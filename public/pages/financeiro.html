@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financeiro</title>
+
+<link rel="stylesheet" href="../css/style.css">
+
+<style>
+.hidden{display:none}
+
+.bank-card{
+  background:linear-gradient(135deg,#1cb978,#0f9d58);
+  color:#fff;
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:14px
+}
+
+.bank-saldo{
+  font-size:28px;
+  font-weight:bold
+}
+
+.btn{
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  font-weight:bold;
+  cursor:pointer
+}
+
+.btn-extrato{
+  margin-top:10px;
+  background:rgba(0,0,0,.25);
+  color:#fff
+}
+
+.form-card{
+  background:#fff;
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:12px
+}
+
+/* ===== EXTRATO ===== */
+.item{
+  display:flex;
+  justify-content:space-between;
+  font-size:13px;
+  margin-bottom:6px;
+  padding:8px 10px;
+  border-radius:8px;
+}
+
+/* GANHO */
+.item.entrada{
+  color:#0f9d58;
+  background:#e6f4ea;
+  border-left:4px solid #0f9d58;
+}
+
+/* GASTO */
+.item.saida{
+  color:#d93025;
+  background:#fdecea;
+  border-left:4px solid #d93025;
+}
+/* BOTÃO GANHO */
+.btn-ganho{
+  background:#0f9d58;
+  color:#fff;
+}
+
+/* BOTÃO GASTO */
+.btn-gasto{
+  background:#d93025;
+  color:#fff;
+}
+
+
+.btn-del{
+  background:none;
+  border:none;
+  color:#d93025;
+  font-weight:bold;
+  cursor:pointer;
+  margin-left:6px;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+<div class="header">Financeiro</div>
+<div class="content">
+
+<div id="modoNormal">
+
+<select id="filtroMes"></select>
+
+<div class="bank-card">
+  <small>Saldo do mês</small>
+  <div class="bank-saldo" id="saldo">R$ 0,00</div>
+  <button class="btn btn-extrato" id="btnExtrato">Extrato</button>
+</div>
+
+<!-- LANÇAMENTO MANUAL -->
+<div class="form-card">
+  <h3>Lançamento manual</h3>
+  <input id="valorManual" placeholder="Ex: 100 ou -50">
+  <button class="btn" id="btnManual">Salvar</button>
+</div>
+
+<!-- NOVO GANHO -->
+<div class="form-card">
+  <h3>Novo ganho</h3>
+  <input id="ganhoDescricao" placeholder="Descrição">
+  <input id="ganhoValor" placeholder="Valor">
+  <button class="btn btn-ganho" id="btnGanho">
+  Adicionar ganho
+</button>
+
+</div>
+
+<!-- NOVO GASTO -->
+<div class="form-card">
+  <h3>Novo gasto</h3>
+  <input id="gastoDescricao" placeholder="Descrição">
+  <input id="gastoValor" placeholder="Valor">
+  <button class="btn btn-gasto" id="btnGasto">
+  Adicionar gasto
+</button>
+
+</div>
+
+</div>
+
+<div id="modoExtrato" class="hidden">
+  <button class="btn" id="btnVoltar">← Voltar</button>
+  <div id="listaExtrato"></div>
+</div>
+
+</div>
+</div>
+
+<script src="../js/app.js"></script>
+
+<script>
+const saldoEl = document.getElementById("saldo");
+const filtroMes = document.getElementById("filtroMes");
+const listaExtrato = document.getElementById("listaExtrato");
+const modoNormal = document.getElementById("modoNormal");
+const modoExtrato = document.getElementById("modoExtrato");
+
+let mesAtual;
+
+/* MESES */
+function carregarMeses(){
+  const meses=new Set();
+  getData().financeiro.forEach(f=>{
+    const d=new Date(f.data);
+    meses.add(`${d.getFullYear()}-${d.getMonth()}`);
+  });
+  if(!meses.size){
+    const h=new Date();
+    meses.add(`${h.getFullYear()}-${h.getMonth()}`);
+  }
+  filtroMes.innerHTML="";
+  [...meses].sort().reverse().forEach(m=>{
+    const [a,me]=m.split("-");
+    const opt=document.createElement("option");
+    opt.value=m;
+    opt.textContent=new Date(a,me).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+    filtroMes.appendChild(opt);
+  });
+  mesAtual=filtroMes.value;
+}
+
+/* SALDO */
+function calcularSaldo(){
+  const [a,m]=mesAtual.split("-").map(Number);
+  let saldo=0;
+  getData().financeiro.forEach(f=>{
+    const d=new Date(f.data);
+    if(d.getMonth()===m && d.getFullYear()===a){
+      saldo += f.tipo==="saida"? -f.valor : f.valor;
+    }
+  });
+  saldoEl.textContent="R$ "+formatarMoedaBR(saldo);
+}
+
+/* LANÇAMENTO MANUAL */
+btnManual.onclick=()=>{
+  const v=Number(valorManual.value.replace(",",".")); 
+  if(!v)return;
+  const data=getData();
+  data.financeiro.push({
+    id:gerarId(),
+    tipo:v>0?"entrada":"saida",
+    descricao:"Lançamento manual",
+    valor:Math.abs(v),
+    data:new Date().toISOString()
+  });
+  saveData(data);
+  valorManual.value="";
+  renderTudo();
+};
+
+/* GANHO */
+btnGanho.onclick=()=>{
+  const d=ganhoDescricao.value.trim();
+  const v=Number(ganhoValor.value.replace(",",".")); 
+  if(!d||v<=0)return;
+
+  const data=getData();
+  data.financeiro.push({
+    id:gerarId(),
+    tipo:"entrada",
+    descricao:d,
+    valor:v,
+    data:new Date().toISOString()
+  });
+  saveData(data);
+
+  ganhoDescricao.value="";
+  ganhoValor.value="";
+  renderTudo();
+};
+
+/* GASTO */
+btnGasto.onclick=()=>{
+  const d=gastoDescricao.value.trim();
+  const v=Number(gastoValor.value.replace(",",".")); 
+  if(!d||v<=0)return;
+
+  const data=getData();
+  data.financeiro.push({
+    id:gerarId(),
+    tipo:"saida",
+    descricao:d,
+    valor:v,
+    data:new Date().toISOString()
+  });
+  saveData(data);
+
+  gastoDescricao.value="";
+  gastoValor.value="";
+  renderTudo();
+};
+
+/* EXTRATO */
+btnExtrato.onclick=()=>{
+  modoNormal.classList.add("hidden");
+  modoExtrato.classList.remove("hidden");
+  renderExtrato();
+};
+
+btnVoltar.onclick=()=>{
+  modoExtrato.classList.add("hidden");
+  modoNormal.classList.remove("hidden");
+};
+
+function apagarLancamento(id){
+  if(!confirm("Apagar este lançamento?"))return;
+  const data=getData();
+  data.financeiro=data.financeiro.filter(f=>f.id!==id);
+  saveData(data);
+  renderTudo();
+  renderExtrato();
+}
+
+function renderExtrato(){
+  listaExtrato.innerHTML="";
+  const [a,m]=mesAtual.split("-").map(Number);
+  getData().financeiro
+    .filter(f=>{
+      const d=new Date(f.data);
+      return d.getMonth()===m && d.getFullYear()===a;
+    })
+    .sort((a,b)=>new Date(b.data)-new Date(a.data))
+    .forEach(f=>{
+      listaExtrato.innerHTML+=`
+        <div class="item ${f.tipo}">
+          <span>${f.descricao}</span>
+          <span>
+            ${f.tipo==="saida"?"-":"+"} R$ ${formatarMoedaBR(f.valor)}
+            <button class="btn-del" onclick="apagarLancamento('${f.id}')">🗑️</button>
+          </span>
+        </div>`;
+    });
+}
+
+/* GERAL */
+function renderTudo(){carregarMeses();calcularSaldo();}
+filtroMes.onchange=()=>{mesAtual=filtroMes.value;renderTudo();}
+renderTudo();
+</script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Agenda</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../css/style.css" />
+
+  <style>
+    .agenda-filtros {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .agenda-filtros select {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    .agenda-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .05);
+      font-size: 14px;
+    }
+
+    .agenda-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .agenda-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .btn-whats {
+      background: #25d366;
+      border-radius: 8px;
+      padding: 6px 8px;
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .btn-arquivar {
+      background: #e0e0e0;
+      border-radius: 8px;
+      padding: 6px 8px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-ver {
+      background: none;
+      border: none;
+      color: #1976d2;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .agenda-detalhes {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #eee;
+      font-size: 13px;
+      display: none;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-weight: bold;
+      margin-left: 6px;
+    }
+
+    .atrasado {
+      background: #fdecea;
+      color: #d93025;
+    }
+
+    .hoje {
+      background: #fff4e5;
+      color: #f57c00;
+    }
+
+    .futuro {
+      background: #e6f4ea;
+      color: #1e8e3e;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+    <div class="header">Agenda • Retornos</div>
+
+    <div class="content">
+
+      <div class="agenda-filtros">
+        <select id="filtroMes">
+          <option value="">Todos os meses</option>
+        </select>
+      </div>
+
+      <div id="listaAgenda"></div>
+    </div>
+  </div>
+
+  <script src="../js/app.js"></script>
+
+  <script>
+    const listaAgenda = document.getElementById("listaAgenda");
+    const filtroMes = document.getElementById("filtroMes");
+
+    function normalizarData(d) {
+      const x = new Date(d);
+      x.setHours(0, 0, 0, 0);
+      return x;
+    }
+
+    function statusPorData(dataRetorno) {
+      const hoje = normalizarData(new Date());
+      const r = normalizarData(dataRetorno);
+      if (r < hoje) return "atrasado";
+      if (r.getTime() === hoje.getTime()) return "hoje";
+      return "futuro";
+    }
+
+    function formatarData(d) {
+      const x = new Date(d);
+      return isNaN(x) ? "—" : x.toLocaleDateString("pt-BR");
+    }
+
+    function popularFiltroMesUmaVez() {
+      const data = getData();
+      const meses = new Set();
+
+      (data.agenda || []).forEach(a => {
+        if (!a.dataRetorno || a.status !== "agendado") return;
+        const d = new Date(a.dataRetorno);
+        meses.add(`${d.getFullYear()}-${d.getMonth()}`);
+      });
+
+      [...meses].sort().forEach(m => {
+        const [ano, mes] = m.split("-");
+        const label = new Date(ano, mes).toLocaleDateString("pt-BR", {
+          month: "long",
+          year: "numeric"
+        });
+
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = label;
+        filtroMes.appendChild(opt);
+      });
+    }
+
+    function arquivar(id) {
+      if (!confirm("Arquivar este retorno?")) return;
+      const data = getData();
+      const item = data.agenda.find(a => a.id === id);
+      if (item) {
+        item.status = "arquivado";
+        saveData(data);
+        renderAgenda();
+      }
+    }
+
+    function gerarMensagemWhats(cliente, dataRetorno) {
+      const dataFmt = formatarData(dataRetorno);
+      return encodeURIComponent(
+        `Olá ${cliente.nome}! 👋\n` +
+        `Passando para lembrar da manutenção agendada para o dia ${dataFmt}.\n` +
+        `Caso queira confirmar ou reagendar, é só me avisar.\n\n` +
+        `Atenciosamente.`
+      );
+    }
+
+    function renderAgenda() {
+      const data = getData();
+      let agenda = (data.agenda || []).filter(a => a.status === "agendado");
+
+      if (filtroMes.value) {
+        const [ano, mes] = filtroMes.value.split("-").map(Number);
+        const inicio = new Date(ano, mes, 1, 0, 0, 0);
+        const fim = new Date(ano, mes + 1, 23, 59, 59);
+
+        agenda = agenda.filter(a => {
+          const d = new Date(a.dataRetorno);
+          return d >= inicio && d <= fim;
+        });
+      }
+
+      agenda.sort((a, b) => new Date(a.dataRetorno) - new Date(b.dataRetorno));
+
+      listaAgenda.innerHTML = "";
+
+      if (!agenda.length) {
+        listaAgenda.innerHTML = "<p>Nenhum retorno para este período</p>";
+        return;
+      }
+
+      agenda.forEach(a => {
+        const c = a.cliente || {};
+        const telefone = (c.telefone || "").replace(/\D/g, "");
+        const status = statusPorData(a.dataRetorno);
+        const msg = gerarMensagemWhats(c, a.dataRetorno);
+
+        const card = document.createElement("div");
+        card.className = "agenda-card";
+
+        card.innerHTML = `
+        <div class="agenda-row">
+          <div>
+            <strong>${c.nome}</strong>
+            <span class="badge ${status}">${status.toUpperCase()}</span><br>
+            <small>🔁 ${formatarData(a.dataRetorno)}</small>
+          </div>
+
+          <div class="agenda-actions">
+            <a class="btn-whats"
+               href="https://wa.me/55${telefone}?text=${msg}"
+               target="_blank">📲</a>
+            <button class="btn-arquivar" onclick="arquivar('${a.id}')">📁</button>
+            <button class="btn-ver">Ver</button>
+          </div>
+        </div>
+
+        <div class="agenda-detalhes">
+          📞 ${c.telefone || "—"}<br>
+          📍 ${c.endereco || "—"}<br>
+          📄 ${formatarDocumentoBR(c.documento) || "—"}<br>
+          💼 Valor: R$ ${
+  formatarMoedaBR(
+    a.valorServico ??
+    (getData().servicos.find(s => s.id === a.origemServicoId)?.totalGeral || 0)
+  )
+}<br>
+
+          🗓 Executado em: ${formatarData(a.dataExecucao)}
+        </div>
+      `;
+
+        const btnVer = card.querySelector(".btn-ver");
+        const detalhes = card.querySelector(".agenda-detalhes");
+
+        btnVer.onclick = () => {
+          const aberto = detalhes.style.display === "block";
+          detalhes.style.display = aberto ? "none" : "block";
+          btnVer.textContent = aberto ? "Ver" : "Fechar";
+        };
+
+        listaAgenda.appendChild(card);
+      });
+    }
+
+    popularFiltroMesUmaVez();
+    filtroMes.onchange = renderAgenda;
+    renderAgenda();
+  </script>
+
+</body>
+</html>

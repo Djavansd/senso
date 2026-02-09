@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resumo mensal</title>
+
+<link rel="stylesheet" href="../css/style.css">
+
+<style>
+.resumo-card {
+    background: linear-gradient(135deg, #1cb978, #0f9d58);
+    color: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+
+.resumo-linha {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin: 6px 0;
+}
+
+.resumo-total {
+    font-size: 24px;
+    font-weight: bold;
+    margin-top: 12px;
+    text-align: center;
+}
+
+.bloco {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.bloco h3 {
+    margin-top: 0;
+    font-size: 15px;
+}
+
+.comparacao {
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+.up { color: #1e8e3e; font-weight: bold; }
+.down { color: #d93025; font-weight: bold; }
+
+.btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    background: #1976d2;
+    color: #fff;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+<div class="header">Resumo do mês</div>
+
+<div class="content">
+
+<select id="filtroMes"></select>
+
+<!-- ===== RESULTADO ===== -->
+<div class="resumo-card">
+    <div class="resumo-linha">
+        <span>Entradas</span>
+        <strong id="resumoEntradas">R$ 0,00</strong>
+    </div>
+    <div class="resumo-linha">
+        <span>Saídas</span>
+        <strong id="resumoSaidas">R$ 0,00</strong>
+    </div>
+
+    <div class="resumo-total">
+        Saldo final<br>
+        <span id="resumoSaldo">R$ 0,00</span>
+    </div>
+</div>
+
+<!-- ===== COMPOSIÇÃO ===== -->
+<div class="bloco">
+    <h3>Composição do resultado</h3>
+
+    <div class="resumo-linha">
+        <span>Serviços executados</span>
+        <strong id="resumoServicos">0</strong>
+    </div>
+
+    <div class="resumo-linha">
+        <span>Faturamento em serviços</span>
+        <strong id="resumoFaturamento">R$ 0,00</strong>
+    </div>
+
+    <div class="resumo-linha">
+        <span>Estornos</span>
+        <strong id="resumoEstornos">0</strong>
+    </div>
+
+    <div class="resumo-linha">
+        <span>Impacto dos estornos</span>
+        <strong id="resumoEstornosValor">R$ 0,00</strong>
+    </div>
+
+    <div class="resumo-linha">
+        <span>Ajustes manuais</span>
+        <strong id="resumoAjustes">R$ 0,00</strong>
+    </div>
+</div>
+
+<!-- ===== COMPARAÇÃO ===== -->
+<div class="bloco">
+    <h3>Comparação com mês anterior</h3>
+    <div id="comparacaoTexto" class="comparacao">—</div>
+</div>
+
+<div class="bloco">
+    <p>
+        Este resumo apresenta uma visão gerencial do mês selecionado.
+        Nenhum dado é alterado ou apagado.
+    </p>
+</div>
+
+<button class="btn" onclick="history.back()">Voltar</button>
+
+</div>
+</div>
+
+<script src="../js/app.js"></script>
+
+<script>
+const filtroMes = document.getElementById("filtroMes");
+
+const resumoEntradas = document.getElementById("resumoEntradas");
+const resumoSaidas = document.getElementById("resumoSaidas");
+const resumoSaldo = document.getElementById("resumoSaldo");
+const resumoServicos = document.getElementById("resumoServicos");
+const resumoFaturamento = document.getElementById("resumoFaturamento");
+const resumoEstornos = document.getElementById("resumoEstornos");
+const resumoEstornosValor = document.getElementById("resumoEstornosValor");
+const resumoAjustes = document.getElementById("resumoAjustes");
+const comparacaoTexto = document.getElementById("comparacaoTexto");
+
+let mesAtual;
+
+/* ===== MESES ===== */
+function carregarMeses() {
+    const meses = new Set();
+    getData().financeiro.forEach(f => {
+        const d = new Date(f.data);
+        meses.add(`${d.getFullYear()}-${d.getMonth()}`);
+    });
+
+    if (!meses.size) {
+        const hoje = new Date();
+        meses.add(`${hoje.getFullYear()}-${hoje.getMonth()}`);
+    }
+
+    filtroMes.innerHTML = "";
+    [...meses].sort().reverse().forEach(m => {
+        const [ano, mes] = m.split("-");
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = new Date(ano, mes).toLocaleDateString("pt-BR", {
+            month: "long",
+            year: "numeric"
+        });
+        filtroMes.appendChild(opt);
+    });
+
+    mesAtual = filtroMes.value;
+}
+
+/* ===== RESUMO ===== */
+function calcularResumo(ano, mes) {
+    const data = getData();
+
+    let entradas = 0;
+    let saidas = 0;
+    let ajustes = 0;
+    let estornosQtd = 0;
+    let estornosValor = 0;
+    let servicosQtd = 0;
+    let faturamento = 0;
+
+    data.financeiro.forEach(f => {
+        const d = new Date(f.data);
+        if (d.getMonth() === mes && d.getFullYear() === ano) {
+            if (f.tipo === "entrada") entradas += f.valor;
+            if (f.tipo === "saida") saidas += f.valor;
+            if (f.tipo === "ajuste") ajustes += f.valor;
+            if (f.origem === "estorno") {
+                estornosQtd++;
+                estornosValor += f.valor;
+            }
+        }
+    });
+
+    data.servicos.forEach(s => {
+        if (s.executadoEm) {
+            const d = new Date(s.executadoEm);
+            if (d.getMonth() === mes && d.getFullYear() === ano) {
+                if (s.status === "executado") {
+                    servicosQtd++;
+                    faturamento += s.totalGeral || 0;
+                }
+            }
+        }
+    });
+
+    return {
+        entradas,
+        saidas,
+        saldo: entradas - saidas,
+        ajustes,
+        estornosQtd,
+        estornosValor,
+        servicosQtd,
+        faturamento
+    };
+}
+
+function renderResumo() {
+    const [ano, mes] = mesAtual.split("-").map(Number);
+    const atual = calcularResumo(ano, mes);
+
+    resumoEntradas.textContent = "R$ " + formatarMoedaBR(atual.entradas);
+    resumoSaidas.textContent = "R$ " + formatarMoedaBR(atual.saidas);
+    resumoSaldo.textContent = "R$ " + formatarMoedaBR(atual.saldo);
+    resumoServicos.textContent = atual.servicosQtd;
+    resumoFaturamento.textContent = "R$ " + formatarMoedaBR(atual.faturamento);
+    resumoEstornos.textContent = atual.estornosQtd;
+    resumoEstornosValor.textContent = "R$ " + formatarMoedaBR(atual.estornosValor);
+    resumoAjustes.textContent = "R$ " + formatarMoedaBR(atual.ajustes);
+
+    // comparação
+    const mesAnterior = new Date(ano, mes - 1, 1);
+    const anterior = calcularResumo(
+        mesAnterior.getFullYear(),
+        mesAnterior.getMonth()
+    );
+
+    const diff = atual.saldo - anterior.saldo;
+
+    if (anterior.entradas || anterior.saidas) {
+        comparacaoTexto.innerHTML =
+            diff >= 0
+            ? `<span class="up">Saldo ↑ R$ ${formatarMoedaBR(diff)}</span> em relação ao mês anterior`
+            : `<span class="down">Saldo ↓ R$ ${formatarMoedaBR(Math.abs(diff))}</span> em relação ao mês anterior`;
+    } else {
+        comparacaoTexto.textContent = "Sem dados para comparação.";
+    }
+}
+
+filtroMes.onchange = () => {
+    mesAtual = filtroMes.value;
+    renderResumo();
+};
+
+carregarMeses();
+renderResumo();
+</script>
+</body>
+</html>

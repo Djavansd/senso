@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orçamento</title>
+
+<link rel="stylesheet" href="../css/style.css">
+
+<style>
+body { background:#eee; }
+.orcamento {
+    background:#fff;
+    max-width:800px;
+    margin:16px auto;
+    padding:16px;
+    border:1px solid #ccc;
+    font-size:14px;
+}
+.cabecalho {
+    display:flex;
+    justify-content:space-between;
+    border-bottom:1px solid #000;
+    padding-bottom:10px;
+}
+.empresa { font-size:13px; }
+.caixa-data {
+    border:1px solid #000;
+    padding:6px 10px;
+    text-align:center;
+    font-size:13px;
+}
+.bloco {
+    border:1px solid #000;
+    margin-top:10px;
+    padding:8px;
+    font-size:13px;
+}
+.bloco-flex {
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+}
+.titulo {
+    background:#0d3b66;
+    color:#fff;
+    padding:6px;
+    margin-top:12px;
+    text-align:center;
+    font-weight:bold;
+}
+table {
+    width:100%;
+    border-collapse:collapse;
+    margin-top:6px;
+}
+th, td {
+    border:1px solid #000;
+    padding:6px;
+    font-size:13px;
+}
+th { background:#e6eef6; }
+.total {
+    background:#0d3b66;
+    color:#fff;
+    padding:8px;
+    font-weight:bold;
+    text-align:right;
+    margin-top:6px;
+}
+.observacoes {
+    border:1px solid #000;
+    height:120px;
+    margin-top:8px;
+    padding:6px;
+}
+.botoes {
+    margin-top:12px;
+    display:flex;
+    gap:10px;
+}
+.btn {
+    flex:1;
+    padding:10px;
+    border-radius:8px;
+    border:none;
+    font-weight:bold;
+    cursor:pointer;
+}
+.btn-pdf { background:#1976d2; color:#fff; }
+.btn-voltar { background:#ccc; }
+.btn-disabled {
+    background:#ddd !important;
+    cursor:not-allowed;
+}
+#statusPdf {
+    display:none;
+    margin-top:10px;
+    padding:10px;
+    border-radius:10px;
+    background:#f1f3f4;
+    font-size:13px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+.loader {
+    width:16px;
+    height:16px;
+    border:3px solid #ccc;
+    border-top:3px solid #1976d2;
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+@media print {
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    body {
+        background: #fff !important;
+    }
+
+    .orcamento {
+        background: #fff !important;
+        border: none !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .titulo,
+    .total {
+        background: #0d3b66 !important;
+        color: #fff !important;
+    }
+
+    th {
+        background: #e6eef6 !important;
+        color: #000 !important;
+    }
+
+    .botoes,
+    #statusPdf {
+        display: none !important;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="orcamento">
+
+<div class="cabecalho">
+    <div class="empresa">
+        <strong>PROICE CLIMATIZAÇÃO</strong><br>
+        CNPJ: 42.937.499/0001-08<br>
+        Endereço: São Paulo<br>
+        📞 (11) 99284-1312
+    </div>
+    <div class="caixa-data">
+        DATA DE EMISSÃO<br>
+        <strong id="dataEmissao">—</strong>
+    </div>
+</div>
+
+<div class="bloco-flex">
+    <div class="bloco">
+        <strong>CLIENTE:</strong> <span id="clienteNome"></span><br>
+        CPF/CNPJ: <span id="clienteDoc"></span><br>
+        ENDEREÇO: <span id="clienteEndereco"></span>
+    </div>
+    <div class="bloco">
+        <strong>TELEFONE:</strong> <span id="clienteTelefone"></span><br>
+        FORMA PGTO: <span id="formaPagamento">—</span>
+    </div>
+</div>
+
+<div class="titulo">ORÇAMENTO</div>
+
+<table>
+<thead>
+<tr>
+    <th>DESCRIÇÃO</th>
+    <th>QTD</th>
+    <th>VALOR</th>
+    <th>SUBTOTAL</th>
+</tr>
+</thead>
+<tbody id="tabelaItens"></tbody>
+</table>
+
+<div class="total">
+    VALOR TOTAL R$ <span id="valorTotal">0,00</span>
+</div>
+
+<div class="observacoes" id="obsBox"></div>
+
+<div class="botoes">
+    <button class="btn btn-pdf" onclick="gerarPDF()">📄 PDF</button>
+    <button id="btnAprovar" class="btn btn-pdf" onclick="aprovar()">✅ Aprovar</button>
+    <button id="btnRecusar" class="btn btn-voltar" onclick="recusar()">❌ Recusar</button>
+    <button class="btn btn-voltar" onclick="history.back()">← Voltar</button>
+</div>
+
+<div id="statusPdf">
+    <span class="loader"></span> Gerando PDF...
+</div>
+
+</div>
+
+<script src="../js/app.js"></script>
+
+<script>
+const id = new URLSearchParams(location.search).get("id");
+const data = getData();
+const orc = data.orcamentos.find(o => o.id === id);
+
+if (!orc) {
+    alert("Orçamento não encontrado");
+    history.back();
+}
+
+dataEmissao.textContent = new Date(orc.criadoEm).toLocaleDateString("pt-BR");
+clienteNome.textContent = orc.cliente.nome;
+clienteDoc.textContent = formatarDocumentoBR(orc.cliente.documento) || "—";
+clienteEndereco.textContent = orc.cliente.endereco || "—";
+clienteTelefone.textContent = orc.cliente.telefone || "—";
+formaPagamento.textContent = orc.formaPagamento || "—";
+
+tabelaItens.innerHTML = "";
+orc.itens.forEach(i => {
+    tabelaItens.innerHTML += `
+        <tr>
+            <td>${i.descricao}</td>
+            <td>1</td>
+            <td>R$ ${formatarMoedaBR(i.total)}</td>
+            <td>R$ ${formatarMoedaBR(i.total)}</td>
+        </tr>
+    `;
+});
+
+valorTotal.textContent = formatarMoedaBR(orc.total);
+obsBox.innerHTML = "<strong>OBSERVAÇÕES:</strong><br>" + (orc.observacoes || "—");
+
+// 🔒 trava botões se já decidido
+if (orc.status !== "enviado") {
+    btnAprovar.disabled = true;
+    btnRecusar.disabled = true;
+    btnAprovar.classList.add("btn-disabled");
+    btnRecusar.classList.add("btn-disabled");
+}
+
+function gerarPDF() {
+    statusPdf.style.display = "flex";
+    setTimeout(() => {
+        window.print();
+        statusPdf.style.display = "none";
+    }, 300);
+}
+
+function aprovar() {
+    marcarOrcamentoComoAprovado(orc.id);
+    alert("Orçamento aprovado");
+    location.href = "orcamentos.html";
+}
+
+function recusar() {
+    marcarOrcamentoComoRecusado(orc.id);
+    alert("Orçamento recusado");
+    location.href = "orcamentos.html";
+}
+</script>
+
+</body>
+</html>

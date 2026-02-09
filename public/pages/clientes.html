@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Clientes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../css/style.css" />
+
+  <style>
+    .cliente-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      font-size: 14px;
+    }
+
+    .cliente-resumo {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cliente-info {
+      line-height: 1.4;
+    }
+
+    .btn-detalhes {
+      background: none;
+      border: none;
+      color: #1976d2;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .cliente-detalhes {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #eee;
+      font-size: 13px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .btn-arquivar {
+      margin-top: 6px;
+      background: #f44336;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+    <div class="header">Clientes</div>
+
+    <div class="content">
+      <a href="novo-cliente.html" class="btn-primary">+ Novo Cliente</a>
+      <div id="lista"></div>
+    </div>
+  </div>
+
+  <script src="../js/app.js"></script>
+
+  <script>
+    const lista = document.getElementById("lista");
+
+    // ===== FORMATAR DOCUMENTO BR (CPF / CNPJ) =====
+    function formatarDocumentoBR(doc) {
+      if (!doc) return "Documento não informado";
+
+      const v = doc.replace(/\D/g, "");
+
+      if (v.length === 11) {
+        return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      }
+
+      if (v.length === 14) {
+        return v.replace(
+          /(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,
+          "$1.$2.$3/$4-$5"
+        );
+      }
+
+      return doc;
+    }
+
+    function renderClientes() {
+      const clientes = listarClientesAtivos();
+      lista.innerHTML = "";
+
+      if (clientes.length === 0) {
+        lista.innerHTML = "<p>Nenhum cliente cadastrado</p>";
+        return;
+      }
+
+      clientes.forEach(c => {
+        const card = document.createElement("div");
+        card.className = "cliente-card";
+
+        card.innerHTML = `
+          <div class="cliente-resumo">
+            <div class="cliente-info">
+              <strong>${c.nome}</strong><br>
+              📞 ${c.telefone}
+            </div>
+            <button class="btn-detalhes">Ver</button>
+          </div>
+
+          <div class="cliente-detalhes hidden">
+            📍 ${c.endereco || "Endereço não informado"}<br>
+            📄 ${formatarDocumentoBR(c.documento)}<br>
+            <button class="btn-arquivar">Arquivar</button>
+          </div>
+        `;
+
+        const btnDetalhes = card.querySelector(".btn-detalhes");
+        const detalhes = card.querySelector(".cliente-detalhes");
+        const btnArquivar = card.querySelector(".btn-arquivar");
+
+        btnDetalhes.onclick = () => {
+          detalhes.classList.toggle("hidden");
+          btnDetalhes.textContent =
+            detalhes.classList.contains("hidden") ? "Ver" : "Fechar";
+        };
+
+        btnArquivar.onclick = () => {
+          if (!confirm("Arquivar este cliente?")) return;
+          arquivarCliente(c.id);
+          renderClientes();
+        };
+
+        lista.appendChild(card);
+      });
+    }
+
+    renderClientes();
+  </script>
+
+</body>
+
+</html>

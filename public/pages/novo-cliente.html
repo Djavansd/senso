@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Novo Cliente</title>
+    <link rel="stylesheet" href="../css/style.css" />
+</head>
+
+<body>
+
+    <div class="app">
+        <div class="header">Novo Cliente</div>
+
+        <div class="content">
+            <div class="form-card">
+                <form id="formCliente">
+
+                    <div class="form-group">
+                        <label>Nome *</label>
+                        <input id="nome" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Telefone *</label>
+                        <input id="telefone" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Endereço</label>
+                        <input id="endereco" placeholder="Opcional" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>CPF / CNPJ</label>
+                        <input id="documento" placeholder="Opcional" />
+                    </div>
+
+                    <button class="btn-primary" type="submit">Salvar</button>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS GLOBAL -->
+    <script src="../js/app.js"></script>
+
+    <!-- JS DA TELA -->
+    <script>
+        const form = document.getElementById("formCliente");
+
+        const nome = document.getElementById("nome");
+        const telefone = document.getElementById("telefone");
+        const endereco = document.getElementById("endereco");
+        const documento = document.getElementById("documento");
+
+        form.onsubmit = function (e) {
+            e.preventDefault();
+
+            const telefoneFormatado = formatarTelefoneBR(telefone.value);
+
+            if (telefoneJaExiste(telefoneFormatado)) {
+                alert("Cliente já cadastrado com esse telefone.");
+                return;
+            }
+
+            adicionarCliente({
+                id: gerarId(),
+                nome: nome.value.trim(),
+                telefone: telefoneFormatado,
+                endereco: endereco.value.trim() || "",
+                documento: documento.value.trim() || ""
+            });
+
+            // fluxo aprovado — não mudar
+            window.location.href = "clientes.html";
+        };
+    </script>
+
+</body>
+
+</html>

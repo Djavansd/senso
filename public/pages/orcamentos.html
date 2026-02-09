@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orçamentos</title>
+
+<link rel="stylesheet" href="../css/style.css" />
+
+<style>
+body {
+    background: #ffffff;
+}
+
+/* ===== BUSCA ===== */
+.busca {
+    padding: 14px;
+}
+
+.busca input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+}
+
+/* ===== AGRUPAMENTO ===== */
+.grupo {
+    padding: 0 14px;
+    margin-top: 12px;
+}
+
+.grupo-titulo {
+    font-size: 13px;
+    font-weight: bold;
+    color: #555;
+    margin: 10px 0 6px;
+}
+
+/* ===== GRID ===== */
+.lista {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+
+/* ===== CARD ===== */
+.card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.08);
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform .15s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+/* ===== CORES POR STATUS ===== */
+.card.enviado {
+    background: #e3f2fd;
+}
+
+.card.aprovado {
+    background: #e8f5e9;
+}
+
+.card.recusado {
+    background: #fdecea;
+}
+
+/* ===== TEXTO ===== */
+.card-numero {
+    font-weight: bold;
+    font-size: 13px;
+    color: #0f9d58;
+}
+
+.card-cliente {
+    margin-top: 6px;
+    font-weight: bold;
+}
+
+.card-data {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+}
+
+.card-valor {
+    margin-top: 8px;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.card-status {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-enviado { color: #1976d2; }
+.status-aprovado { color: #1e8e3e; }
+.status-recusado { color: #d93025; }
+
+/* ===== VAZIO ===== */
+.vazio {
+    padding: 30px;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+    <div class="header">Orçamentos</div>
+
+    <div class="busca">
+        <input id="buscaCliente" placeholder="Buscar por cliente..." />
+    </div>
+
+    <div class="content" id="conteudo"></div>
+</div>
+
+<script src="../js/app.js"></script>
+
+<script>
+const conteudo = document.getElementById("conteudo");
+const busca = document.getElementById("buscaCliente");
+
+const todos = (getData().orcamentos || [])
+    .slice()
+    .sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
+
+function render(lista) {
+    conteudo.innerHTML = "";
+
+    if (!lista.length) {
+        conteudo.innerHTML = `
+            <div class="vazio">
+                🔍 Nenhum orçamento encontrado
+            </div>
+        `;
+        return;
+    }
+
+    let ultimoGrupo = "";
+
+    lista.forEach(o => {
+        const d = new Date(o.criadoEm);
+        const grupo = d.toLocaleDateString("pt-BR", {
+            month: "long",
+            year: "numeric"
+        });
+
+        if (grupo !== ultimoGrupo) {
+            const bloco = document.createElement("div");
+            bloco.className = "grupo";
+            bloco.innerHTML = `
+                <div class="grupo-titulo">${grupo}</div>
+                <div class="lista"></div>
+            `;
+            conteudo.appendChild(bloco);
+            ultimoGrupo = grupo;
+        }
+
+        const listaEl =
+            conteudo.querySelector(".grupo:last-child .lista");
+
+        const card = document.createElement("div");
+        card.className = `card ${o.status || ""}`;
+        card.onclick = () => {
+            location.href = "orcamento.html?id=" + o.id;
+        };
+
+        card.innerHTML = `
+            <div class="card-numero">📄 ${o.numero}</div>
+            <div class="card-cliente">${o.cliente.nome}</div>
+            <div class="card-data">
+                ${d.toLocaleDateString("pt-BR")}
+            </div>
+            <div class="card-valor">
+                R$ ${formatarMoedaBR(o.total)}
+            </div>
+
+            ${o.status
+                ? `<div class="card-status status-${o.status}">
+                    ${o.status === "enviado" ? "📤 Enviado" :
+                      o.status === "aprovado" ? "✅ Aprovado" :
+                      o.status === "recusado" ? "❌ Recusado" : ""}
+                   </div>`
+                : ""
+            }
+        `;
+
+        listaEl.appendChild(card);
+    });
+}
+
+/* ===== BUSCA ===== */
+busca.oninput = () => {
+    const termo = busca.value.toLowerCase().trim();
+
+    if (!termo) {
+        render(todos);
+        return;
+    }
+
+    const filtrados = todos.filter(o =>
+        o.cliente.nome.toLowerCase().includes(termo)
+    );
+
+    render(filtrados);
+};
+
+/* ===== INIT ===== */
+render(todos);
+</script>
+
+</body>
+</html>

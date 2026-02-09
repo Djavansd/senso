@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Serviço</title>
+
+<link rel="stylesheet" href="../css/style.css" />
+
+<style>
+.hidden { display:none; }
+
+.resumo-card {
+    background:#fff;
+    border-radius:14px;
+    padding:12px;
+    margin-bottom:12px;
+    box-shadow:0 4px 10px rgba(0,0,0,.06);
+    font-size:14px;
+}
+
+.item-servico {
+    background:#f5f5f5;
+    border-radius:10px;
+    padding:6px 8px;
+    margin-bottom:4px;
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+}
+
+.item-valor { font-weight:bold; color:#0f9d58; }
+
+.status-pendente { color:#f57c00; font-weight:bold; }
+.status-executado { color:#0f9d58; font-weight:bold; }
+.status-estornado { color:#777; }
+
+.toggle-itens {
+    font-size:12px;
+    color:#1976d2;
+    cursor:pointer;
+    margin-top:6px;
+    display:inline-block;
+}
+
+.cliente-mini {
+    font-size:13px;
+    color:#555;
+    margin-top:4px;
+}
+
+.btn-corrigir {
+    margin-top:6px;
+    background:#fff3cd;
+    color:#856404;
+    border:none;
+    padding:6px 10px;
+    border-radius:8px;
+    font-size:13px;
+    cursor:pointer;
+}
+
+.btn-orcamento {
+    margin-top:6px;
+    background:#e3f2fd;
+    color:#0d47a1;
+    border:none;
+    padding:6px 10px;
+    border-radius:8px;
+    font-size:13px;
+    cursor:pointer;
+}
+
+textarea {
+    width: 100%;
+    min-height: 70px;
+    resize: vertical;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+<div class="header">Serviço</div>
+
+<div class="content">
+
+<h3>Serviço • Passo 1</h3>
+
+<label>Cliente</label>
+<select id="clienteSelect">
+    <option value="">Selecione um cliente</option>
+</select>
+
+<div id="clienteResumo" class="resumo-card hidden"></div>
+
+<hr />
+
+<h3>Serviço • Passo 2</h3>
+
+<form id="formItem" class="servico-card">
+    <label>Descrição do serviço</label>
+    <input id="itemDescricao" required />
+
+    <label>Valor unitário</label>
+    <input id="itemValor" required />
+
+    <label>Quantidade</label>
+    <input id="itemQtd" type="number" value="1" min="1" required />
+
+    <button type="submit">Adicionar Item</button>
+</form>
+
+<div id="itensResumo" class="hidden">
+    <div id="listaItens"></div>
+    <h4>Total do Serviço: R$ <span id="totalServico">0,00</span></h4>
+</div>
+
+<label style="margin-top:10px;">Observações do serviço (opcional)</label>
+<textarea id="observacoesServico"
+ placeholder="Ex: Equipamento muito sujo, acesso difícil, valor válido por 10 dias..."></textarea>
+
+<!-- ✅ CAMPO QUE FALTAVA -->
+<label style="margin-top:10px;">Forma de pagamento</label>
+<select id="formaPagamento">
+    <option value="">Não informado</option>
+    <option>Pix</option>
+    <option>Dinheiro</option>
+    <option>Cartão de crédito</option>
+    <option>Cartão de débito</option>
+    <option>Transferência</option>
+</select>
+
+<div style="margin-top:12px;">
+<label style="font-size:13px;">Retorno / Manutenção (opcional)</label>
+<select id="intervaloSelect">
+    <option value="">Padrão (6 meses)</option>
+    <option value="nenhum">Nenhum</option>
+    <option value="semanal">Semanal</option>
+    <option value="mensal">Mensal</option>
+    <option value="3">3 meses</option>
+    <option value="6">6 meses</option>
+    <option value="12">12 meses</option>
+</select>
+
+</div>
+
+<button type="button" id="btnSalvarServico">Salvar Serviço</button>
+
+<hr />
+
+<h3>Serviços cadastrados</h3>
+<div id="listaServicos"></div>
+
+</div>
+</div>
+
+<script src="../js/app.js"></script>
+
+<script>
+const clienteSelect = document.getElementById("clienteSelect");
+const clienteResumo = document.getElementById("clienteResumo");
+const listaItens = document.getElementById("listaItens");
+const totalServicoEl = document.getElementById("totalServico");
+const listaServicos = document.getElementById("listaServicos");
+const intervaloSelect = document.getElementById("intervaloSelect");
+const observacoesServico = document.getElementById("observacoesServico");
+const formaPagamento = document.getElementById("formaPagamento");
+
+const itens = [];
+
+/* CLIENTES */
+listarClientesAtivos().forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.nome;
+    clienteSelect.appendChild(opt);
+});
+
+clienteSelect.onchange = () => {
+    const c = listarClientesAtivos().find(x => x.id === clienteSelect.value);
+    if (!c) return;
+
+    clienteResumo.innerHTML = `
+        <strong>${c.nome}</strong><br>
+        <div class="cliente-mini">
+            📞 ${c.telefone || "—"}<br>
+            📍 ${c.endereco || "—"}<br>
+            📄 ${formatarDocumentoBR(c.documento) || "—"}
+        </div>
+    `;
+    clienteResumo.classList.remove("hidden");
+};
+
+/* ITENS */
+formItem.onsubmit = e => {
+    e.preventDefault();
+
+    const desc = itemDescricao.value.trim();
+    const valor = Number(itemValor.value.replace(",", "."));
+    const qtd = Number(itemQtd.value);
+
+    if (!desc || valor <= 0 || qtd <= 0) return;
+
+    itens.push({ descricao: desc, total: valor * qtd });
+
+    formItem.reset();
+    itemQtd.value = 1;
+    renderItens();
+};
+
+function renderItens() {
+    let total = 0;
+    listaItens.innerHTML = "";
+
+    itens.forEach(i => {
+        total += i.total;
+        listaItens.innerHTML += `
+            <div class="item-servico">
+                <span>${i.descricao}</span>
+                <span class="item-valor">R$ ${formatarMoedaBR(i.total)}</span>
+            </div>
+        `;
+    });
+
+    totalServicoEl.textContent = formatarMoedaBR(total);
+    document.getElementById("itensResumo").classList.remove("hidden");
+}
+
+/* SALVAR SERVIÇO */
+btnSalvarServico.onclick = () => {
+    if (!clienteSelect.value || itens.length === 0) return;
+
+    let intervaloTipo = "meses";
+let intervaloValor = 6;
+
+// 👇 exceção explícita
+if (intervaloSelect.value === "nenhum") {
+    intervaloTipo = "nenhum";
+    intervaloValor = 0;
+
+} else if (intervaloSelect.value === "semanal") {
+    intervaloTipo = "semanas";
+    intervaloValor = 1;
+
+} else if (intervaloSelect.value === "mensal") {
+    intervaloTipo = "meses";
+    intervaloValor = 1;
+
+} else if (intervaloSelect.value) {
+    intervaloTipo = "meses";
+    intervaloValor = Number(intervaloSelect.value);
+}
+
+
+    const c = listarClientesAtivos().find(x => x.id === clienteSelect.value);
+
+    salvarServico({
+        id: gerarId(),
+        cliente: {
+            id: c.id,
+            nome: c.nome,
+            telefone: c.telefone || "",
+            endereco: c.endereco || "",
+            documento: c.documento || ""
+        },
+        itens: itens.slice(),
+        totalGeral: itens.reduce((s,i)=>s+i.total,0),
+        observacoes: observacoesServico.value.trim(),
+        formaPagamento: formaPagamento.value || "",
+        status: "pendente",
+        intervaloTipo,
+        intervaloValor,
+        criadoEm: new Date().toISOString()
+    });
+
+    itens.length = 0;
+    observacoesServico.value = "";
+    formaPagamento.value = "";
+    clienteSelect.value = "";
+    clienteResumo.classList.add("hidden");
+    document.getElementById("itensResumo").classList.add("hidden");
+    intervaloSelect.value = "";
+
+    renderServicos();
+};
+
+/* LISTA */
+function renderServicos() {
+    listaServicos.innerHTML = "";
+    const servicos = getData().servicos;
+
+    if (!servicos.length) {
+        listaServicos.innerHTML = "<p>Nenhum serviço cadastrado</p>";
+        return;
+    }
+
+    servicos.forEach(s => {
+        const data = new Date(s.criadoEm).toLocaleDateString("pt-BR");
+
+        listaServicos.innerHTML += `
+            <div class="resumo-card">
+                <strong>${s.cliente.nome}</strong><br>
+                <small>${data}</small><br>
+                Total: <strong>R$ ${formatarMoedaBR(s.totalGeral)}</strong><br>
+
+                ${s.observacoes ? `<em>📝 ${s.observacoes}</em><br>` : ""}
+                ${s.formaPagamento ? `<em>💳 ${s.formaPagamento}</em><br>` : ""}
+
+                <span class="status-${s.status}">
+                    ${s.status === "pendente" ? "⏳ Pendente" :
+                      s.status === "executado" ? "✔ Executado" :
+                      "🔁 Corrigido"}
+                </span><br>
+
+                <button class="btn-orcamento"
+                    onclick="
+                        const n = gerarOrcamentoDoServico('${s.id}');
+                        if(n){
+                          const o = getData().orcamentos.find(x=>x.numero===n);
+                          if(o) location.href='orcamento.html?id='+o.id;
+                        }
+                    ">
+                    📄 Gerar orçamento
+                </button>
+
+                ${
+                    s.status === "pendente"
+                    ? `<button onclick="executarServico('${s.id}'); renderServicos();">
+                        ▶️ Executar serviço
+                       </button>`
+                    : s.status === "executado"
+                    ? `<button class="btn-corrigir"
+                        onclick="estornarServico('${s.id}'); renderServicos();">
+                        ⚠️ Corrigir serviço
+                       </button>`
+                    : ""
+                }
+            </div>
+        `;
+    });
+}
+
+renderServicos();
+</script>
+</body>
+</html>

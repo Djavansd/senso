@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>App Manutenção</title>
+
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="icon" type="image/png" href="assets/icons/icon-192.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f9d58">
+
+    <style>
+        body { background: #ffffff; }
+
+        /* ===== MENU ===== */
+        .menu-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.4);
+            display: none;
+            z-index: 998;
+        }
+
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: -260px;
+            width: 260px;
+            height: 100%;
+            background: #fff;
+            box-shadow: 2px 0 10px rgba(0,0,0,.2);
+            padding: 16px;
+            transition: left .3s ease;
+            z-index: 999;
+        }
+
+        .side-menu.open { left: 0; }
+
+        .menu-link {
+            display: block;
+            padding: 10px 8px;
+            font-size: 15px;
+            color: #333;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+
+        .menu-link.active {
+            background: #e8f5e9;
+            color: #0f9d58;
+            font-weight: bold;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .btn-menu {
+            position: absolute;
+            left: 12px;
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        /* ===== DASHBOARD ===== */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            padding: 14px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
+            text-decoration: none;
+            color: #000;
+        }
+
+        .card-icon { font-size: 36px; margin-bottom: 6px; }
+        .card-title { font-size: 15px; font-weight: bold; }
+        .card-value { margin-top: 6px; font-size: 15px; font-weight: bold; }
+        .card-desc { font-size: 13px; color: #666; margin-top: 4px; }
+
+        .card-extra {
+            margin-top: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #f57c00;
+        }
+
+        /* cores suaves */
+        .clientes { background: #e3f2fd; }
+        .servico { background: #fff3e0; }
+        .orcamentos { background: #e8f5e9; }
+        .agenda { background: #ede7f6; }
+        .financeiro { background: #f1f8e9; }
+        .resumo { background: #fce4ec; }
+    </style>
+</head>
+
+<body>
+
+<div class="menu-overlay" id="menuOverlay"></div>
+
+<div class="side-menu" id="sideMenu">
+    <a class="menu-link" href="index.html">🏠 Início</a>
+    <a class="menu-link" href="pages/clientes.html">👤 Clientes</a>
+    <a class="menu-link" href="pages/servico.html">🛠️ Serviços</a>
+    <a class="menu-link" href="pages/orcamentos.html">📄 Orçamentos</a>
+    <a class="menu-link" href="pages/agenda.html">📅 Agenda</a>
+    <a class="menu-link" href="pages/financeiro.html">💰 Financeiro</a>
+    <a class="menu-link" href="pages/resumo.html">📊 Resumo mensal</a>
+</div>
+
+<div class="app">
+    <div class="header">
+        <span class="btn-menu" id="btnMenu">☰</span>
+        Início
+    </div>
+
+    <div class="dashboard">
+
+        <a href="pages/clientes.html" class="card clientes">
+            <div class="card-icon">👤</div>
+            <div class="card-title">Clientes</div>
+            <div class="card-value" id="totalClientes">0</div>
+            <div class="card-desc">Ativos</div>
+        </a>
+
+        <a href="pages/servico.html" class="card servico">
+            <div class="card-icon">🛠️</div>
+            <div class="card-title">Serviços</div>
+            <div class="card-value" id="servicosPendentes">0</div>
+            <div class="card-desc">Pendentes</div>
+        </a>
+
+        <a href="pages/orcamentos.html" class="card orcamentos">
+            <div class="card-icon">📄</div>
+            <div class="card-title">Orçamentos</div>
+            <div class="card-value" id="totalOrcamentos">0</div>
+            <div class="card-desc">Gerados</div>
+            <div class="card-extra" id="orcPendentes"></div>
+        </a>
+
+        <a href="pages/agenda.html" class="card agenda">
+            <div class="card-icon">📅</div>
+            <div class="card-title">Agenda</div>
+            <div class="card-value" id="proximoRetorno">—</div>
+            <div class="card-desc">Próximo retorno</div>
+        </a>
+
+        <a href="pages/financeiro.html" class="card financeiro">
+            <div class="card-icon">💰</div>
+            <div class="card-title">Financeiro</div>
+            <div class="card-value" id="saldoMes">R$ 0,00</div>
+            <div class="card-desc">Saldo do mês</div>
+        </a>
+
+        <a href="pages/resumo.html" class="card resumo">
+            <div class="card-icon">📊</div>
+            <div class="card-title">Resumo mensal</div>
+            <div class="card-desc">Fechamento</div>
+        </a>
+
+    </div>
+</div>
+
+<script src="js/app.js"></script>
+
+<script>
+const data = getData();
+
+/* CLIENTES */
+document.getElementById("totalClientes").textContent =
+    data.clientes.filter(c => !c.arquivado).length;
+
+/* SERVIÇOS */
+document.getElementById("servicosPendentes").textContent =
+    data.servicos.filter(s => s.status === "pendente").length;
+
+/* ORÇAMENTOS */
+const totalOrc = data.orcamentos.length;
+const pendentes = data.orcamentos.filter(o => o.status === "enviado").length;
+
+document.getElementById("totalOrcamentos").textContent = totalOrc;
+
+document.getElementById("orcPendentes").textContent =
+    pendentes > 0 ? `🔔 ${pendentes} pendente(s)` : "";
+
+/* FINANCEIRO */
+const agora = new Date();
+let saldo = 0;
+
+data.financeiro.forEach(f => {
+    const d = new Date(f.data);
+    if (d.getMonth() === agora.getMonth() &&
+        d.getFullYear() === agora.getFullYear()) {
+        saldo += (f.tipo === "saida" ? -f.valor : f.valor);
+    }
+});
+
+document.getElementById("saldoMes").textContent =
+    "R$ " + formatarMoedaBR(saldo);
+</script>
+
+</body>
+
+</html>
+<script>
+const btnMenu = document.getElementById("btnMenu");
+const sideMenu = document.getElementById("sideMenu");
+const overlay = document.getElementById("menuOverlay");
+
+btnMenu.onclick = () => {
+    sideMenu.classList.add("open");
+    overlay.style.display = "block";
+};
+
+overlay.onclick = () => {
+    sideMenu.classList.remove("open");
+    overlay.style.display = "none";
+};
+</script>
+<script>
+/* ===== AGENDA • PRÓXIMO RETORNO ===== */
+const hoje = new Date();
+hoje.setHours(0, 0, 0, 0);
+
+const proximos = (data.agenda || [])
+    .filter(a =>
+        a.status === "agendado" &&
+        a.dataRetorno &&
+        new Date(a.dataRetorno) >= hoje
+    )
+    .sort((a, b) => new Date(a.dataRetorno) - new Date(b.dataRetorno));
+
+const proximoEl = document.getElementById("proximoRetorno");
+
+if (proximos.length) {
+    const p = proximos[0];
+    const dataFmt = new Date(p.dataRetorno).toLocaleDateString("pt-BR");
+
+    proximoEl.textContent = dataFmt;
+} else {
+    proximoEl.textContent = "—";
+}
+</script>
