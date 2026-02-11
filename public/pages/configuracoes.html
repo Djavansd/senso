@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configuracoes</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+body { background:#f4f6f8; }
+.app { max-width:420px; margin:0 auto; }
+.content { padding:12px; }
+.card {
+    background:#fff;
+    border-radius:14px;
+    padding:14px;
+    box-shadow:0 4px 10px rgba(0,0,0,.06);
+}
+.group { margin-bottom:14px; }
+label { display:block; margin-bottom:6px; font-size:14px; font-weight:600; }
+input[type="color"] {
+    width:100%;
+    height:44px;
+    border:none;
+    border-radius:10px;
+    background:#fff;
+}
+.logo-preview {
+    margin-top:10px;
+    min-height:60px;
+    border:1px dashed #d1d5db;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:8px;
+    background:#fafafa;
+}
+.logo-preview img {
+    max-height:56px;
+    max-width:100%;
+    object-fit:contain;
+}
+.muted {
+    font-size:12px;
+    color:#666;
+    margin-top:6px;
+}
+.actions {
+    display:flex;
+    gap:8px;
+}
+.btn-sec {
+    background:#d1d5db !important;
+    color:#111827;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+    <div class="header">Configuracoes</div>
+    <div class="content">
+        <div class="card">
+            <div class="group">
+                <label for="primaryColor">Cor principal do app</label>
+                <input id="primaryColor" type="color" value="#0a7cff">
+                <div class="muted">Essa cor sera aplicada nos cabecalhos e botoes.</div>
+            </div>
+
+            <div class="group">
+                <label for="logoInput">Logo do orcamento</label>
+                <input id="logoInput" type="file" accept="image/*">
+                <div class="logo-preview" id="logoPreview">Nenhuma logo selecionada</div>
+                <div class="muted">A logo aparece no topo do cabecalho do orcamento.</div>
+            </div>
+
+            <div class="actions">
+                <button id="btnSalvar">Salvar</button>
+                <button id="btnRemoverLogo" class="btn-sec" type="button">Remover logo</button>
+                <button class="btn-sec" type="button" onclick="history.back()">Voltar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+const primaryColorInput = document.getElementById("primaryColor");
+const logoInput = document.getElementById("logoInput");
+const logoPreview = document.getElementById("logoPreview");
+const btnSalvar = document.getElementById("btnSalvar");
+const btnRemoverLogo = document.getElementById("btnRemoverLogo");
+
+let logoDataUrl = "";
+
+function renderLogoPreview() {
+    if (!logoDataUrl) {
+        logoPreview.textContent = "Nenhuma logo selecionada";
+        return;
+    }
+
+    logoPreview.innerHTML = `<img src="${logoDataUrl}" alt="Logo">`;
+}
+
+const settings = getAppSettings();
+primaryColorInput.value = settings.primaryColor || "#0a7cff";
+logoDataUrl = settings.logoDataUrl || "";
+renderLogoPreview();
+
+function aplicarCorEmTempoReal(color) {
+    document.documentElement.style.setProperty("--app-primary", color);
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+        metaTheme.setAttribute("content", color);
+    }
+}
+
+primaryColorInput.addEventListener("input", () => {
+    const color = primaryColorInput.value;
+    aplicarCorEmTempoReal(color);
+
+    // salva automaticamente para refletir no app sem precisar atualizar
+    saveAppSettings({ primaryColor: color });
+});
+
+logoInput.addEventListener("change", () => {
+    const file = logoInput.files && logoInput.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        logoDataUrl = String(reader.result || "");
+        renderLogoPreview();
+    };
+    reader.readAsDataURL(file);
+});
+
+btnRemoverLogo.addEventListener("click", () => {
+    logoDataUrl = "";
+    logoInput.value = "";
+    renderLogoPreview();
+});
+
+btnSalvar.addEventListener("click", () => {
+    saveAppSettings({
+        primaryColor: primaryColorInput.value,
+        logoDataUrl
+    });
+
+    alert("Configuracoes salvas.");
+});
+</script>
+
+</body>
+</html>

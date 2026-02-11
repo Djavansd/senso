@@ -278,3 +278,78 @@ function estornarServico(servicoId) {
 
     saveData(data);
 }
+
+// =========================
+// CONFIGURACOES VISUAIS
+// =========================
+const SETTINGS_KEY = "appSettings";
+
+function getAppSettings() {
+    let settings;
+    try {
+        settings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    } catch {
+        settings = null;
+    }
+
+    if (!settings || typeof settings !== "object") {
+        settings = {};
+    }
+
+    return {
+        primaryColor: settings.primaryColor || "#0a7cff",
+        logoDataUrl: settings.logoDataUrl || ""
+    };
+}
+
+function saveAppSettings(nextSettings) {
+    const current = getAppSettings();
+    const merged = {
+        ...current,
+        ...(nextSettings || {})
+    };
+
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
+    applyAppSettings();
+}
+
+function applyAppSettings() {
+    const settings = getAppSettings();
+
+    document.documentElement.style.setProperty(
+        "--app-primary",
+        settings.primaryColor
+    );
+
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+        metaTheme.setAttribute("content", settings.primaryColor);
+    }
+
+    applyBudgetLogo(settings.logoDataUrl);
+}
+
+function applyBudgetLogo(logoDataUrl) {
+    const empresaEl = document.querySelector(".cabecalho .empresa");
+    if (!empresaEl) return;
+
+    const existing = document.getElementById("orcamentoLogo");
+    if (existing) existing.remove();
+
+    if (!logoDataUrl) return;
+
+    const img = document.createElement("img");
+    img.id = "orcamentoLogo";
+    img.src = logoDataUrl;
+    img.alt = "Logo da empresa";
+    img.style.display = "block";
+    img.style.maxHeight = "56px";
+    img.style.maxWidth = "180px";
+    img.style.marginBottom = "8px";
+    img.style.objectFit = "contain";
+    img.style.objectPosition = "left center";
+
+    empresaEl.prepend(img);
+}
+
+applyAppSettings();

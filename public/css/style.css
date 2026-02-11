@@ -374,3 +374,28 @@ input, select {
 .servico-acoes {
     margin-top: 8px;
 }
+
+/* ===== TEMA DINAMICO ===== */
+:root {
+    --app-primary: #0a7cff;
+}
+
+.header {
+    background: var(--app-primary) !important;
+}
+
+.btn-primary,
+button,
+.btn-pdf {
+    background: var(--app-primary) !important;
+}
+
+.titulo,
+.total {
+    background: var(--app-primary) !important;
+}
+
+.bottom-nav a.active,
+.servico-total {
+    color: var(--app-primary) !important;
+}
