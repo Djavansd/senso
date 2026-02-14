@@ -17,7 +17,8 @@ function getData() {
             servicos: [],
             agenda: [],
             financeiro: [],
-            orcamentos: []
+            orcamentos: [],
+            correcoes: []
         };
     }
 
@@ -26,8 +27,26 @@ function getData() {
     data.agenda ||= [];
     data.financeiro ||= [];
     data.orcamentos ||= [];
+    data.correcoes ||= [];
 
     return data;
+}
+
+function lancamentoFinanceiroValido(f, dataRef) {
+    const data = dataRef || getData();
+    if (!f) return false;
+
+    if (f.origem !== "servico") return true;
+    if (!f.origemServicoId) return false;
+
+    return data.orcamentos.some(
+        o => o.origemServicoId === f.origemServicoId && o.status === "aprovado"
+    );
+}
+
+function listarFinanceiroValido(dataRef) {
+    const data = dataRef || getData();
+    return (data.financeiro || []).filter(f => lancamentoFinanceiroValido(f, data));
 }
 
 function saveData(data) {
@@ -94,6 +113,26 @@ function formatarDocumentoBR(doc) {
     return doc;
 }
 
+function montarDescricaoServicoFinanceiro(servico) {
+    if (!servico || !Array.isArray(servico.itens) || !servico.itens.length) {
+        return `Servico - ${servico?.cliente?.nome || ""}`.trim();
+    }
+
+    const descricoes = servico.itens
+        .map(i => String(i?.descricao || "").trim())
+        .filter(Boolean);
+
+    if (!descricoes.length) {
+        return `Servico - ${servico?.cliente?.nome || ""}`.trim();
+    }
+
+    if (descricoes.length === 1) {
+        return `${descricoes[0]} - ${servico?.cliente?.nome || ""}`.trim();
+    }
+
+    return `${descricoes[0]} +${descricoes.length - 1} item(ns) - ${servico?.cliente?.nome || ""}`.trim();
+}
+
 // =========================
 // SERVIÇOS
 // =========================
@@ -120,10 +159,25 @@ function gerarOrcamentoDoServico(servicoId) {
     const servico = data.servicos.find(s => s.id === servicoId);
     if (!servico) return null;
 
+    if (servico.orcamentoId) {
+        const porId = data.orcamentos.find(o => o.id === servico.orcamentoId);
+        if (porId) return porId.numero;
+    }
+
+    const orcamentoExistente = data.orcamentos.find(
+        o => o.origemServicoId === servico.id
+    );
+    if (orcamentoExistente) {
+        servico.orcamentoId = orcamentoExistente.id;
+        saveData(data);
+        return orcamentoExistente.numero;
+    }
+
     const numero = gerarNumeroOrcamento();
 
+    const novoId = gerarId();
     data.orcamentos.push({
-        id: gerarId(),
+        id: novoId,
         numero,
         criadoEm: new Date().toISOString(),
         origemServicoId: servico.id,
@@ -136,6 +190,7 @@ function gerarOrcamentoDoServico(servicoId) {
         formaPagamento: servico.formaPagamento || ""
     });
 
+    servico.orcamentoId = novoId;
     saveData(data);
     return numero;
 }
@@ -146,7 +201,12 @@ function gerarOrcamentoDoServico(servicoId) {
 function marcarOrcamentoComoAprovado(orcamentoId) {
     const data = getData();
     const orc = data.orcamentos.find(o => o.id === orcamentoId);
-    if (!orc) return;
+    if (!orc) return false;
+
+    if (orc.status === "aprovado") {
+        alert("Este orcamento ja foi aprovado.");
+        return false;
+    }
 
     orc.status = "aprovado";
     orc.aprovadoEm = new Date().toISOString();
@@ -165,7 +225,7 @@ function marcarOrcamentoComoAprovado(orcamentoId) {
             tipo: "entrada",
             origem: "servico",
             origemServicoId: servico.id,
-            descricao: `Serviço - ${servico.cliente.nome}`,
+            descricao: montarDescricaoServicoFinanceiro(servico),
             valor: servico.totalGeral,
             data: servico.executadoEm
         });
@@ -197,79 +257,66 @@ if (servico.intervaloTipo !== "nenhum") {
     }
 
     saveData(data);
+    return true;
 }
 
 // =========================
 // RECUSAR ORÇAMENTO
 // =========================
-function marcarOrcamentoComoAprovado(orcamentoId) {
+function marcarOrcamentoComoRecusado(orcamentoId) {
     const data = getData();
     const orc = data.orcamentos.find(o => o.id === orcamentoId);
-    if (!orc) return;
+    if (!orc) return false;
 
-    // 🔒 TRAVA DEFINITIVA
     if (orc.status === "aprovado") {
-        alert("Este orçamento já foi aprovado.");
-        return;
+        alert("Este orcamento ja foi aprovado.");
+        return false;
     }
 
     if (orc.status === "recusado") {
-        alert("Este orçamento foi recusado e não pode ser aprovado.");
-        return;
+        alert("Este orcamento ja foi recusado.");
+        return false;
     }
 
-    // marca orçamento
-    orc.status = "aprovado";
-    orc.aprovadoEm = new Date().toISOString();
-
-    // executa serviço UMA ÚNICA VEZ
-    const servico = data.servicos.find(
-        s => s.id === orc.origemServicoId
-    );
-
-    if (servico && servico.status !== "executado") {
-        servico.status = "executado";
-        servico.executadoEm = new Date().toISOString();
-
-        // financeiro
-        data.financeiro.push({
-            id: gerarId(),
-            tipo: "entrada",
-            origem: "servico",
-            origemServicoId: servico.id,
-            descricao: `Serviço - ${servico.cliente.nome}`,
-            valor: servico.totalGeral,
-            data: servico.executadoEm
-        });
-
-        // agenda (se tiver retorno)
-        if (servico.intervaloValor) {
-            const retorno = new Date();
-            retorno.setMonth(
-                retorno.getMonth() + servico.intervaloValor
-            );
-
-            data.agenda.push({
-                id: gerarId(),
-                origemServicoId: servico.id,
-                cliente: servico.cliente,
-                dataExecucao: servico.executadoEm,
-                dataRetorno: retorno.toISOString(),
-                status: "agendado",
-                valorServico: servico.totalGeral
-            });
-        }
-    }
+    orc.status = "recusado";
+    orc.recusadoEm = new Date().toISOString();
 
     saveData(data);
+    return true;
 }
-
 
 // =========================
 // CORRIGIR / APAGAR SERVIÇO
 // =========================
 function estornarServico(servicoId) {
     const data = getData();
+    const servico = data.servicos.find(s => s.id === servicoId);
+    const lancamentosRemovidos = data.financeiro.filter(
+        f => f.origemServicoId === servicoId
+    );
+
+    if (servico) {
+        const impactoSaldo = lancamentosRemovidos.reduce((acc, f) => {
+            if (f.tipo === "saida") return acc + Number(f.valor || 0);
+            return acc - Number(f.valor || 0);
+        }, 0);
+
+        const itens = Array.isArray(servico.itens) ? servico.itens : [];
+        const itensResumo = itens
+            .map(i => String(i?.descricao || "").trim())
+            .filter(Boolean)
+            .join(" - ");
+
+        data.correcoes.push({
+            id: gerarId(),
+            servicoId,
+            data: new Date().toISOString(),
+            clienteNome: servico?.cliente?.nome || "",
+            totalServico: Number(servico?.totalGeral || 0),
+            impactoSaldo,
+            itensResumo
+        });
+    }
 
     data.servicos = data.servicos.filter(s => s.id !== servicoId);
     data.orcamentos = data.orcamentos.filter(o => o.origemServicoId !== servicoId);
@@ -298,7 +345,13 @@ function getAppSettings() {
 
     return {
         primaryColor: settings.primaryColor || "#0a7cff",
-        logoDataUrl: settings.logoDataUrl || ""
+        buttonTextColor: settings.buttonTextColor || "#ffffff",
+        buttonSecondaryTextColor: settings.buttonSecondaryTextColor || "#111827",
+        logoDataUrl: settings.logoDataUrl || "",
+        companyName: settings.companyName || "PROICE CLIMATIZACAO",
+        companyDocument: settings.companyDocument || "42.937.499/0001-08",
+        companyAddress: settings.companyAddress || "Sao Paulo",
+        companyPhone: settings.companyPhone || "(11) 99284-1312"
     };
 }
 
@@ -320,13 +373,53 @@ function applyAppSettings() {
         "--app-primary",
         settings.primaryColor
     );
+    document.documentElement.style.setProperty(
+        "--app-button-text",
+        settings.buttonTextColor || "#ffffff"
+    );
+    document.documentElement.style.setProperty(
+        "--app-button-secondary-text",
+        settings.buttonSecondaryTextColor || "#111827"
+    );
 
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) {
         metaTheme.setAttribute("content", settings.primaryColor);
     }
 
+    applyBudgetCompanyInfo(settings);
     applyBudgetLogo(settings.logoDataUrl);
+}
+
+function applyBudgetCompanyInfo(settings) {
+    const empresaEl = document.querySelector(".cabecalho .empresa");
+    if (!empresaEl) return;
+
+    const companyName = settings.companyName || "PROICE CLIMATIZACAO";
+    const companyDocument = settings.companyDocument || "42.937.499/0001-08";
+    const companyAddress = settings.companyAddress || "Sao Paulo";
+    const companyPhone = settings.companyPhone || "(11) 99284-1312";
+
+    empresaEl.innerHTML = "";
+
+    const strong = document.createElement("strong");
+    strong.textContent = companyName;
+    empresaEl.appendChild(strong);
+    empresaEl.appendChild(document.createElement("br"));
+
+    empresaEl.appendChild(
+        document.createTextNode(`CNPJ: ${companyDocument}`)
+    );
+    empresaEl.appendChild(document.createElement("br"));
+
+    empresaEl.appendChild(
+        document.createTextNode(`Endereco: ${companyAddress}`)
+    );
+    empresaEl.appendChild(document.createElement("br"));
+
+    empresaEl.appendChild(
+        document.createTextNode(`Telefone: ${companyPhone}`)
+    );
 }
 
 function applyBudgetLogo(logoDataUrl) {
@@ -343,8 +436,10 @@ function applyBudgetLogo(logoDataUrl) {
     img.src = logoDataUrl;
     img.alt = "Logo da empresa";
     img.style.display = "block";
-    img.style.maxHeight = "56px";
-    img.style.maxWidth = "180px";
+    img.style.height = "110px";
+    img.style.maxHeight = "110px";
+    img.style.maxWidth = "320px";
+    img.style.width = "auto";
     img.style.marginBottom = "8px";
     img.style.objectFit = "contain";
     img.style.objectPosition = "left center";
@@ -353,3 +448,44 @@ function applyBudgetLogo(logoDataUrl) {
 }
 
 applyAppSettings();
+
+// =========================
+// ATUALIZACAO AUTOMATICA DE TELA
+// =========================
+function enableAutoRefreshOnDataChange() {
+    const isConfigPage = /\/configuracoes\.html$/i.test(location.pathname);
+    if (isConfigPage) return;
+
+    let lastDataRaw = localStorage.getItem(STORAGE_KEY) || "";
+    let lastSettingsRaw = localStorage.getItem(SETTINGS_KEY) || "";
+
+    function hasChanged() {
+        const currentDataRaw = localStorage.getItem(STORAGE_KEY) || "";
+        const currentSettingsRaw = localStorage.getItem(SETTINGS_KEY) || "";
+        return currentDataRaw !== lastDataRaw || currentSettingsRaw !== lastSettingsRaw;
+    }
+
+    function refreshIfChanged() {
+        if (!hasChanged()) return;
+        location.reload();
+    }
+
+    window.addEventListener("storage", event => {
+        if (event.key === STORAGE_KEY || event.key === SETTINGS_KEY) {
+            refreshIfChanged();
+        }
+    });
+
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshIfChanged();
+    });
+
+    window.addEventListener("focus", refreshIfChanged);
+
+    // fallback para navegadores mobile onde alguns eventos sao limitados
+    setInterval(() => {
+        if (!document.hidden) refreshIfChanged();
+    }, 15000);
+}
+
+enableAutoRefreshOnDataChange();

@@ -19,6 +19,7 @@
 .resumo-linha {
     display: flex;
     justify-content: space-between;
+    gap: 8px;
     font-size: 14px;
     margin: 6px 0;
 }
@@ -40,7 +41,8 @@
 
 .bloco h3 {
     margin-top: 0;
-    font-size: 15px;
+    margin-bottom: 10px;
+    font-size: 16px;
 }
 
 .comparacao {
@@ -50,6 +52,46 @@
 
 .up { color: #1e8e3e; font-weight: bold; }
 .down { color: #d93025; font-weight: bold; }
+
+.detalhe-lista {
+    display: grid;
+    gap: 8px;
+}
+
+.detalhe-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px;
+    background: #fafafa;
+}
+
+.detalhe-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.detalhe-titulo {
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.detalhe-sub {
+    margin-top: 3px;
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.35;
+}
+
+.detalhe-valor {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.detalhe-vazio {
+    font-size: 13px;
+    color: #6b7280;
+}
 
 .btn {
     width: 100%;
@@ -66,69 +108,84 @@
 
 <body>
 <div class="app">
-<div class="header">Resumo do mês</div>
+<div class="header">Resumo do mes</div>
 
 <div class="content">
 
 <select id="filtroMes"></select>
 
-<!-- ===== RESULTADO ===== -->
 <div class="resumo-card">
     <div class="resumo-linha">
         <span>Entradas</span>
         <strong id="resumoEntradas">R$ 0,00</strong>
     </div>
     <div class="resumo-linha">
-        <span>Saídas</span>
+        <span>Saidas</span>
         <strong id="resumoSaidas">R$ 0,00</strong>
     </div>
-
     <div class="resumo-total">
         Saldo final<br>
         <span id="resumoSaldo">R$ 0,00</span>
     </div>
 </div>
 
-<!-- ===== COMPOSIÇÃO ===== -->
 <div class="bloco">
-    <h3>Composição do resultado</h3>
+    <h3>Composicao do resultado</h3>
 
     <div class="resumo-linha">
-        <span>Serviços executados</span>
+        <span>Servicos executados</span>
         <strong id="resumoServicos">0</strong>
     </div>
 
     <div class="resumo-linha">
-        <span>Faturamento em serviços</span>
+        <span>Faturamento em servicos</span>
         <strong id="resumoFaturamento">R$ 0,00</strong>
     </div>
 
     <div class="resumo-linha">
-        <span>Estornos</span>
-        <strong id="resumoEstornos">0</strong>
+        <span>Correcoes de servico</span>
+        <strong id="resumoCorrecoes">0</strong>
     </div>
 
     <div class="resumo-linha">
-        <span>Impacto dos estornos</span>
-        <strong id="resumoEstornosValor">R$ 0,00</strong>
+        <span>Impacto das correcoes no saldo</span>
+        <strong id="resumoCorrecoesValor">R$ 0,00</strong>
     </div>
 
     <div class="resumo-linha">
-        <span>Ajustes manuais</span>
-        <strong id="resumoAjustes">R$ 0,00</strong>
+        <span>Ganhos manuais</span>
+        <strong id="resumoGanhosManuais">R$ 0,00</strong>
+    </div>
+
+    <div class="resumo-linha">
+        <span>Gastos manuais</span>
+        <strong id="resumoGastosManuais">R$ 0,00</strong>
     </div>
 </div>
 
-<!-- ===== COMPARAÇÃO ===== -->
 <div class="bloco">
-    <h3>Comparação com mês anterior</h3>
-    <div id="comparacaoTexto" class="comparacao">—</div>
+    <h3>Servicos do mes</h3>
+    <div id="listaServicosMes" class="detalhe-lista"></div>
+</div>
+
+<div class="bloco">
+    <h3>Gastos do mes</h3>
+    <div id="listaGastosMes" class="detalhe-lista"></div>
+</div>
+
+<div class="bloco">
+    <h3>Correcoes do mes</h3>
+    <div id="listaCorrecoesMes" class="detalhe-lista"></div>
+</div>
+
+<div class="bloco">
+    <h3>Comparacao com mes anterior</h3>
+    <div id="comparacaoTexto" class="comparacao">-</div>
 </div>
 
 <div class="bloco">
     <p>
-        Este resumo apresenta uma visão gerencial do mês selecionado.
-        Nenhum dado é alterado ou apagado.
+        O resumo considera financeiro valido, servicos executados e correcoes de servico registradas no periodo.
     </p>
 </div>
 
@@ -147,18 +204,68 @@ const resumoSaidas = document.getElementById("resumoSaidas");
 const resumoSaldo = document.getElementById("resumoSaldo");
 const resumoServicos = document.getElementById("resumoServicos");
 const resumoFaturamento = document.getElementById("resumoFaturamento");
-const resumoEstornos = document.getElementById("resumoEstornos");
-const resumoEstornosValor = document.getElementById("resumoEstornosValor");
-const resumoAjustes = document.getElementById("resumoAjustes");
+const resumoCorrecoes = document.getElementById("resumoCorrecoes");
+const resumoCorrecoesValor = document.getElementById("resumoCorrecoesValor");
+const resumoGanhosManuais = document.getElementById("resumoGanhosManuais");
+const resumoGastosManuais = document.getElementById("resumoGastosManuais");
+const listaServicosMes = document.getElementById("listaServicosMes");
+const listaGastosMes = document.getElementById("listaGastosMes");
+const listaCorrecoesMes = document.getElementById("listaCorrecoesMes");
 const comparacaoTexto = document.getElementById("comparacaoTexto");
 
 let mesAtual;
 
-/* ===== MESES ===== */
+function escapeHtml(value) {
+    return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+}
+
+function formatarMoedaComSinal(valor) {
+    if (!valor) return "R$ 0,00";
+    const prefixo = valor > 0 ? "+ " : "- ";
+    return `${prefixo}R$ ${formatarMoedaBR(Math.abs(valor))}`;
+}
+
+function mesmoMes(isoDate, ano, mes) {
+    if (!isoDate) return false;
+    const d = new Date(isoDate);
+    return d.getFullYear() === ano && d.getMonth() === mes;
+}
+
+function resumoItensServico(servico) {
+    const itens = Array.isArray(servico?.itens) ? servico.itens : [];
+    const descricoes = itens
+        .map(i => String(i?.descricao || "").trim())
+        .filter(Boolean);
+
+    if (!descricoes.length) return "Sem itens descritos";
+    if (descricoes.length === 1) return descricoes[0];
+    return `${descricoes[0]} +${descricoes.length - 1} item(ns)`;
+}
+
 function carregarMeses() {
+    const data = getData();
     const meses = new Set();
-    getData().financeiro.forEach(f => {
+
+    listarFinanceiroValido(data).forEach(f => {
+        if (!f?.data) return;
         const d = new Date(f.data);
+        meses.add(`${d.getFullYear()}-${d.getMonth()}`);
+    });
+
+    (data.servicos || []).forEach(s => {
+        if (!s?.executadoEm) return;
+        const d = new Date(s.executadoEm);
+        meses.add(`${d.getFullYear()}-${d.getMonth()}`);
+    });
+
+    (data.correcoes || []).forEach(c => {
+        if (!c?.data) return;
+        const d = new Date(c.data);
         meses.add(`${d.getFullYear()}-${d.getMonth()}`);
     });
 
@@ -182,53 +289,105 @@ function carregarMeses() {
     mesAtual = filtroMes.value;
 }
 
-/* ===== RESUMO ===== */
 function calcularResumo(ano, mes) {
     const data = getData();
 
     let entradas = 0;
     let saidas = 0;
-    let ajustes = 0;
-    let estornosQtd = 0;
-    let estornosValor = 0;
     let servicosQtd = 0;
     let faturamento = 0;
+    let correcoesQtd = 0;
+    let correcoesImpacto = 0;
+    let ganhosManuais = 0;
+    let gastosManuais = 0;
 
-    data.financeiro.forEach(f => {
-        const d = new Date(f.data);
-        if (d.getMonth() === mes && d.getFullYear() === ano) {
-            if (f.tipo === "entrada") entradas += f.valor;
-            if (f.tipo === "saida") saidas += f.valor;
-            if (f.tipo === "ajuste") ajustes += f.valor;
-            if (f.origem === "estorno") {
-                estornosQtd++;
-                estornosValor += f.valor;
+    const servicosDetalhes = [];
+    const gastosDetalhes = [];
+    const correcoesDetalhes = [];
+
+    listarFinanceiroValido(data).forEach(f => {
+        if (!mesmoMes(f.data, ano, mes)) return;
+
+        const valor = Number(f.valor || 0);
+        if (f.tipo === "entrada") entradas += valor;
+        if (f.tipo === "saida") saidas += valor;
+
+        if (f.origem !== "servico") {
+            if (f.tipo === "entrada") ganhosManuais += valor;
+            if (f.tipo === "saida") {
+                gastosManuais += valor;
+                gastosDetalhes.push({
+                    titulo: f.descricao || "Gasto sem descricao",
+                    sub: new Date(f.data).toLocaleDateString("pt-BR"),
+                    valor: -valor
+                });
             }
         }
     });
 
-    data.servicos.forEach(s => {
-        if (s.executadoEm) {
-            const d = new Date(s.executadoEm);
-            if (d.getMonth() === mes && d.getFullYear() === ano) {
-                if (s.status === "executado") {
-                    servicosQtd++;
-                    faturamento += s.totalGeral || 0;
-                }
-            }
-        }
+    (data.servicos || []).forEach(s => {
+        if (s.status !== "executado" || !mesmoMes(s.executadoEm, ano, mes)) return;
+
+        const total = Number(s.totalGeral || 0);
+        servicosQtd++;
+        faturamento += total;
+
+        servicosDetalhes.push({
+            titulo: s?.cliente?.nome || "Cliente sem nome",
+            sub: `${resumoItensServico(s)} - ${new Date(s.executadoEm).toLocaleDateString("pt-BR")}`,
+            valor: total
+        });
     });
+
+    (data.correcoes || []).forEach(c => {
+        if (!mesmoMes(c.data, ano, mes)) return;
+
+        const impacto = Number(c.impactoSaldo || 0);
+        correcoesQtd++;
+        correcoesImpacto += impacto;
+
+        correcoesDetalhes.push({
+            titulo: c.clienteNome || "Cliente nao informado",
+            sub: c.itensResumo || "Servico sem itens",
+            valor: impacto
+        });
+    });
+
+    servicosDetalhes.sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor));
+    gastosDetalhes.sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor));
+    correcoesDetalhes.sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor));
 
     return {
         entradas,
         saidas,
         saldo: entradas - saidas,
-        ajustes,
-        estornosQtd,
-        estornosValor,
         servicosQtd,
-        faturamento
+        faturamento,
+        correcoesQtd,
+        correcoesImpacto,
+        ganhosManuais,
+        gastosManuais,
+        servicosDetalhes,
+        gastosDetalhes,
+        correcoesDetalhes
     };
+}
+
+function renderLista(container, itens, mensagemVazia) {
+    if (!itens.length) {
+        container.innerHTML = `<div class="detalhe-vazio">${escapeHtml(mensagemVazia)}</div>`;
+        return;
+    }
+
+    container.innerHTML = itens.map(item => `
+        <div class="detalhe-item">
+            <div class="detalhe-head">
+                <div class="detalhe-titulo">${escapeHtml(item.titulo)}</div>
+                <div class="detalhe-valor">${escapeHtml(formatarMoedaComSinal(item.valor))}</div>
+            </div>
+            ${item.sub ? `<div class="detalhe-sub">${escapeHtml(item.sub)}</div>` : ""}
+        </div>
+    `).join("");
 }
 
 function renderResumo() {
@@ -240,11 +399,15 @@ function renderResumo() {
     resumoSaldo.textContent = "R$ " + formatarMoedaBR(atual.saldo);
     resumoServicos.textContent = atual.servicosQtd;
     resumoFaturamento.textContent = "R$ " + formatarMoedaBR(atual.faturamento);
-    resumoEstornos.textContent = atual.estornosQtd;
-    resumoEstornosValor.textContent = "R$ " + formatarMoedaBR(atual.estornosValor);
-    resumoAjustes.textContent = "R$ " + formatarMoedaBR(atual.ajustes);
+    resumoCorrecoes.textContent = atual.correcoesQtd;
+    resumoCorrecoesValor.textContent = formatarMoedaComSinal(atual.correcoesImpacto);
+    resumoGanhosManuais.textContent = "R$ " + formatarMoedaBR(atual.ganhosManuais);
+    resumoGastosManuais.textContent = "R$ " + formatarMoedaBR(atual.gastosManuais);
 
-    // comparação
+    renderLista(listaServicosMes, atual.servicosDetalhes, "Nenhum servico executado neste mes.");
+    renderLista(listaGastosMes, atual.gastosDetalhes, "Nenhum gasto manual neste mes.");
+    renderLista(listaCorrecoesMes, atual.correcoesDetalhes, "Nenhuma correcao registrada neste mes.");
+
     const mesAnterior = new Date(ano, mes - 1, 1);
     const anterior = calcularResumo(
         mesAnterior.getFullYear(),
@@ -253,13 +416,13 @@ function renderResumo() {
 
     const diff = atual.saldo - anterior.saldo;
 
-    if (anterior.entradas || anterior.saidas) {
+    if (anterior.entradas || anterior.saidas || anterior.servicosQtd || anterior.correcoesQtd) {
         comparacaoTexto.innerHTML =
             diff >= 0
-            ? `<span class="up">Saldo ↑ R$ ${formatarMoedaBR(diff)}</span> em relação ao mês anterior`
-            : `<span class="down">Saldo ↓ R$ ${formatarMoedaBR(Math.abs(diff))}</span> em relação ao mês anterior`;
+            ? `<span class="up">Saldo subiu ${formatarMoedaComSinal(diff)}</span> em relacao ao mes anterior`
+            : `<span class="down">Saldo caiu R$ ${formatarMoedaBR(Math.abs(diff))}</span> em relacao ao mes anterior`;
     } else {
-        comparacaoTexto.textContent = "Sem dados para comparação.";
+        comparacaoTexto.textContent = "Sem dados para comparacao.";
     }
 }
 

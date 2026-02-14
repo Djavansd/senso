@@ -49,10 +49,38 @@
 .item{
   display:flex;
   justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
   font-size:13px;
   margin-bottom:6px;
   padding:8px 10px;
   border-radius:8px;
+}
+
+.item-left{
+  flex:1;
+  min-width:0;
+}
+
+.item-titulo{
+  font-weight:600;
+  line-height:1.3;
+  word-break:break-word;
+}
+
+.item-sub{
+  margin-top:3px;
+  font-size:12px;
+  opacity:.85;
+  word-break:break-word;
+}
+
+.item-right{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+  font-weight:700;
 }
 
 /* GANHO */
@@ -160,7 +188,7 @@ let mesAtual;
 /* MESES */
 function carregarMeses(){
   const meses=new Set();
-  getData().financeiro.forEach(f=>{
+  listarFinanceiroValido().forEach(f=>{
     const d=new Date(f.data);
     meses.add(`${d.getFullYear()}-${d.getMonth()}`);
   });
@@ -183,7 +211,7 @@ function carregarMeses(){
 function calcularSaldo(){
   const [a,m]=mesAtual.split("-").map(Number);
   let saldo=0;
-  getData().financeiro.forEach(f=>{
+  listarFinanceiroValido().forEach(f=>{
     const d=new Date(f.data);
     if(d.getMonth()===m && d.getFullYear()===a){
       saldo += f.tipo==="saida"? -f.valor : f.valor;
@@ -272,23 +300,69 @@ function apagarLancamento(id){
   renderExtrato();
 }
 
+function descricaoExtrato(f) {
+  if (f?.origem !== "servico" || !f?.origemServicoId) {
+    return {
+      titulo: f?.descricao || "Sem descricao",
+      sub: ""
+    };
+  }
+
+  const servico = (getData().servicos || []).find(s => s.id === f.origemServicoId);
+  if (!servico || !Array.isArray(servico.itens) || !servico.itens.length) {
+    return {
+      titulo: f?.descricao || "Servico",
+      sub: servico?.cliente?.nome || ""
+    };
+  }
+
+  const descricoes = servico.itens
+    .map(i => String(i?.descricao || "").trim())
+    .filter(Boolean);
+
+  if (!descricoes.length) {
+    return {
+      titulo: f?.descricao || "Servico",
+      sub: servico?.cliente?.nome || ""
+    };
+  }
+
+  const contador = new Map();
+  descricoes.forEach(d => {
+    contador.set(d, (contador.get(d) || 0) + 1);
+  });
+
+  const resumoItens = [...contador.entries()]
+    .map(([desc, qtd]) => qtd > 1 ? `${desc} (${qtd}x)` : desc)
+    .join(" • ");
+
+  return {
+    titulo: resumoItens,
+    sub: servico?.cliente?.nome || ""
+  };
+}
+
 function renderExtrato(){
   listaExtrato.innerHTML="";
   const [a,m]=mesAtual.split("-").map(Number);
-  getData().financeiro
+  listarFinanceiroValido()
     .filter(f=>{
       const d=new Date(f.data);
       return d.getMonth()===m && d.getFullYear()===a;
     })
     .sort((a,b)=>new Date(b.data)-new Date(a.data))
     .forEach(f=>{
+      const info = descricaoExtrato(f);
       listaExtrato.innerHTML+=`
         <div class="item ${f.tipo}">
-          <span>${f.descricao}</span>
-          <span>
+          <div class="item-left">
+            <div class="item-titulo">${info.titulo}</div>
+            ${info.sub ? `<div class="item-sub">${info.sub}</div>` : ""}
+          </div>
+          <div class="item-right">
             ${f.tipo==="saida"?"-":"+"} R$ ${formatarMoedaBR(f.valor)}
             <button class="btn-del" onclick="apagarLancamento('${f.id}')">🗑️</button>
-          </span>
+          </div>
         </div>`;
     });
 }

@@ -207,8 +207,8 @@ body {
 
 /* Botões */
 button {
-  background: #0a7cff;
-  color: #fff;
+  background: var(--app-primary);
+  color: var(--app-button-text);
   border: none;
   border-radius: 10px;
   padding: 10px;
@@ -378,6 +378,8 @@ input, select {
 /* ===== TEMA DINAMICO ===== */
 :root {
     --app-primary: #0a7cff;
+    --app-button-text: #ffffff;
+    --app-button-secondary-text: #111827;
 }
 
 .header {
@@ -385,9 +387,15 @@ input, select {
 }
 
 .btn-primary,
-button,
 .btn-pdf {
     background: var(--app-primary) !important;
+    color: var(--app-button-text) !important;
+}
+
+.btn-voltar,
+.btn-sec,
+.btn-archive {
+    color: var(--app-button-secondary-text) !important;
 }
 
 .titulo,

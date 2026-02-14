@@ -16,15 +16,19 @@ body { background:#eee; }
     padding:16px;
     border:1px solid #ccc;
     font-size:14px;
+    box-sizing:border-box;
 }
 .cabecalho {
     display:flex;
     justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
     border-bottom:1px solid #000;
     padding-bottom:10px;
 }
-.empresa { font-size:13px; }
+.empresa { font-size:13px; flex:1; min-width:0; }
 .caixa-data {
+    flex-shrink:0;
     border:1px solid #000;
     padding:6px 10px;
     text-align:center;
@@ -41,6 +45,12 @@ body { background:#eee; }
     justify-content:space-between;
     gap:10px;
 }
+.bloco-flex .bloco {
+    flex:1;
+    min-width:0;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+}
 .titulo {
     background:#0d3b66;
     color:#fff;
@@ -53,11 +63,14 @@ table {
     width:100%;
     border-collapse:collapse;
     margin-top:6px;
+    table-layout: fixed;
 }
 th, td {
     border:1px solid #000;
     padding:6px;
     font-size:13px;
+    word-break:break-word;
+    overflow-wrap:anywhere;
 }
 th { background:#e6eef6; }
 .total {
@@ -70,9 +83,24 @@ th { background:#e6eef6; }
 }
 .observacoes {
     border:1px solid #000;
-    height:120px;
+    min-height:120px;
+    height:auto;
     margin-top:8px;
     padding:6px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    overflow-wrap:anywhere;
+    line-height:1.4;
+    break-inside:auto;
+    page-break-inside:auto;
+}
+.cabecalho,
+.bloco-flex,
+.titulo,
+.total,
+table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
 }
 .botoes {
     margin-top:12px;
@@ -203,6 +231,7 @@ th { background:#e6eef6; }
 
 <div class="botoes">
     <button class="btn btn-pdf" onclick="gerarPDF()">📄 PDF</button>
+    <button class="btn btn-pdf" onclick="enviarWhatsAppPDF()">📲 WhatsApp</button>
     <button id="btnAprovar" class="btn btn-pdf" onclick="aprovar()">✅ Aprovar</button>
     <button id="btnRecusar" class="btn btn-voltar" onclick="recusar()">❌ Recusar</button>
     <button class="btn btn-voltar" onclick="history.back()">← Voltar</button>
@@ -215,6 +244,8 @@ th { background:#e6eef6; }
 </div>
 
 <script src="../js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
 const id = new URLSearchParams(location.search).get("id");
@@ -224,6 +255,7 @@ const orc = data.orcamentos.find(o => o.id === id);
 if (!orc) {
     alert("Orçamento não encontrado");
     history.back();
+    throw new Error("Orcamento nao encontrado");
 }
 
 dataEmissao.textContent = new Date(orc.criadoEm).toLocaleDateString("pt-BR");
@@ -246,7 +278,9 @@ orc.itens.forEach(i => {
 });
 
 valorTotal.textContent = formatarMoedaBR(orc.total);
-obsBox.innerHTML = "<strong>OBSERVAÇÕES:</strong><br>" + (orc.observacoes || "—");
+const textoObs = (orc.observacoes || "—");
+obsBox.innerHTML = "<strong>OBSERVAÇÕES:</strong><br>";
+obsBox.appendChild(document.createTextNode(textoObs));
 
 // 🔒 trava botões se já decidido
 if (orc.status !== "enviado") {
@@ -257,21 +291,367 @@ if (orc.status !== "enviado") {
 }
 
 function gerarPDF() {
-    statusPdf.style.display = "flex";
-    setTimeout(() => {
-        window.print();
-        statusPdf.style.display = "none";
-    }, 300);
+    gerarArquivoPdf();
 }
 
+
+function normalizarTelefoneWhats(telefone) {
+    const digitos = String(telefone || "").replace(/\D/g, "");
+    if (!digitos) return "";
+    if (digitos.startsWith("55")) return digitos;
+    if (digitos.length >= 10 && digitos.length <= 11) return `55${digitos}`;
+    return digitos;
+}
+
+async function gerarBlobPdfOrcamento() {
+    const originalStatus = statusPdf.innerHTML;
+    statusPdf.innerHTML = '<span class="loader"></span> Gerando PDF para WhatsApp...';
+    statusPdf.style.display = "flex";
+
+    try {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            if (window.html2pdf) {
+                const clone = document.querySelector(".orcamento").cloneNode(true);
+                const cloneBotoes = clone.querySelector(".botoes");
+                const cloneStatus = clone.querySelector("#statusPdf");
+                if (cloneBotoes) cloneBotoes.remove();
+                if (cloneStatus) cloneStatus.remove();
+
+                clone.style.width = "760px";
+                clone.style.maxWidth = "760px";
+                clone.style.margin = "0 auto";
+                clone.style.boxSizing = "border-box";
+                clone.style.background = "#fff";
+
+                const worker = window.html2pdf().set({
+                    margin: [8, 8, 8, 8],
+                    image: { type: "jpeg", quality: 0.96 },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: "#ffffff",
+                        scrollX: 0,
+                        scrollY: 0,
+                        windowWidth: 760
+                    },
+                    pagebreak: { mode: ["css", "legacy"] },
+                    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+                }).from(clone).toPdf();
+
+                const pdfFallback = await worker.get("pdf");
+                return pdfFallback.output("blob");
+            }
+
+            throw new Error("Bibliotecas de PDF indisponiveis.");
+        }
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            unit: "mm",
+            format: "a4",
+            orientation: "portrait"
+        });
+
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const m = 9;
+        const contentW = pageW - (m * 2);
+        const rightColW = 72;
+        const leftColW = contentW - rightColW - 6;
+        const rowH = 10.5;
+        const lineGap = 5;
+        const lineGapObs = 5.2;
+        const settings = getAppSettings();
+        const colorAccent = [200, 161, 107];
+        const colorHead = [223, 230, 238];
+
+        let y = m;
+
+        function ensureSpace(heightNeeded) {
+            if (y + heightNeeded <= pageH - m) return;
+            pdf.addPage();
+            drawPageFrame();
+            y = m;
+        }
+
+        function drawRect(x, yy, w, h) {
+            pdf.setDrawColor(80, 80, 80);
+            pdf.rect(x, yy, w, h);
+        }
+
+        function drawPageFrame() {
+            pdf.setDrawColor(120, 120, 120);
+            pdf.setLineWidth(0.35);
+            pdf.rect(4.5, 4.5, pageW - 9, pageH - 9);
+        }
+
+        function money(v) {
+            return `R$ ${formatarMoedaBR(Number(v || 0))}`;
+        }
+
+        drawPageFrame();
+
+        // Cabecalho empresa
+        y += 3;
+
+        const headerBaseY = y;
+        const logoBoxW = 46;
+        const logoBoxH = 34;
+        const logoBoxY = headerBaseY + 2;
+        let textX = m;
+        if (settings.logoDataUrl) {
+            try {
+                pdf.addImage(settings.logoDataUrl, "PNG", m + 1, logoBoxY + 1, logoBoxW - 2, logoBoxH - 2);
+                textX = m + logoBoxW + 4;
+            } catch {}
+        }
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(13.5);
+        pdf.text((settings.companyName || "PROICE CLIMATIZACAO"), m, headerBaseY + logoBoxH + 10);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.8);
+        pdf.text(`CNPJ: ${settings.companyDocument || "—"}`, m, headerBaseY + logoBoxH + 15.2);
+        pdf.text(`Endereco: ${settings.companyAddress || "—"}`, m, headerBaseY + logoBoxH + 19.7);
+        pdf.text(`Telefone: ${settings.companyPhone || "—"}`, m, headerBaseY + logoBoxH + 24.2);
+
+        drawRect(pageW - m - rightColW, headerBaseY + 2, rightColW, 23);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(7.2);
+        const dataBoxCenterX = pageW - m - rightColW + (rightColW / 2);
+        pdf.text("DATA DE EMISSAO", dataBoxCenterX, headerBaseY + 10, { align: "center" });
+        pdf.setFontSize(11.8);
+        pdf.text(new Date(orc.criadoEm).toLocaleDateString("pt-BR"), dataBoxCenterX, headerBaseY + 18, { align: "center" });
+
+        y = headerBaseY + logoBoxH + 27;
+        pdf.setDrawColor(100, 100, 100);
+        pdf.line(m, y, pageW - m, y);
+        y += 7;
+
+        // Dados cliente
+        const clienteGap = 6;
+        const clienteBoxH = 26;
+        drawRect(m, y, leftColW, clienteBoxH);
+        drawRect(m + leftColW + clienteGap, y, rightColW, clienteBoxH);
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(10.5);
+        pdf.text(`CLIENTE: ${orc?.cliente?.nome || "—"}`, m + 4, y + 8);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9.6);
+        pdf.text(`CPF/CNPJ: ${formatarDocumentoBR(orc?.cliente?.documento) || "—"}`, m + 4, y + 13.8);
+        const endCli = String(orc?.cliente?.endereco || "—");
+        const endCliText = pdf.splitTextToSize(`ENDERECO: ${endCli}`, leftColW - 8);
+        pdf.text(endCliText, m + 4, y + 19.5);
+
+        const telCli = String(orc?.cliente?.telefone || "—");
+        const fp = String(orc?.formaPagamento || "—");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(10.5);
+        pdf.text("TELEFONE:", m + leftColW + clienteGap + 4, y + 8);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9.8);
+        pdf.text(String(telCli), m + leftColW + clienteGap + 4, y + 14);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(10.5);
+        pdf.text("FORMA PGTO:", m + leftColW + clienteGap + 4, y + 20);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9.8);
+        pdf.text(String(fp), m + leftColW + clienteGap + 36, y + 20);
+
+        y += clienteBoxH + 8;
+
+        // Titulo
+        pdf.setFillColor(...colorAccent);
+        pdf.rect(m, y, contentW, 9, "F");
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        pdf.text("ORCAMENTO", pageW / 2, y + 6.2, { align: "center" });
+        pdf.setTextColor(0, 0, 0);
+        y += 12;
+
+        // Tabela
+        const colQtd = 18;
+        const colValor = 44;
+        const colSub = 44;
+        const colDesc = contentW - colQtd - colValor - colSub;
+
+        function drawTableHeader() {
+            ensureSpace(14);
+            drawRect(m, y, contentW, rowH);
+            drawRect(m, y, colDesc, rowH);
+            drawRect(m + colDesc, y, colQtd, rowH);
+            drawRect(m + colDesc + colQtd, y, colValor, rowH);
+            drawRect(m + colDesc + colQtd + colValor, y, colSub, rowH);
+            pdf.setFillColor(...colorHead);
+            pdf.rect(m, y, contentW, rowH, "F");
+            drawRect(m, y, colDesc, rowH);
+            drawRect(m + colDesc, y, colQtd, rowH);
+            drawRect(m + colDesc + colQtd, y, colValor, rowH);
+            drawRect(m + colDesc + colQtd + colValor, y, colSub, rowH);
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(11);
+            pdf.text("DESCRICAO", m + 4, y + 6.8);
+            pdf.text("QTD", m + colDesc + colQtd / 2, y + 6.8, { align: "center" });
+            pdf.text("VALOR", m + colDesc + colQtd + colValor / 2, y + 6.8, { align: "center" });
+            pdf.text("SUBTOTAL", m + colDesc + colQtd + colValor + colSub / 2, y + 6.8, { align: "center" });
+            y += rowH;
+        }
+
+        drawTableHeader();
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10.8);
+
+        (orc.itens || []).forEach(item => {
+            const descricao = String(item?.descricao || "—");
+            const lines = pdf.splitTextToSize(descricao, colDesc - 5);
+            const cellH = Math.max(10.5, lines.length * lineGap + 4);
+
+            ensureSpace(cellH + 2);
+            if (y > pageH - m - 30) {
+                pdf.addPage();
+                y = m;
+                drawTableHeader();
+            }
+
+            drawRect(m, y, colDesc, cellH);
+            drawRect(m + colDesc, y, colQtd, cellH);
+            drawRect(m + colDesc + colQtd, y, colValor, cellH);
+            drawRect(m + colDesc + colQtd + colValor, y, colSub, cellH);
+
+            const baselineY = y + Math.min(cellH - 3.5, 7.5);
+            pdf.text(lines, m + 4, y + 6.2);
+            pdf.text("1", m + colDesc + (colQtd / 2), baselineY, { align: "center" });
+            pdf.text(money(item?.total), m + colDesc + colQtd + 3, baselineY);
+            pdf.text(money(item?.total), m + colDesc + colQtd + colValor + 3, baselineY);
+            y += cellH;
+        });
+
+        // Total
+        ensureSpace(14);
+        pdf.setFillColor(...colorAccent);
+        pdf.rect(m, y, contentW, 10, "F");
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(12);
+        pdf.text(`VALOR TOTAL ${money(orc.total)}`, pageW - m - 3, y + 6.8, { align: "right" });
+        pdf.setTextColor(0, 0, 0);
+        y += 14;
+
+        // Observacoes
+        const obsTitulo = "OBSERVACOES:";
+        const obsTexto = String(orc.observacoes || "—");
+        const obsLinhas = pdf.splitTextToSize(obsTexto, contentW - 4);
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        ensureSpace(12);
+        pdf.text(obsTitulo, m + 4, y + 6);
+        y += 9;
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10.8);
+
+        let idx = 0;
+        while (idx < obsLinhas.length) {
+            ensureSpace(10);
+            const linhasRestantes = Math.floor((pageH - m - y - 8) / lineGapObs);
+            const qtd = Math.max(1, linhasRestantes);
+            const bloco = obsLinhas.slice(idx, idx + qtd);
+            const boxH = Math.max(24, (bloco.length * lineGapObs) + 12);
+
+            drawRect(m, y - 7, contentW, boxH + 4);
+            pdf.text(bloco, m + 4, y + 3);
+
+            idx += bloco.length;
+            y += boxH + 2;
+            if (idx < obsLinhas.length) {
+                pdf.addPage();
+                drawPageFrame();
+                y = m;
+                pdf.setFont("helvetica", "bold");
+                pdf.setFontSize(11);
+                pdf.text("OBSERVACOES (contin.)", m + 4, y + 6);
+                y += 8.5;
+                pdf.setFont("helvetica", "normal");
+                pdf.setFontSize(10.8);
+            }
+        }
+
+        return pdf.output("blob");
+    } finally {
+        statusPdf.innerHTML = originalStatus;
+        statusPdf.style.display = "none";
+    }
+}
+
+async function gerarArquivoPdf() {
+    try {
+        const blob = await gerarBlobPdfOrcamento();
+        const fileName = `orcamento-${orc.numero || orc.id}.pdf`;
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    } catch (err) {
+        statusPdf.style.display = "none";
+        console.error(err);
+        alert("Nao foi possivel gerar o PDF.");
+    }
+}
+
+async function enviarWhatsAppPDF() {
+    try {
+        const blob = await gerarBlobPdfOrcamento();
+        const fileName = `orcamento-${orc.numero || orc.id}.pdf`;
+        const file = typeof File === "function"
+            ? new File([blob], fileName, { type: "application/pdf" })
+            : null;
+        const telefone = normalizarTelefoneWhats(orc?.cliente?.telefone);
+        const msg = `Ola ${orc?.cliente?.nome || ""}, segue seu orcamento ${orc?.numero || ""}.`;
+        const waUrl = telefone
+            ? `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`
+            : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+
+        if (
+            file &&
+            navigator.canShare &&
+            navigator.canShare({ files: [file] })
+        ) {
+            await navigator.share({
+                files: [file],
+                title: `Orcamento ${orc?.numero || ""}`,
+                text: msg
+            });
+            return;
+        }
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+        window.open(waUrl, "_blank");
+        alert("PDF baixado. O WhatsApp foi aberto para voce anexar o arquivo.");
+    } catch (err) {
+        statusPdf.style.display = "none";
+        console.error(err);
+        alert("Nao foi possivel gerar o PDF para WhatsApp.");
+    }
+}
 function aprovar() {
-    marcarOrcamentoComoAprovado(orc.id);
+    const aprovado = marcarOrcamentoComoAprovado(orc.id);
+    if (!aprovado) return;
     alert("Orçamento aprovado");
     location.href = "orcamentos.html";
 }
 
 function recusar() {
-    marcarOrcamentoComoRecusado(orc.id);
+    const recusado = marcarOrcamentoComoRecusado(orc.id);
+    if (!recusado) return;
     alert("Orçamento recusado");
     location.href = "orcamentos.html";
 }
@@ -279,3 +659,4 @@ function recusar() {
 
 </body>
 </html>
+

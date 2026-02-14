@@ -202,7 +202,7 @@ document.getElementById("orcPendentes").textContent =
 const agora = new Date();
 let saldo = 0;
 
-data.financeiro.forEach(f => {
+listarFinanceiroValido(data).forEach(f => {
     const d = new Date(f.data);
     if (d.getMonth() === agora.getMonth() &&
         d.getFullYear() === agora.getFullYear()) {

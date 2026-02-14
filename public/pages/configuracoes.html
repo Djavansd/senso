@@ -26,7 +26,7 @@ input[type="color"] {
 }
 .logo-preview {
     margin-top:10px;
-    min-height:60px;
+    min-height:125px;
     border:1px dashed #d1d5db;
     border-radius:10px;
     display:flex;
@@ -36,7 +36,9 @@ input[type="color"] {
     background:#fafafa;
 }
 .logo-preview img {
-    max-height:56px;
+    height:110px;
+    max-height:110px;
+    width:auto;
     max-width:100%;
     object-fit:contain;
 }
@@ -68,10 +70,42 @@ input[type="color"] {
             </div>
 
             <div class="group">
+                <label for="buttonTextColor">Cor do texto dos botoes principais</label>
+                <input id="buttonTextColor" type="color" value="#ffffff">
+                <div class="muted">Ex.: botoes azuis, verdes e vermelhos.</div>
+            </div>
+
+            <div class="group">
+                <label for="buttonSecondaryTextColor">Cor do texto dos botoes secundarios</label>
+                <input id="buttonSecondaryTextColor" type="color" value="#111827">
+                <div class="muted">Ex.: botoes cinza como Voltar/Recusar.</div>
+            </div>
+
+            <div class="group">
                 <label for="logoInput">Logo do orcamento</label>
                 <input id="logoInput" type="file" accept="image/*">
                 <div class="logo-preview" id="logoPreview">Nenhuma logo selecionada</div>
                 <div class="muted">A logo aparece no topo do cabecalho do orcamento.</div>
+            </div>
+
+            <div class="group">
+                <label for="companyName">Nome da empresa</label>
+                <input id="companyName" type="text" placeholder="Nome da empresa">
+            </div>
+
+            <div class="group">
+                <label for="companyDocument">CNPJ</label>
+                <input id="companyDocument" type="text" placeholder="00.000.000/0000-00">
+            </div>
+
+            <div class="group">
+                <label for="companyAddress">Endereco</label>
+                <input id="companyAddress" type="text" placeholder="Cidade/Endereco">
+            </div>
+
+            <div class="group">
+                <label for="companyPhone">Telefone</label>
+                <input id="companyPhone" type="text" placeholder="(00) 00000-0000">
             </div>
 
             <div class="actions">
@@ -86,10 +120,16 @@ input[type="color"] {
 <script src="../js/app.js"></script>
 <script>
 const primaryColorInput = document.getElementById("primaryColor");
+const buttonTextColorInput = document.getElementById("buttonTextColor");
+const buttonSecondaryTextColorInput = document.getElementById("buttonSecondaryTextColor");
 const logoInput = document.getElementById("logoInput");
 const logoPreview = document.getElementById("logoPreview");
 const btnSalvar = document.getElementById("btnSalvar");
 const btnRemoverLogo = document.getElementById("btnRemoverLogo");
+const companyNameInput = document.getElementById("companyName");
+const companyDocumentInput = document.getElementById("companyDocument");
+const companyAddressInput = document.getElementById("companyAddress");
+const companyPhoneInput = document.getElementById("companyPhone");
 
 let logoDataUrl = "";
 
@@ -104,7 +144,13 @@ function renderLogoPreview() {
 
 const settings = getAppSettings();
 primaryColorInput.value = settings.primaryColor || "#0a7cff";
+buttonTextColorInput.value = settings.buttonTextColor || "#ffffff";
+buttonSecondaryTextColorInput.value = settings.buttonSecondaryTextColor || "#111827";
 logoDataUrl = settings.logoDataUrl || "";
+companyNameInput.value = settings.companyName || "";
+companyDocumentInput.value = settings.companyDocument || "";
+companyAddressInput.value = settings.companyAddress || "";
+companyPhoneInput.value = settings.companyPhone || "";
 renderLogoPreview();
 
 function aplicarCorEmTempoReal(color) {
@@ -115,12 +161,37 @@ function aplicarCorEmTempoReal(color) {
     }
 }
 
+function aplicarCorTextoBotoesEmTempoReal() {
+    document.documentElement.style.setProperty(
+        "--app-button-text",
+        buttonTextColorInput.value
+    );
+    document.documentElement.style.setProperty(
+        "--app-button-secondary-text",
+        buttonSecondaryTextColorInput.value
+    );
+}
+
 primaryColorInput.addEventListener("input", () => {
     const color = primaryColorInput.value;
     aplicarCorEmTempoReal(color);
 
     // salva automaticamente para refletir no app sem precisar atualizar
     saveAppSettings({ primaryColor: color });
+});
+
+buttonTextColorInput.addEventListener("input", () => {
+    aplicarCorTextoBotoesEmTempoReal();
+    saveAppSettings({
+        buttonTextColor: buttonTextColorInput.value
+    });
+});
+
+buttonSecondaryTextColorInput.addEventListener("input", () => {
+    aplicarCorTextoBotoesEmTempoReal();
+    saveAppSettings({
+        buttonSecondaryTextColor: buttonSecondaryTextColorInput.value
+    });
 });
 
 logoInput.addEventListener("change", () => {
@@ -144,7 +215,13 @@ btnRemoverLogo.addEventListener("click", () => {
 btnSalvar.addEventListener("click", () => {
     saveAppSettings({
         primaryColor: primaryColorInput.value,
-        logoDataUrl
+        buttonTextColor: buttonTextColorInput.value,
+        buttonSecondaryTextColor: buttonSecondaryTextColorInput.value,
+        logoDataUrl,
+        companyName: companyNameInput.value.trim(),
+        companyDocument: companyDocumentInput.value.trim(),
+        companyAddress: companyAddressInput.value.trim(),
+        companyPhone: companyPhoneInput.value.trim()
     });
 
     alert("Configuracoes salvas.");
