@@ -46,6 +46,23 @@
             text-decoration: none;
             border-radius: 8px;
         }
+        .menu-link.destaque {
+            background: #fff8e1;
+            color: #b45309;
+            font-weight: 700;
+            border: 1px solid #facc15;
+        }
+        .menu-link.destaque::after {
+            content: " NOVO";
+            font-size: 11px;
+            font-weight: 800;
+            color: #ffffff;
+            background: #f59e0b;
+            border-radius: 999px;
+            padding: 2px 6px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
 
         .menu-link.active {
             background: #e8f5e9;
@@ -99,15 +116,14 @@
         }
 
         /* cores suaves */
-        .clientes { background: #e3f2fd; }
-        .servico { background: #fff3e0; }
-        .orcamentos { background: #e8f5e9; }
+        .clientes { background: #bbd1f3; }
+        .servico { background: #f2f6c0; }
+        .orcamentos { background: #ddf3df; }
         .agenda { background: #ede7f6; }
-        .financeiro { background: #f1f8e9; }
+        .financeiro { background: #fbe5bd; }
         .resumo { background: #fce4ec; }
     </style>
 </head>
-
 <body>
 
 <div class="menu-overlay" id="menuOverlay"></div>
@@ -121,6 +137,8 @@
     <a class="menu-link" href="pages/financeiro.html">💰 Financeiro</a>
     <a class="menu-link" href="pages/resumo.html">📊 Resumo mensal</a>
     <a class="menu-link" href="pages/configuracoes.html">⚙️ Configuracoes</a>
+    <a class="menu-link destaque" href="pages/nossos-servicos.html">🚀 Nossos serviços</a>
+
 </div>
 
 <div class="app">
@@ -176,42 +194,77 @@
     </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth-guard.js"></script>
+<script src="js/core/profile.js"></script>
+<script src="js/domains/mecanica/domain.js"></script>
 <script src="js/app.js"></script>
 
 <script>
-const data = getData();
+function renderHomeDashboard() {
+    const data = getData();
 
-/* CLIENTES */
-document.getElementById("totalClientes").textContent =
-    data.clientes.filter(c => !c.arquivado).length;
+    document.getElementById("totalClientes").textContent =
+        data.clientes.filter(c => !c.arquivado).length;
 
-/* SERVIÇOS */
-document.getElementById("servicosPendentes").textContent =
-    data.servicos.filter(s => s.status === "pendente").length;
+    document.getElementById("servicosPendentes").textContent =
+        data.servicos.filter(s => s.status === "pendente").length;
 
-/* ORÇAMENTOS */
-const totalOrc = data.orcamentos.length;
-const pendentes = data.orcamentos.filter(o => o.status === "enviado").length;
+    const totalOrc = data.orcamentos.length;
+    const pendentes = data.orcamentos.filter(o => o.status === "enviado").length;
+    document.getElementById("totalOrcamentos").textContent = totalOrc;
+    document.getElementById("orcPendentes").textContent =
+        pendentes > 0 ? `🔔 ${pendentes} pendente(s)` : "";
 
-document.getElementById("totalOrcamentos").textContent = totalOrc;
+    const agora = new Date();
+    let saldo = 0;
+    listarFinanceiroValido(data).forEach(f => {
+        const d = new Date(f.data);
+        if (d.getMonth() === agora.getMonth() &&
+            d.getFullYear() === agora.getFullYear()) {
+            saldo += (f.tipo === "saida" ? -f.valor : f.valor);
+        }
+    });
+    document.getElementById("saldoMes").textContent =
+        "R$ " + formatarMoedaBR(saldo);
+}
 
-document.getElementById("orcPendentes").textContent =
-    pendentes > 0 ? `🔔 ${pendentes} pendente(s)` : "";
+function renderProximoRetorno() {
+    const data = getData();
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
 
-/* FINANCEIRO */
-const agora = new Date();
-let saldo = 0;
+    const proximos = (data.agenda || [])
+        .filter(a =>
+            a.status === "agendado" &&
+            a.dataRetorno &&
+            new Date(a.dataRetorno) >= hoje
+        )
+        .sort((a, b) => new Date(a.dataRetorno) - new Date(b.dataRetorno));
 
-listarFinanceiroValido(data).forEach(f => {
-    const d = new Date(f.data);
-    if (d.getMonth() === agora.getMonth() &&
-        d.getFullYear() === agora.getFullYear()) {
-        saldo += (f.tipo === "saida" ? -f.valor : f.valor);
+    const proximoEl = document.getElementById("proximoRetorno");
+    if (!proximoEl) return;
+
+    if (proximos.length) {
+        const p = proximos[0];
+        const dataFmt = new Date(p.dataRetorno).toLocaleDateString("pt-BR");
+        proximoEl.textContent = dataFmt;
+        return;
     }
+
+    proximoEl.textContent = "—";
+}
+
+window.addEventListener("senso-live-update", () => {
+    renderHomeDashboard();
+    renderProximoRetorno();
 });
 
-document.getElementById("saldoMes").textContent =
-    "R$ " + formatarMoedaBR(saldo);
+renderHomeDashboard();
+renderProximoRetorno();
 </script>
 
 </body>
@@ -231,28 +284,4 @@ overlay.onclick = () => {
     sideMenu.classList.remove("open");
     overlay.style.display = "none";
 };
-</script>
-<script>
-/* ===== AGENDA • PRÓXIMO RETORNO ===== */
-const hoje = new Date();
-hoje.setHours(0, 0, 0, 0);
-
-const proximos = (data.agenda || [])
-    .filter(a =>
-        a.status === "agendado" &&
-        a.dataRetorno &&
-        new Date(a.dataRetorno) >= hoje
-    )
-    .sort((a, b) => new Date(a.dataRetorno) - new Date(b.dataRetorno));
-
-const proximoEl = document.getElementById("proximoRetorno");
-
-if (proximos.length) {
-    const p = proximos[0];
-    const dataFmt = new Date(p.dataRetorno).toLocaleDateString("pt-BR");
-
-    proximoEl.textContent = dataFmt;
-} else {
-    proximoEl.textContent = "—";
-}
 </script>

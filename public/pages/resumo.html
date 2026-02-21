@@ -103,6 +103,48 @@
     background: #1976d2;
     color: #fff;
 }
+
+.acoes-resumo {
+    margin-top: 14px;
+    display: grid;
+    gap: 12px;
+}
+
+.accordion {
+    padding: 0;
+    overflow: hidden;
+}
+
+.accordion summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.accordion summary::-webkit-details-marker {
+    display: none;
+}
+
+.accordion summary::after {
+    content: "+";
+    font-size: 20px;
+    line-height: 1;
+    color: #6b7280;
+}
+
+.accordion[open] summary::after {
+    content: "-";
+}
+
+.accordion-conteudo {
+    border-top: 1px solid #e5e7eb;
+    padding: 12px 14px 14px;
+}
 </style>
 </head>
 
@@ -163,37 +205,55 @@
     </div>
 </div>
 
-<div class="bloco">
-    <h3>Servicos do mes</h3>
-    <div id="listaServicosMes" class="detalhe-lista"></div>
-</div>
+<details class="bloco accordion">
+    <summary>Servicos do mes</summary>
+    <div class="accordion-conteudo">
+        <div id="listaServicosMes" class="detalhe-lista"></div>
+    </div>
+</details>
 
-<div class="bloco">
-    <h3>Gastos do mes</h3>
-    <div id="listaGastosMes" class="detalhe-lista"></div>
-</div>
+<details class="bloco accordion">
+    <summary>Gastos do mes</summary>
+    <div class="accordion-conteudo">
+        <div id="listaGastosMes" class="detalhe-lista"></div>
+    </div>
+</details>
 
-<div class="bloco">
-    <h3>Correcoes do mes</h3>
-    <div id="listaCorrecoesMes" class="detalhe-lista"></div>
-</div>
+<details class="bloco accordion">
+    <summary>Correcoes do mes</summary>
+    <div class="accordion-conteudo">
+        <div id="listaCorrecoesMes" class="detalhe-lista"></div>
+    </div>
+</details>
 
-<div class="bloco">
-    <h3>Comparacao com mes anterior</h3>
-    <div id="comparacaoTexto" class="comparacao">-</div>
-</div>
+<details class="bloco accordion">
+    <summary>Comparacao com mes anterior</summary>
+    <div class="accordion-conteudo">
+        <div id="comparacaoTexto" class="comparacao">-</div>
+    </div>
+</details>
 
 <div class="bloco">
     <p>
-        O resumo considera financeiro valido, servicos executados e correcoes de servico registradas no periodo.
+        O resumo considera apenas os lancamentos atuais do financeiro e as correcoes registradas no periodo.
     </p>
 </div>
 
-<button class="btn" onclick="history.back()">Voltar</button>
+<div class="acoes-resumo">
+    <button class="btn" id="btnApagarResumo">Apagar resumo</button>
+    <button class="btn" onclick="history.back()">Voltar</button>
+</div>
 
 </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth-guard.js"></script>
+<script src="../js/core/profile.js"></script>
+<script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
 
 <script>
@@ -257,12 +317,6 @@ function carregarMeses() {
         meses.add(`${d.getFullYear()}-${d.getMonth()}`);
     });
 
-    (data.servicos || []).forEach(s => {
-        if (!s?.executadoEm) return;
-        const d = new Date(s.executadoEm);
-        meses.add(`${d.getFullYear()}-${d.getMonth()}`);
-    });
-
     (data.correcoes || []).forEach(c => {
         if (!c?.data) return;
         const d = new Date(c.data);
@@ -304,6 +358,7 @@ function calcularResumo(ano, mes) {
     const servicosDetalhes = [];
     const gastosDetalhes = [];
     const correcoesDetalhes = [];
+    const servicosContados = new Set();
 
     listarFinanceiroValido(data).forEach(f => {
         if (!mesmoMes(f.data, ano, mes)) return;
@@ -311,6 +366,26 @@ function calcularResumo(ano, mes) {
         const valor = Number(f.valor || 0);
         if (f.tipo === "entrada") entradas += valor;
         if (f.tipo === "saida") saidas += valor;
+
+        if (f.origem === "servico" && f.tipo === "entrada") {
+            faturamento += valor;
+
+            const servicoId = f.origemServicoId || f.id;
+            if (!servicosContados.has(servicoId)) {
+                servicosContados.add(servicoId);
+                servicosQtd++;
+            }
+
+            const servico = (data.servicos || []).find(s => s.id === f.origemServicoId);
+            servicosDetalhes.push({
+                titulo: servico?.cliente?.nome || f.descricao || "Servico",
+                sub: servico
+                    ? `${resumoItensServico(servico)} - ${new Date(f.data).toLocaleDateString("pt-BR")}`
+                    : new Date(f.data).toLocaleDateString("pt-BR"),
+                valor
+            });
+            return;
+        }
 
         if (f.origem !== "servico") {
             if (f.tipo === "entrada") ganhosManuais += valor;
@@ -323,20 +398,6 @@ function calcularResumo(ano, mes) {
                 });
             }
         }
-    });
-
-    (data.servicos || []).forEach(s => {
-        if (s.status !== "executado" || !mesmoMes(s.executadoEm, ano, mes)) return;
-
-        const total = Number(s.totalGeral || 0);
-        servicosQtd++;
-        faturamento += total;
-
-        servicosDetalhes.push({
-            titulo: s?.cliente?.nome || "Cliente sem nome",
-            sub: `${resumoItensServico(s)} - ${new Date(s.executadoEm).toLocaleDateString("pt-BR")}`,
-            valor: total
-        });
     });
 
     (data.correcoes || []).forEach(c => {
@@ -431,7 +492,26 @@ filtroMes.onchange = () => {
     renderResumo();
 };
 
+document.getElementById("btnApagarResumo").onclick = () => {
+    const confirmar = confirm(
+        "Tem certeza que deseja apagar somente os dados do resumo (correcoes)?"
+    );
+    if (!confirmar) return;
+
+    const data = getData();
+    data.correcoes = [];
+    saveData(data);
+
+    carregarMeses();
+    renderResumo();
+    alert("Resumo apagado com sucesso.");
+};
+
 carregarMeses();
+window.addEventListener("senso-live-update", () => {
+    carregarMeses();
+    renderResumo();
+});
 renderResumo();
 </script>
 </body>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Entrar - Senso</title>
+    <style>
+        :root {
+            color-scheme: light;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            color: #0f172a;
+            padding: 16px;
+            pointer-events: auto;
+        }
+        .card {
+            width: 100%;
+            max-width: 420px;
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+            position: relative;
+            z-index: 2;
+            pointer-events: auto;
+        }
+        h1 {
+            margin: 0 0 14px;
+            font-size: 24px;
+        }
+        p {
+            margin: 0 0 14px;
+            font-size: 14px;
+            color: #475569;
+        }
+        label {
+            display: block;
+            margin: 12px 0 6px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 14px;
+            pointer-events: auto;
+        }
+        button {
+            margin-top: 14px;
+            width: 100%;
+            border: 0;
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: #0f766e;
+            color: #ffffff;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .status {
+            margin-top: 10px;
+            min-height: 20px;
+            font-size: 13px;
+            color: #b91c1c;
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <h1>Senso</h1>
+        <p>Entre com sua conta para acessar seus dados.</p>
+
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" />
+
+        <label for="senha">Senha</label>
+        <input id="senha" type="password" autocomplete="current-password" />
+
+        <div class="actions">
+            <button class="btn-primary" id="btnEntrar">Entrar</button>
+            <button class="btn-secondary" id="btnCriar">Criar conta</button>
+        </div>
+        <div class="status" id="status"></div>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script>
+        const emailEl = document.getElementById("email");
+        const senhaEl = document.getElementById("senha");
+        const statusEl = document.getElementById("status");
+        const btnEntrar = document.getElementById("btnEntrar");
+        const btnCriar = document.getElementById("btnCriar");
+        const nextParam = new URLSearchParams(window.location.search).get("next");
+
+        function getSafeNext() {
+            if (nextParam && nextParam.startsWith("/")) return nextParam;
+            return "/index.html";
+        }
+
+        function initFirebaseAuth() {
+            const cfg = window.SENSO_FIREBASE_CONFIG;
+            if (!cfg || !cfg.apiKey || !cfg.projectId) {
+                setStatus("Firebase nao configurado em public/js/firebase-config.js.");
+                return false;
+            }
+
+            if (!firebase.apps.length) {
+                firebase.initializeApp(cfg);
+            }
+
+            firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {
+                // Mantem fluxo mesmo se o navegador limitar persistencia.
+            });
+
+            firebase.auth().onAuthStateChanged(user => {
+                if (user) {
+                    window.location.replace(getSafeNext());
+                }
+            });
+
+            return true;
+        }
+
+        function setStatus(msg) {
+            statusEl.textContent = msg || "";
+        }
+
+        async function login() {
+            const email = emailEl.value.trim();
+            const senha = senhaEl.value;
+
+            if (!email || !senha) {
+                setStatus("Informe email e senha.");
+                return;
+            }
+
+            setStatus("Entrando...");
+            try {
+                await firebase.auth().signInWithEmailAndPassword(email, senha);
+                setStatus("");
+            } catch (err) {
+                setStatus(err && err.message ? err.message : "Falha no login.");
+            }
+        }
+
+        async function criarConta() {
+            const email = emailEl.value.trim();
+            const senha = senhaEl.value;
+
+            if (!email || !senha) {
+                setStatus("Informe email e senha.");
+                return;
+            }
+
+            if (senha.length < 6) {
+                setStatus("A senha precisa ter pelo menos 6 caracteres.");
+                return;
+            }
+
+            setStatus("Criando conta...");
+            try {
+                await firebase.auth().createUserWithEmailAndPassword(email, senha);
+                setStatus("");
+            } catch (err) {
+                setStatus(err && err.message ? err.message : "Falha ao criar conta.");
+            }
+        }
+
+        btnEntrar.addEventListener("click", login);
+        btnCriar.addEventListener("click", criarConta);
+        initFirebaseAuth();
+    </script>
+</body>
+</html>

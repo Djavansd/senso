@@ -37,6 +37,22 @@
                         <input id="documento" placeholder="Opcional" />
                     </div>
 
+                    <div class="form-group">
+                        <label>Modelo do carro</label>
+                        <input id="modeloCarro" name="modeloCarro" list="sugestoesModeloCarro" placeholder="Opcional" autocomplete="on" />
+                        <datalist id="sugestoesModeloCarro"></datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Placa</label>
+                        <input id="placaCarro" placeholder="Opcional" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cor</label>
+                        <input id="corCarro" placeholder="Opcional" />
+                    </div>
+
                     <button class="btn-primary" type="submit">Salvar</button>
 
                 </form>
@@ -45,6 +61,13 @@
     </div>
 
     <!-- JS GLOBAL -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/auth-guard.js"></script>
+    <script src="../js/core/profile.js"></script>
+    <script src="../js/domains/mecanica/domain.js"></script>
     <script src="../js/app.js"></script>
 
     <!-- JS DA TELA -->
@@ -55,6 +78,57 @@
         const telefone = document.getElementById("telefone");
         const endereco = document.getElementById("endereco");
         const documento = document.getElementById("documento");
+        const modeloCarro = document.getElementById("modeloCarro");
+        const sugestoesModeloCarro = document.getElementById("sugestoesModeloCarro");
+        const placaCarro = document.getElementById("placaCarro");
+        const corCarro = document.getElementById("corCarro");
+
+        function carregarSugestoesModeloCarro() {
+            const modelosUnicos = new Map();
+
+            listarClientesAtivos().forEach(cliente => {
+                const modelo = String(cliente.modeloCarro || "").trim();
+                if (!modelo) return;
+
+                const chave = modelo.toLocaleLowerCase("pt-BR");
+                if (!modelosUnicos.has(chave)) {
+                    modelosUnicos.set(chave, modelo);
+                }
+            });
+
+            const opcoes = Array.from(modelosUnicos.values())
+                .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+            sugestoesModeloCarro.innerHTML = opcoes
+                .map(modelo => `<option value="${modelo.replace(/"/g, "&quot;")}"></option>`)
+                .join("");
+        }
+
+        function normalizarPlaca(value) {
+            const raw = String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+            if (!raw) return "";
+
+            if (/^[A-Z]{3}[0-9]{4}$/.test(raw)) {
+                return `${raw.slice(0, 3)}-${raw.slice(3)}`;
+            }
+
+            if (/^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(raw)) {
+                return raw;
+            }
+
+            return raw;
+        }
+
+        function placaValida(value) {
+            if (!value) return true;
+            return /^[A-Z]{3}-[0-9]{4}$/.test(value) || /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(value);
+        }
+
+        carregarSugestoesModeloCarro();
+
+        placaCarro.addEventListener("input", () => {
+            placaCarro.value = normalizarPlaca(placaCarro.value);
+        });
 
         form.onsubmit = function (e) {
             e.preventDefault();
@@ -66,16 +140,26 @@
                 return;
             }
 
+            const placaNormalizada = normalizarPlaca(placaCarro.value);
+            if (!placaValida(placaNormalizada)) {
+                alert("Placa inválida. Use ABC-1234 ou ABC1D23 (Mercosul).");
+                placaCarro.focus();
+                return;
+            }
+
             adicionarCliente({
                 id: gerarId(),
                 nome: nome.value.trim(),
                 telefone: telefoneFormatado,
                 endereco: endereco.value.trim() || "",
-                documento: documento.value.trim() || ""
+                documento: documento.value.trim() || "",
+                modeloCarro: modeloCarro.value.trim() || "",
+                placaCarro: placaNormalizada || "",
+                corCarro: corCarro.value.trim() || ""
             });
 
-            // fluxo aprovado — não mudar
-            window.location.href = "clientes.html";
+            // envia direto para a tela inicial sem empilhar retornos no historico
+            window.location.replace("../index.html");
         };
     </script>
 

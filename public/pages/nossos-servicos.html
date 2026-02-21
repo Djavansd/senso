@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nossos serviços</title>
+<link rel="stylesheet" href="../css/style.css" />
+<style>
+body { background:#f7f8fa; }
+.content { padding:12px; }
+.intro {
+    background: linear-gradient(135deg, #0f766e, #0ea5a4);
+    color:#fff;
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:12px;
+}
+.intro h3 { margin:0 0 6px; font-size:18px; }
+.intro p { margin:0; font-size:13px; opacity:.95; }
+.service-card {
+    background:#fff;
+    border-radius:14px;
+    box-shadow:0 4px 10px rgba(0,0,0,.06);
+    padding:12px;
+    margin-bottom:10px;
+    border:1px solid #eef0f3;
+}
+.service-card h4 { margin:0 0 6px; font-size:16px; }
+.service-card p { margin:0 0 8px; font-size:13px; color:#4b5563; }
+.service-list {
+    margin:0 0 10px 0;
+    padding-left:18px;
+    color:#374151;
+    font-size:13px;
+}
+.service-list li { margin-bottom:4px; }
+.cta-row {
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+.btn-mini {
+    text-decoration:none;
+    display:inline-block;
+    padding:8px 10px;
+    border-radius:9px;
+    font-size:13px;
+    font-weight:700;
+}
+.btn-whats {
+    background:#22c55e;
+    color:#fff;
+}
+.btn-back {
+    background:#e5e7eb;
+    color:#111827;
+}
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="header">Nossos serviços</div>
+
+    <div class="content">
+        <div class="intro">
+            <h3>Transformamos ideias em sistemas que vendem</h3>
+            <p>Desenvolvemos app, site e automações com foco em resultado, agilidade e suporte real.</p>
+        </div>
+
+        <div class="service-card">
+            <h4>📱 Aplicativos</h4>
+            <p>Aplicativos para gestão, atendimento e vendas do seu negócio, com identidade da sua marca.</p>
+            <ul class="service-list">
+                <li>Painel de cadastro de clientes, serviços e agenda</li>
+                <li>Fluxos personalizados para sua operação</li>
+                <li>Publicação e evolução por versões</li>
+            </ul>
+            <div class="cta-row">
+                <a class="btn-mini btn-whats" target="_blank" href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20quero%20um%20aplicativo%20para%20meu%20neg%C3%B3cio.">Solicitar app</a>
+            </div>
+        </div>
+
+        <div class="service-card">
+            <h4>🌐 Sites profissionais</h4>
+            <p>Sites de apresentação e páginas de conversão para gerar credibilidade e captar novos clientes.</p>
+            <ul class="service-list">
+                <li>Site institucional e landing pages</li>
+                <li>Layout responsivo para celular e desktop</li>
+                <li>Integração com WhatsApp e formulários</li>
+            </ul>
+            <div class="cta-row">
+                <a class="btn-mini btn-whats" target="_blank" href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20quero%20criar%20um%20site%20profissional.">Solicitar site</a>
+            </div>
+        </div>
+
+        <div class="service-card">
+            <h4>⚙️ Sistemas sob medida</h4>
+            <p>Projetos personalizados conforme sua necessidade, sem pacote engessado.</p>
+            <ul class="service-list">
+                <li>Mapeamento do processo e proposta técnica</li>
+                <li>Funcionalidades de acordo com seu fluxo real</li>
+                <li>Integrações com ferramentas já usadas por você</li>
+            </ul>
+            <div class="cta-row">
+                <a class="btn-mini btn-whats" target="_blank" href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20preciso%20de%20um%20sistema%20sob%20medida.">Solicitar sistema</a>
+            </div>
+        </div>
+
+        <div class="service-card">
+            <h4>🛠️ Melhorias e suporte</h4>
+            <p>Ajustes, correções e evolução contínua para manter seu sistema sempre funcionando bem.</p>
+            <ul class="service-list">
+                <li>Correção de bugs e melhorias visuais</li>
+                <li>Novas funções conforme crescimento da empresa</li>
+                <li>Suporte técnico e acompanhamento</li>
+            </ul>
+            <div class="cta-row">
+                <a class="btn-mini btn-whats" target="_blank" href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20quero%20melhorias%20e%20suporte%20em%20um%20sistema.">Falar no WhatsApp</a>
+                <a class="btn-mini btn-back" href="../index.html">Voltar</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth-guard.js"></script>
+</body>
+</html>

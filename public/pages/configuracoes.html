@@ -24,6 +24,14 @@ input[type="color"] {
     border-radius:10px;
     background:#fff;
 }
+select {
+    width:100%;
+    height:44px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    background:#fff;
+    padding:0 10px;
+}
 .logo-preview {
     margin-top:10px;
     min-height:125px;
@@ -94,7 +102,15 @@ input[type="color"] {
             </div>
 
             <div class="group">
-                <label for="companyDocument">CNPJ</label>
+                <label for="companyDocumentType">Tipo de documento</label>
+                <select id="companyDocumentType">
+                    <option value="cnpj">CNPJ</option>
+                    <option value="cpf">CPF</option>
+                </select>
+            </div>
+
+            <div class="group">
+                <label for="companyDocument" id="companyDocumentLabel">CNPJ</label>
                 <input id="companyDocument" type="text" placeholder="00.000.000/0000-00">
             </div>
 
@@ -112,11 +128,19 @@ input[type="color"] {
                 <button id="btnSalvar">Salvar</button>
                 <button id="btnRemoverLogo" class="btn-sec" type="button">Remover logo</button>
                 <button class="btn-sec" type="button" onclick="history.back()">Voltar</button>
+                <button id="btnSair" class="btn-sec" type="button">Sair</button>
             </div>
         </div>
     </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth-guard.js"></script>
+<script src="../js/core/profile.js"></script>
+<script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
 <script>
 const primaryColorInput = document.getElementById("primaryColor");
@@ -126,7 +150,10 @@ const logoInput = document.getElementById("logoInput");
 const logoPreview = document.getElementById("logoPreview");
 const btnSalvar = document.getElementById("btnSalvar");
 const btnRemoverLogo = document.getElementById("btnRemoverLogo");
+const btnSair = document.getElementById("btnSair");
 const companyNameInput = document.getElementById("companyName");
+const companyDocumentTypeInput = document.getElementById("companyDocumentType");
+const companyDocumentLabel = document.getElementById("companyDocumentLabel");
 const companyDocumentInput = document.getElementById("companyDocument");
 const companyAddressInput = document.getElementById("companyAddress");
 const companyPhoneInput = document.getElementById("companyPhone");
@@ -142,16 +169,28 @@ function renderLogoPreview() {
     logoPreview.innerHTML = `<img src="${logoDataUrl}" alt="Logo">`;
 }
 
+function applyCompanyDocumentFieldState() {
+    const isCpf = companyDocumentTypeInput.value === "cpf";
+    companyDocumentLabel.textContent = isCpf ? "CPF" : "CNPJ";
+    companyDocumentInput.placeholder = isCpf ? "000.000.000-00" : "00.000.000/0000-00";
+    companyDocumentInput.value = formatarDocumentoPorTipo(
+        companyDocumentInput.value,
+        companyDocumentTypeInput.value
+    );
+}
+
 const settings = getAppSettings();
 primaryColorInput.value = settings.primaryColor || "#0a7cff";
 buttonTextColorInput.value = settings.buttonTextColor || "#ffffff";
 buttonSecondaryTextColorInput.value = settings.buttonSecondaryTextColor || "#111827";
 logoDataUrl = settings.logoDataUrl || "";
 companyNameInput.value = settings.companyName || "";
+companyDocumentTypeInput.value = settings.companyDocumentType === "cpf" ? "cpf" : "cnpj";
 companyDocumentInput.value = settings.companyDocument || "";
 companyAddressInput.value = settings.companyAddress || "";
 companyPhoneInput.value = settings.companyPhone || "";
 renderLogoPreview();
+applyCompanyDocumentFieldState();
 
 function aplicarCorEmTempoReal(color) {
     document.documentElement.style.setProperty("--app-primary", color);
@@ -194,6 +233,20 @@ buttonSecondaryTextColorInput.addEventListener("input", () => {
     });
 });
 
+companyDocumentTypeInput.addEventListener("change", () => {
+    applyCompanyDocumentFieldState();
+    saveAppSettings({
+        companyDocumentType: companyDocumentTypeInput.value
+    });
+});
+
+companyDocumentInput.addEventListener("input", () => {
+    companyDocumentInput.value = formatarDocumentoPorTipo(
+        companyDocumentInput.value,
+        companyDocumentTypeInput.value
+    );
+});
+
 logoInput.addEventListener("change", () => {
     const file = logoInput.files && logoInput.files[0];
     if (!file) return;
@@ -219,12 +272,27 @@ btnSalvar.addEventListener("click", () => {
         buttonSecondaryTextColor: buttonSecondaryTextColorInput.value,
         logoDataUrl,
         companyName: companyNameInput.value.trim(),
-        companyDocument: companyDocumentInput.value.trim(),
+        companyDocumentType: companyDocumentTypeInput.value,
+        companyDocument: formatarDocumentoPorTipo(
+            companyDocumentInput.value.trim(),
+            companyDocumentTypeInput.value
+        ),
         companyAddress: companyAddressInput.value.trim(),
         companyPhone: companyPhoneInput.value.trim()
     });
 
     alert("Configuracoes salvas.");
+});
+
+btnSair.addEventListener("click", async () => {
+    const confirmar = confirm("Deseja realmente sair da sua conta? Voce sera redirecionado para a tela de login.");
+    if (!confirmar) return;
+
+    try {
+        await sensoSignOut();
+    } catch (err) {
+        alert(err && err.message ? err.message : "Falha ao sair.");
+    }
 });
 </script>
 

@@ -10,6 +10,29 @@
 <style>
 .hidden{display:none}
 
+.abas{
+  display:flex;
+  gap:8px;
+  margin-bottom:10px;
+}
+
+.aba-btn{
+  border:1px solid #d0d7de;
+  background:#fff;
+  color:#444;
+  border-radius:999px;
+  padding:8px 12px;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.aba-btn.ativa{
+  background:#0f9d58;
+  color:#fff;
+  border-color:#0f9d58;
+}
+
 .bank-card{
   background:linear-gradient(135deg,#1cb978,#0f9d58);
   color:#fff;
@@ -117,6 +140,13 @@
   cursor:pointer;
   margin-left:6px;
 }
+
+.vazio{
+  padding:14px;
+  text-align:center;
+  color:#666;
+  font-size:14px;
+}
 </style>
 </head>
 
@@ -126,6 +156,11 @@
 <div class="content">
 
 <div id="modoNormal">
+
+<div class="abas" id="abasPeriodo">
+  <button class="aba-btn ativa" data-aba="atual">Mês atual</button>
+  <button class="aba-btn" data-aba="fechados">Meses fechados</button>
+</div>
 
 <select id="filtroMes"></select>
 
@@ -174,6 +209,13 @@
 </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth-guard.js"></script>
+<script src="../js/core/profile.js"></script>
+<script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
 
 <script>
@@ -182,20 +224,30 @@ const filtroMes = document.getElementById("filtroMes");
 const listaExtrato = document.getElementById("listaExtrato");
 const modoNormal = document.getElementById("modoNormal");
 const modoExtrato = document.getElementById("modoExtrato");
+const abasPeriodo = document.getElementById("abasPeriodo");
 
 let mesAtual;
+let abaAtiva = "atual";
 
 /* MESES */
 function carregarMeses(){
+  const hoje = new Date();
+  const mesHoje = hoje.getMonth();
+  const anoHoje = hoje.getFullYear();
   const meses=new Set();
   listarFinanceiroValido().forEach(f=>{
     const d=new Date(f.data);
-    meses.add(`${d.getFullYear()}-${d.getMonth()}`);
+    const isMesAtual = d.getMonth()===mesHoje && d.getFullYear()===anoHoje;
+    const incluir = abaAtiva==="atual" ? isMesAtual : !isMesAtual;
+    if(incluir){
+      meses.add(`${d.getFullYear()}-${d.getMonth()}`);
+    }
   });
-  if(!meses.size){
-    const h=new Date();
-    meses.add(`${h.getFullYear()}-${h.getMonth()}`);
+
+  if(!meses.size && abaAtiva==="atual"){
+    meses.add(`${anoHoje}-${mesHoje}`);
   }
+
   filtroMes.innerHTML="";
   [...meses].sort().reverse().forEach(m=>{
     const [a,me]=m.split("-");
@@ -204,11 +256,26 @@ function carregarMeses(){
     opt.textContent=new Date(a,me).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
     filtroMes.appendChild(opt);
   });
+
+  if(!filtroMes.options.length){
+    const opt=document.createElement("option");
+    opt.value="";
+    opt.textContent="Sem meses fechados";
+    filtroMes.appendChild(opt);
+    filtroMes.disabled=true;
+  }else{
+    filtroMes.disabled=false;
+  }
+
   mesAtual=filtroMes.value;
 }
 
 /* SALDO */
 function calcularSaldo(){
+  if(!mesAtual){
+    saldoEl.textContent="R$ 0,00";
+    return;
+  }
   const [a,m]=mesAtual.split("-").map(Number);
   let saldo=0;
   listarFinanceiroValido().forEach(f=>{
@@ -343,6 +410,10 @@ function descricaoExtrato(f) {
 }
 
 function renderExtrato(){
+  if(!mesAtual){
+    listaExtrato.innerHTML = '<div class="vazio">Sem lançamentos para este período</div>';
+    return;
+  }
   listaExtrato.innerHTML="";
   const [a,m]=mesAtual.split("-").map(Number);
   listarFinanceiroValido()
@@ -365,11 +436,33 @@ function renderExtrato(){
           </div>
         </div>`;
     });
+
+  if(!listaExtrato.innerHTML.trim()){
+    listaExtrato.innerHTML = '<div class="vazio">Sem lançamentos para este período</div>';
+  }
 }
 
 /* GERAL */
 function renderTudo(){carregarMeses();calcularSaldo();}
 filtroMes.onchange=()=>{mesAtual=filtroMes.value;renderTudo();}
+abasPeriodo.onclick=(event)=>{
+  const btn = event.target.closest(".aba-btn");
+  if(!btn)return;
+  abaAtiva = btn.dataset.aba || "atual";
+  abasPeriodo.querySelectorAll(".aba-btn").forEach(el =>
+    el.classList.toggle("ativa", el===btn)
+  );
+  renderTudo();
+  if(!modoExtrato.classList.contains("hidden")){
+    renderExtrato();
+  }
+}
+window.addEventListener("senso-live-update", () => {
+  renderTudo();
+  if(!modoExtrato.classList.contains("hidden")){
+    renderExtrato();
+  }
+});
 renderTudo();
 </script>
 </body>

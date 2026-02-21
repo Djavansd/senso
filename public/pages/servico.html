@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
@@ -88,6 +88,7 @@ textarea {
 <h3>Serviço • Passo 1</h3>
 
 <label>Cliente</label>
+<input id="clienteBusca" placeholder="Buscar cliente por nome, sobrenome ou telefone" autocomplete="off" />
 <select id="clienteSelect">
     <option value="">Selecione um cliente</option>
 </select>
@@ -98,9 +99,10 @@ textarea {
 
 <h3>Serviço • Passo 2</h3>
 
-<form id="formItem" class="servico-card">
+<form id="formItem" class="servico-card" autocomplete="on">
     <label>Descrição do serviço</label>
-    <input id="itemDescricao" required />
+    <input id="itemDescricao" name="descricaoServico" list="sugestoesServico" required autocomplete="on" />
+    <datalist id="sugestoesServico"></datalist>
 
     <label>Valor unitário</label>
     <input id="itemValor" required />
@@ -126,7 +128,7 @@ textarea {
     <option value="">Não informado</option>
     <option>Pix</option>
     <option>Dinheiro</option>
-    <option>Cartão de crédito</option>
+    <option>Crédito</option>
     <option>Cartão de débito</option>
     <option>Transferência</option>
 </select>
@@ -155,9 +157,17 @@ textarea {
 </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth-guard.js"></script>
+<script src="../js/core/profile.js"></script>
+<script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
 
 <script>
+const clienteBusca = document.getElementById("clienteBusca");
 const clienteSelect = document.getElementById("clienteSelect");
 const clienteResumo = document.getElementById("clienteResumo");
 const listaItens = document.getElementById("listaItens");
@@ -166,30 +176,127 @@ const listaServicos = document.getElementById("listaServicos");
 const intervaloSelect = document.getElementById("intervaloSelect");
 const observacoesServico = document.getElementById("observacoesServico");
 const formaPagamento = document.getElementById("formaPagamento");
+const sugestoesServico = document.getElementById("sugestoesServico");
+const itemDescricao = document.getElementById("itemDescricao");
+const itemValor = document.getElementById("itemValor");
+const itemQtd = document.getElementById("itemQtd");
 
 const itens = [];
+const sugestoesDescricaoMap = new Map();
+const clientesAtivos = listarClientesAtivos();
+const activeProfileId = (
+    window.SensoProfile &&
+    typeof window.SensoProfile.getActiveProfile === "function" &&
+    window.SensoProfile.getActiveProfile()?.id
+) ? window.SensoProfile.getActiveProfile().id : "base";
+const SUGESTOES_DESCRICAO_KEY = `servicoSugestoesDescricao:${activeProfileId}`;
+
+function carregarSugestoesDescricaoSalvas() {
+    try {
+        const raw = localStorage.getItem(SUGESTOES_DESCRICAO_KEY);
+        const lista = JSON.parse(raw || "[]");
+        if (!Array.isArray(lista)) return [];
+        return lista.map(v => String(v || "").trim()).filter(Boolean);
+    } catch {
+        return [];
+    }
+}
+
+function salvarSugestoesDescricao() {
+    const lista = Array.from(sugestoesDescricaoMap.values());
+    localStorage.setItem(SUGESTOES_DESCRICAO_KEY, JSON.stringify(lista));
+}
+
+function registrarSugestaoDescricao(texto) {
+    const valor = String(texto || "").trim();
+    if (!valor) return;
+
+    const chave = valor.toLocaleLowerCase("pt-BR");
+    if (sugestoesDescricaoMap.has(chave)) return;
+    sugestoesDescricaoMap.set(chave, valor);
+    salvarSugestoesDescricao();
+}
+
+function renderSugestoesDescricao() {
+    const opcoes = Array.from(sugestoesDescricaoMap.values())
+        .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    sugestoesServico.innerHTML = opcoes
+        .map(opcao => `<option value="${opcao.replace(/"/g, "&quot;")}"></option>`)
+        .join("");
+}
+
+function carregarSugestoesDescricao() {
+    carregarSugestoesDescricaoSalvas().forEach(registrarSugestaoDescricao);
+
+    const servicos = getData().servicos || [];
+
+    servicos.forEach(servico => {
+        (servico.itens || []).forEach(item => {
+            registrarSugestaoDescricao(item.descricao);
+        });
+    });
+
+    renderSugestoesDescricao();
+}
+
+carregarSugestoesDescricao();
 
 /* CLIENTES */
-listarClientesAtivos().forEach(c => {
-    const opt = document.createElement("option");
-    opt.value = c.id;
-    opt.textContent = c.nome;
-    clienteSelect.appendChild(opt);
-});
+function renderClienteOptions(filtroTexto) {
+    const filtro = String(filtroTexto || "").trim().toLocaleLowerCase("pt-BR");
+    const selecionadoAtual = clienteSelect.value;
 
-clienteSelect.onchange = () => {
-    const c = listarClientesAtivos().find(x => x.id === clienteSelect.value);
-    if (!c) return;
+    clienteSelect.innerHTML = '<option value="">Selecione um cliente</option>';
+
+    const filtrados = clientesAtivos.filter(c => {
+        if (!filtro) return true;
+        const nome = String(c.nome || "").toLocaleLowerCase("pt-BR");
+        const telefone = String(c.telefone || "").toLocaleLowerCase("pt-BR");
+        return nome.includes(filtro) || telefone.includes(filtro);
+    });
+
+    filtrados.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.telefone ? `${c.nome} - ${c.telefone}` : c.nome;
+        clienteSelect.appendChild(opt);
+    });
+
+    const existeSelecionado = filtrados.some(c => c.id === selecionadoAtual);
+    clienteSelect.value = existeSelecionado ? selecionadoAtual : "";
+}
+
+function renderResumoClienteSelecionado() {
+    const c = clientesAtivos.find(x => x.id === clienteSelect.value);
+    if (!c) {
+        clienteResumo.classList.add("hidden");
+        return;
+    }
 
     clienteResumo.innerHTML = `
         <strong>${c.nome}</strong><br>
         <div class="cliente-mini">
             📞 ${c.telefone || "—"}<br>
             📍 ${c.endereco || "—"}<br>
-            📄 ${formatarDocumentoBR(c.documento) || "—"}
+            📄 ${formatarDocumentoBR(c.documento) || "—"}<br>
+            🚗 ${c.modeloCarro || "—"}<br>
+            🔖 ${c.placaCarro || "—"}<br>
+            🎨 ${c.corCarro || "—"}
         </div>
     `;
     clienteResumo.classList.remove("hidden");
+}
+
+renderClienteOptions("");
+
+clienteBusca.addEventListener("input", () => {
+    renderClienteOptions(clienteBusca.value);
+    renderResumoClienteSelecionado();
+});
+
+clienteSelect.onchange = () => {
+    renderResumoClienteSelecionado();
 };
 
 /* ITENS */
@@ -203,6 +310,8 @@ formItem.onsubmit = e => {
     if (!desc || valor <= 0 || qtd <= 0) return;
 
     itens.push({ descricao: desc, total: valor * qtd });
+    registrarSugestaoDescricao(desc);
+    renderSugestoesDescricao();
 
     formItem.reset();
     itemQtd.value = 1;
@@ -253,7 +362,7 @@ if (intervaloSelect.value === "nenhum") {
 }
 
 
-    const c = listarClientesAtivos().find(x => x.id === clienteSelect.value);
+    const c = clientesAtivos.find(x => x.id === clienteSelect.value);
 
     salvarServico({
         id: gerarId(),
@@ -262,7 +371,10 @@ if (intervaloSelect.value === "nenhum") {
             nome: c.nome,
             telefone: c.telefone || "",
             endereco: c.endereco || "",
-            documento: c.documento || ""
+            documento: c.documento || "",
+            modeloCarro: c.modeloCarro || "",
+            placaCarro: c.placaCarro || "",
+            corCarro: c.corCarro || ""
         },
         itens: itens.slice(),
         totalGeral: itens.reduce((s,i)=>s+i.total,0),
@@ -277,10 +389,12 @@ if (intervaloSelect.value === "nenhum") {
     itens.length = 0;
     observacoesServico.value = "";
     formaPagamento.value = "";
+    clienteBusca.value = "";
     clienteSelect.value = "";
     clienteResumo.classList.add("hidden");
     document.getElementById("itensResumo").classList.add("hidden");
     intervaloSelect.value = "";
+    renderClienteOptions("");
 
     renderServicos();
 };
@@ -355,7 +469,13 @@ function renderServicos() {
         .forEach(btn => btn.remove());
 }
 
+window.addEventListener("senso-live-update", () => {
+    renderClienteOptions(clienteBusca.value || "");
+    renderServicos();
+});
+
 renderServicos();
 </script>
 </body>
 </html>
+

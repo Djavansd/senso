@@ -26,7 +26,21 @@ body { background:#eee; }
     border-bottom:1px solid #000;
     padding-bottom:10px;
 }
-.empresa { font-size:13px; flex:1; min-width:0; }
+.empresa {
+    font-size:14px;
+    line-height:1.45;
+    flex:1;
+    min-width:0;
+}
+.empresa strong {
+    font-size:15px;
+}
+#orcamentoLogo {
+    height:120px !important;
+    max-height:120px !important;
+    max-width:340px !important;
+    margin-bottom:10px !important;
+}
 .caixa-data {
     flex-shrink:0;
     border:1px solid #000;
@@ -52,7 +66,7 @@ body { background:#eee; }
     word-break:break-word;
 }
 .titulo {
-    background:#0d3b66;
+    background:var(--app-primary);
     color:#fff;
     padding:6px;
     margin-top:12px;
@@ -74,7 +88,7 @@ th, td {
 }
 th { background:#e6eef6; }
 .total {
-    background:#0d3b66;
+    background:var(--app-primary);
     color:#fff;
     padding:8px;
     font-weight:bold;
@@ -115,8 +129,11 @@ table tr {
     font-weight:bold;
     cursor:pointer;
 }
-.btn-pdf { background:#1976d2; color:#fff; }
 .btn-voltar { background:#ccc; }
+.btn-pdf {
+    background: var(--app-primary);
+    color: var(--app-button-text);
+}
 .btn-disabled {
     background:#ddd !important;
     cursor:not-allowed;
@@ -142,6 +159,24 @@ table tr {
 }
 @keyframes spin { to { transform:rotate(360deg); } }
 
+@media (max-width: 480px) {
+    .empresa {
+        font-size:13px;
+        line-height:1.4;
+    }
+
+    .empresa strong {
+        font-size:14px;
+    }
+
+    #orcamentoLogo {
+        height:96px !important;
+        max-height:96px !important;
+        max-width:260px !important;
+        margin-bottom:8px !important;
+    }
+}
+
 @media print {
     * {
         -webkit-print-color-adjust: exact !important;
@@ -162,7 +197,7 @@ table tr {
 
     .titulo,
     .total {
-        background: #0d3b66 !important;
+        background: var(--app-primary) !important;
         color: #fff !important;
     }
 
@@ -243,6 +278,13 @@ table tr {
 
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth-guard.js"></script>
+<script src="../js/core/profile.js"></script>
+<script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -362,8 +404,8 @@ async function gerarBlobPdfOrcamento() {
         const lineGap = 5;
         const lineGapObs = 5.2;
         const settings = getAppSettings();
-        const colorAccent = [200, 161, 107];
-        const colorHead = [223, 230, 238];
+        const colorAccent = hexToRgb(settings.primaryColor, [13, 59, 102]);
+        const colorHead = lightenRgb(colorAccent, 0.84);
 
         let y = m;
 
@@ -389,6 +431,25 @@ async function gerarBlobPdfOrcamento() {
             return `R$ ${formatarMoedaBR(Number(v || 0))}`;
         }
 
+        function hexToRgb(hex, fallback) {
+            const raw = String(hex || "").trim().replace("#", "");
+            if (!/^[0-9a-fA-F]{3,6}$/.test(raw)) return fallback;
+            const full = raw.length === 3
+                ? raw.split("").map(ch => ch + ch).join("")
+                : raw.padStart(6, "0").slice(0, 6);
+            const n = parseInt(full, 16);
+            return [
+                (n >> 16) & 255,
+                (n >> 8) & 255,
+                n & 255
+            ];
+        }
+
+        function lightenRgb(rgb, ratio) {
+            const r = Math.max(0, Math.min(1, Number(ratio || 0)));
+            return rgb.map(v => Math.round(v + ((255 - v) * r)));
+        }
+
         drawPageFrame();
 
         // Cabecalho empresa
@@ -411,9 +472,12 @@ async function gerarBlobPdfOrcamento() {
         pdf.text((settings.companyName || "PROICE CLIMATIZACAO"), m, headerBaseY + logoBoxH + 10);
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(8.8);
-        pdf.text(`CNPJ: ${settings.companyDocument || "—"}`, m, headerBaseY + logoBoxH + 15.2);
+        const companyDocType = inferCompanyDocumentType(settings.companyDocument || "");
+        const companyDocLabel = companyDocType === "cpf" ? "CPF" : "CNPJ";
+        const companyDocValue = formatarDocumentoPorTipo(settings.companyDocument || "", companyDocType);
+        pdf.text(`${companyDocLabel}: ${companyDocValue || "—"}`, m, headerBaseY + logoBoxH + 15.2);
         pdf.text(`Endereco: ${settings.companyAddress || "—"}`, m, headerBaseY + logoBoxH + 19.7);
-        pdf.text(`Telefone: ${settings.companyPhone || "—"}`, m, headerBaseY + logoBoxH + 24.2);
+        pdf.text(`Telefone: ${formatarTelefoneBR(settings.companyPhone || "") || "—"}`, m, headerBaseY + logoBoxH + 24.2);
 
         drawRect(pageW - m - rightColW, headerBaseY + 2, rightColW, 23);
         pdf.setFont("helvetica", "bold");
@@ -439,13 +503,13 @@ async function gerarBlobPdfOrcamento() {
         pdf.text(`CLIENTE: ${orc?.cliente?.nome || "—"}`, m + 4, y + 8);
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(9.6);
-        pdf.text(`CPF/CNPJ: ${formatarDocumentoBR(orc?.cliente?.documento) || "—"}`, m + 4, y + 13.8);
+        pdf.text(`CPF/CNPJ: ${formatarDocumentoBR(String(orc?.cliente?.documento || "").trim()) || "—"}`, m + 4, y + 13.8);
         const endCli = String(orc?.cliente?.endereco || "—");
         const endCliText = pdf.splitTextToSize(`ENDERECO: ${endCli}`, leftColW - 8);
         pdf.text(endCliText, m + 4, y + 19.5);
 
-        const telCli = String(orc?.cliente?.telefone || "—");
-        const fp = String(orc?.formaPagamento || "—");
+        const telCli = formatarTelefoneBR(String(orc?.cliente?.telefone || "").trim()) || "—";
+        const fp = String(orc?.formaPagamento || "").trim() || "—";
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(10.5);
         pdf.text("TELEFONE:", m + leftColW + clienteGap + 4, y + 8);
@@ -457,7 +521,7 @@ async function gerarBlobPdfOrcamento() {
         pdf.text("FORMA PGTO:", m + leftColW + clienteGap + 4, y + 20);
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(9.8);
-        pdf.text(String(fp), m + leftColW + clienteGap + 36, y + 20);
+        pdf.text(String(fp), m + leftColW + clienteGap + 34, y + 20);
 
         y += clienteBoxH + 8;
 

@@ -1,26 +1,105 @@
 // =========================
 // BASE DO APP
 // =========================
-const STORAGE_KEY = "appData";
+const ACTIVE_PROFILE = (
+    window.SensoProfile &&
+    typeof window.SensoProfile.getActiveProfile === "function"
+)
+    ? window.SensoProfile.getActiveProfile()
+    : {
+        id: "base",
+        appName: "Senso",
+        defaults: {}
+    };
 
-function getData() {
-    let data;
+const ACTIVE_DOMAIN = (
+    window.SensoDomains &&
+    ACTIVE_PROFILE.domainId &&
+    window.SensoDomains[ACTIVE_PROFILE.domainId]
+)
+    ? window.SensoDomains[ACTIVE_PROFILE.domainId]
+    : { id: "base", labels: {} };
+
+const LEGACY_STORAGE_KEY = "appData";
+const LEGACY_SETTINGS_KEY = "appSettings";
+const STORAGE_KEY_BASE = `appData:${ACTIVE_PROFILE.id}`;
+const SETTINGS_KEY_BASE = `appSettings:${ACTIVE_PROFILE.id}`;
+const LAST_UID_KEY = "senso:lastAuthUid";
+
+let cloudHydrationStarted = false;
+let cloudSyncTimer = null;
+let authStorageMigrated = false;
+let authStorageReloadDone = false;
+let liveUpdateTimer = null;
+
+function getAuthUid() {
+    if (window.SensoAuth && window.SensoAuth.uid) {
+        return window.SensoAuth.uid;
+    }
+
     try {
-        data = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    } catch {
-        data = null;
+        const user = window.firebase?.auth?.()?.currentUser;
+        if (user?.uid) return user.uid;
+    } catch (_err) {
+        // Sem auth pronto ainda.
     }
 
-    if (!data || typeof data !== "object") {
-        data = {
-            clientes: [],
-            servicos: [],
-            agenda: [],
-            financeiro: [],
-            orcamentos: [],
-            correcoes: []
-        };
+    try {
+        const cachedUid = localStorage.getItem(LAST_UID_KEY);
+        if (cachedUid) return cachedUid;
+    } catch (_err) {
+        // Storage indisponivel.
     }
+
+    return null;
+}
+
+function getStorageKey() {
+    const uid = getAuthUid();
+    if (uid) return `${STORAGE_KEY_BASE}:uid:${uid}`;
+
+    return `${STORAGE_KEY_BASE}:anon`;
+}
+
+function getSettingsKey() {
+    const uid = getAuthUid();
+    if (uid) return `${SETTINGS_KEY_BASE}:uid:${uid}`;
+
+    return `${SETTINGS_KEY_BASE}:anon`;
+}
+
+function getUidStorageKey(uid) {
+    return `${STORAGE_KEY_BASE}:uid:${uid}`;
+}
+
+function getUidSettingsKey(uid) {
+    return `${SETTINGS_KEY_BASE}:uid:${uid}`;
+}
+
+function getAnonStorageKey() {
+    return `${STORAGE_KEY_BASE}:anon`;
+}
+
+function getAnonSettingsKey() {
+    return `${SETTINGS_KEY_BASE}:anon`;
+}
+
+function createEmptyData() {
+    return {
+        clientes: [],
+        servicos: [],
+        agenda: [],
+        financeiro: [],
+        orcamentos: [],
+        correcoes: [],
+        updatedAt: 0
+    };
+}
+
+function normalizeData(input) {
+    const data = (input && typeof input === "object")
+        ? input
+        : createEmptyData();
 
     data.clientes ||= [];
     data.servicos ||= [];
@@ -28,6 +107,116 @@ function getData() {
     data.financeiro ||= [];
     data.orcamentos ||= [];
     data.correcoes ||= [];
+    data.updatedAt = Number(data.updatedAt || 0);
+
+    return data;
+}
+
+function parseDataSafe(raw) {
+    if (!raw) return null;
+    try {
+        return normalizeData(JSON.parse(raw));
+    } catch {
+        return null;
+    }
+}
+
+function isDataEmpty(data) {
+    const d = normalizeData(data);
+    return (
+        d.clientes.length === 0 &&
+        d.servicos.length === 0 &&
+        d.agenda.length === 0 &&
+        d.financeiro.length === 0 &&
+        d.orcamentos.length === 0 &&
+        d.correcoes.length === 0
+    );
+}
+
+function migrateAnonStorageToUser(uid) {
+    if (!uid || authStorageMigrated) return;
+    authStorageMigrated = true;
+
+    const anonDataKey = getAnonStorageKey();
+    const anonSettingsKey = getAnonSettingsKey();
+    const uidDataKey = getUidStorageKey(uid);
+    const uidSettingsKey = getUidSettingsKey(uid);
+
+    const anonDataRaw = localStorage.getItem(anonDataKey);
+    const anonSettingsRaw = localStorage.getItem(anonSettingsKey);
+    const uidDataRaw = localStorage.getItem(uidDataKey);
+    const uidSettingsRaw = localStorage.getItem(uidSettingsKey);
+
+    let migratedSomething = false;
+
+    const anonData = parseDataSafe(anonDataRaw);
+    const uidData = parseDataSafe(uidDataRaw);
+    if (anonData && !isDataEmpty(anonData)) {
+        if (!uidData || isDataEmpty(uidData)) {
+            localStorage.setItem(uidDataKey, JSON.stringify(anonData));
+            migratedSomething = true;
+        } else if (Number(anonData.updatedAt || 0) > Number(uidData.updatedAt || 0)) {
+            localStorage.setItem(uidDataKey, JSON.stringify(anonData));
+            migratedSomething = true;
+        }
+    }
+
+    if (anonSettingsRaw) {
+        if (!uidSettingsRaw) {
+            localStorage.setItem(uidSettingsKey, anonSettingsRaw);
+            migratedSomething = true;
+        }
+    }
+
+    if (anonDataRaw) localStorage.removeItem(anonDataKey);
+    if (anonSettingsRaw) localStorage.removeItem(anonSettingsKey);
+
+    if (migratedSomething && !authStorageReloadDone) {
+        authStorageReloadDone = true;
+        notifyLiveUpdate("auth-migrate");
+    }
+}
+
+function getFirestoreDocRef() {
+    const uid = getAuthUid();
+    if (!uid || !window.firebase?.firestore) return null;
+
+    return window.firebase
+        .firestore()
+        .collection("users")
+        .doc(uid)
+        .collection("appData")
+        .doc(ACTIVE_PROFILE.id);
+}
+
+function migrateLegacyStorageIfNeeded(targetKey, legacyKey) {
+    const targetRaw = localStorage.getItem(targetKey);
+    if (targetRaw !== null) return;
+
+    const legacyRaw = localStorage.getItem(legacyKey);
+    if (legacyRaw === null) return;
+
+    localStorage.setItem(targetKey, legacyRaw);
+}
+
+function getDomainLabel(name, fallback) {
+    if (!ACTIVE_DOMAIN || !ACTIVE_DOMAIN.labels) return fallback;
+    return ACTIVE_DOMAIN.labels[name] || fallback;
+}
+
+function getData() {
+    const storageKey = getStorageKey();
+    migrateLegacyStorageIfNeeded(storageKey, LEGACY_STORAGE_KEY);
+
+    let data;
+    try {
+        data = JSON.parse(localStorage.getItem(storageKey));
+    } catch {
+        data = null;
+    }
+
+    data = normalizeData(data);
+    tryHydrateCloudData();
 
     return data;
 }
@@ -50,7 +239,72 @@ function listarFinanceiroValido(dataRef) {
 }
 
 function saveData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const storageKey = getStorageKey();
+    const normalized = normalizeData(data);
+    normalized.updatedAt = Date.now();
+    localStorage.setItem(storageKey, JSON.stringify(normalized));
+    queueCloudDataSync(normalized);
+    notifyLiveUpdate("save-data");
+}
+
+function queueCloudDataSync(data) {
+    const docRef = getFirestoreDocRef();
+    if (!docRef) return;
+
+    if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+    cloudSyncTimer = setTimeout(() => {
+        docRef.set({
+            data: normalizeData(data),
+            updatedAt: Number(data.updatedAt || Date.now())
+        }).catch(err => {
+            console.warn("Falha ao sincronizar dados no Firestore.", err);
+        });
+    }, 500);
+}
+
+function tryHydrateCloudData() {
+    if (cloudHydrationStarted) return;
+
+    const docRef = getFirestoreDocRef();
+    if (!docRef) return;
+    cloudHydrationStarted = true;
+
+    const storageKey = getStorageKey();
+    let localData;
+    try {
+        localData = normalizeData(JSON.parse(localStorage.getItem(storageKey) || "null"));
+    } catch {
+        localData = createEmptyData();
+    }
+
+    docRef.get().then(snapshot => {
+        if (!snapshot.exists) {
+            if (!isDataEmpty(localData)) {
+                queueCloudDataSync(localData);
+            }
+            return;
+        }
+
+        const cloudPayload = snapshot.data() || {};
+        const cloudData = normalizeData(cloudPayload.data || null);
+        const cloudUpdatedAt = Number(cloudPayload.updatedAt || cloudData.updatedAt || 0);
+        const localUpdatedAt = Number(localData.updatedAt || 0);
+
+        if (cloudUpdatedAt > localUpdatedAt) {
+            localStorage.setItem(storageKey, JSON.stringify({
+                ...cloudData,
+                updatedAt: cloudUpdatedAt
+            }));
+            notifyLiveUpdate("cloud-hydrate");
+            return;
+        }
+
+        if (localUpdatedAt > cloudUpdatedAt && !isDataEmpty(localData)) {
+            queueCloudDataSync(localData);
+        }
+    }).catch(err => {
+        console.warn("Falha ao carregar dados do Firestore.", err);
+    });
 }
 
 function gerarId() {
@@ -111,6 +365,26 @@ function formatarDocumentoBR(doc) {
     if (v.length === 14)
         return v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
     return doc;
+}
+
+function formatarDocumentoPorTipo(doc, tipo) {
+    const v = String(doc || "").replace(/\D/g, "");
+    const t = tipo === "cpf" ? "cpf" : "cnpj";
+
+    if (t === "cpf") {
+        const clipped = v.slice(0, 11);
+        if (clipped.length <= 3) return clipped;
+        if (clipped.length <= 6) return `${clipped.slice(0, 3)}.${clipped.slice(3)}`;
+        if (clipped.length <= 9) return `${clipped.slice(0, 3)}.${clipped.slice(3, 6)}.${clipped.slice(6)}`;
+        return `${clipped.slice(0, 3)}.${clipped.slice(3, 6)}.${clipped.slice(6, 9)}-${clipped.slice(9)}`;
+    }
+
+    const clipped = v.slice(0, 14);
+    if (clipped.length <= 2) return clipped;
+    if (clipped.length <= 5) return `${clipped.slice(0, 2)}.${clipped.slice(2)}`;
+    if (clipped.length <= 8) return `${clipped.slice(0, 2)}.${clipped.slice(2, 5)}.${clipped.slice(5)}`;
+    if (clipped.length <= 12) return `${clipped.slice(0, 2)}.${clipped.slice(2, 5)}.${clipped.slice(5, 8)}/${clipped.slice(8)}`;
+    return `${clipped.slice(0, 2)}.${clipped.slice(2, 5)}.${clipped.slice(5, 8)}/${clipped.slice(8, 12)}-${clipped.slice(12)}`;
 }
 
 function montarDescricaoServicoFinanceiro(servico) {
@@ -329,12 +603,14 @@ function estornarServico(servicoId) {
 // =========================
 // CONFIGURACOES VISUAIS
 // =========================
-const SETTINGS_KEY = "appSettings";
-
 function getAppSettings() {
+    const settingsKey = getSettingsKey();
+    migrateLegacyStorageIfNeeded(settingsKey, LEGACY_SETTINGS_KEY);
+
+    const profileDefaults = ACTIVE_PROFILE.defaults || {};
     let settings;
     try {
-        settings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+        settings = JSON.parse(localStorage.getItem(settingsKey));
     } catch {
         settings = null;
     }
@@ -343,16 +619,42 @@ function getAppSettings() {
         settings = {};
     }
 
+    const resolvedDocument = settings.companyDocument || profileDefaults.companyDocument || "00.000.000/0001-00";
+    const resolvedDocumentType = (
+        settings.companyDocumentType === "cpf" || settings.companyDocumentType === "cnpj"
+    )
+        ? settings.companyDocumentType
+        : inferCompanyDocumentType(resolvedDocument);
+
     return {
-        primaryColor: settings.primaryColor || "#0a7cff",
+        primaryColor: settings.primaryColor || profileDefaults.primaryColor || "#0a7cff",
         buttonTextColor: settings.buttonTextColor || "#ffffff",
         buttonSecondaryTextColor: settings.buttonSecondaryTextColor || "#111827",
         logoDataUrl: settings.logoDataUrl || "",
-        companyName: settings.companyName || "PROICE CLIMATIZACAO",
-        companyDocument: settings.companyDocument || "42.937.499/0001-08",
-        companyAddress: settings.companyAddress || "Sao Paulo",
-        companyPhone: settings.companyPhone || "(11) 99284-1312"
+        companyName: settings.companyName || profileDefaults.companyName || "EMPRESA MODELO",
+        companyDocument: resolvedDocument,
+        companyDocumentType: resolvedDocumentType,
+        companyAddress: settings.companyAddress || profileDefaults.companyAddress || "Sao Paulo",
+        companyPhone: settings.companyPhone || profileDefaults.companyPhone || "(11) 90000-0000"
     };
+}
+
+function inferCompanyDocumentType(doc) {
+    const digits = String(doc || "").replace(/\D/g, "");
+    if (digits.length === 11) return "cpf";
+    return "cnpj";
+}
+
+function notifyLiveUpdate(source) {
+    if (liveUpdateTimer) clearTimeout(liveUpdateTimer);
+    liveUpdateTimer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("senso-live-update", {
+            detail: {
+                source: source || "unknown",
+                ts: Date.now()
+            }
+        }));
+    }, 180);
 }
 
 function saveAppSettings(nextSettings) {
@@ -362,8 +664,9 @@ function saveAppSettings(nextSettings) {
         ...(nextSettings || {})
     };
 
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
+    localStorage.setItem(getSettingsKey(), JSON.stringify(merged));
     applyAppSettings();
+    notifyLiveUpdate("save-settings");
 }
 
 function applyAppSettings() {
@@ -397,8 +700,12 @@ function applyBudgetCompanyInfo(settings) {
 
     const companyName = settings.companyName || "PROICE CLIMATIZACAO";
     const companyDocument = settings.companyDocument || "42.937.499/0001-08";
+    const companyDocumentType = settings.companyDocumentType === "cpf" ? "cpf" : "cnpj";
+    const companyDocumentLabel = companyDocumentType === "cpf" ? "CPF" : "CNPJ";
+    const companyDocumentFormatted = formatarDocumentoPorTipo(companyDocument, companyDocumentType);
     const companyAddress = settings.companyAddress || "Sao Paulo";
     const companyPhone = settings.companyPhone || "(11) 99284-1312";
+    const companyPhoneFormatted = formatarTelefoneBR(companyPhone);
 
     empresaEl.innerHTML = "";
 
@@ -408,7 +715,7 @@ function applyBudgetCompanyInfo(settings) {
     empresaEl.appendChild(document.createElement("br"));
 
     empresaEl.appendChild(
-        document.createTextNode(`CNPJ: ${companyDocument}`)
+        document.createTextNode(`${companyDocumentLabel}: ${companyDocumentFormatted}`)
     );
     empresaEl.appendChild(document.createElement("br"));
 
@@ -418,7 +725,7 @@ function applyBudgetCompanyInfo(settings) {
     empresaEl.appendChild(document.createElement("br"));
 
     empresaEl.appendChild(
-        document.createTextNode(`Telefone: ${companyPhone}`)
+        document.createTextNode(`Telefone: ${companyPhoneFormatted}`)
     );
 }
 
@@ -449,6 +756,17 @@ function applyBudgetLogo(logoDataUrl) {
 
 applyAppSettings();
 
+window.addEventListener("senso-auth-ready", event => {
+    const uid = event?.detail?.uid || getAuthUid();
+    if (!uid) return;
+    migrateAnonStorageToUser(uid);
+});
+
+const initialAuthUid = getAuthUid();
+if (initialAuthUid) {
+    migrateAnonStorageToUser(initialAuthUid);
+}
+
 // =========================
 // ATUALIZACAO AUTOMATICA DE TELA
 // =========================
@@ -456,22 +774,45 @@ function enableAutoRefreshOnDataChange() {
     const isConfigPage = /\/configuracoes\.html$/i.test(location.pathname);
     if (isConfigPage) return;
 
-    let lastDataRaw = localStorage.getItem(STORAGE_KEY) || "";
-    let lastSettingsRaw = localStorage.getItem(SETTINGS_KEY) || "";
+    let lastDataKey = getStorageKey();
+    let lastSettingsKey = getSettingsKey();
+    let lastDataRaw = localStorage.getItem(lastDataKey) || "";
+    let lastSettingsRaw = localStorage.getItem(lastSettingsKey) || "";
+
+    function captureCurrentSnapshot() {
+        lastDataKey = getStorageKey();
+        lastSettingsKey = getSettingsKey();
+        lastDataRaw = localStorage.getItem(lastDataKey) || "";
+        lastSettingsRaw = localStorage.getItem(lastSettingsKey) || "";
+    }
 
     function hasChanged() {
-        const currentDataRaw = localStorage.getItem(STORAGE_KEY) || "";
-        const currentSettingsRaw = localStorage.getItem(SETTINGS_KEY) || "";
+        const currentDataKey = getStorageKey();
+        const currentSettingsKey = getSettingsKey();
+
+        // Quando a chave muda (ex.: anon -> uid), so recalibra baseline.
+        if (currentDataKey !== lastDataKey || currentSettingsKey !== lastSettingsKey) {
+            lastDataKey = currentDataKey;
+            lastSettingsKey = currentSettingsKey;
+            lastDataRaw = localStorage.getItem(lastDataKey) || "";
+            lastSettingsRaw = localStorage.getItem(lastSettingsKey) || "";
+            return false;
+        }
+
+        const currentDataRaw = localStorage.getItem(currentDataKey) || "";
+        const currentSettingsRaw = localStorage.getItem(currentSettingsKey) || "";
         return currentDataRaw !== lastDataRaw || currentSettingsRaw !== lastSettingsRaw;
     }
 
     function refreshIfChanged() {
         if (!hasChanged()) return;
-        location.reload();
+        captureCurrentSnapshot();
+        applyAppSettings();
+        notifyLiveUpdate("storage-sync");
     }
 
     window.addEventListener("storage", event => {
-        if (event.key === STORAGE_KEY || event.key === SETTINGS_KEY) {
+        if (event.key === getStorageKey() || event.key === getSettingsKey()) {
             refreshIfChanged();
         }
     });
