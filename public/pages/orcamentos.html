@@ -48,6 +48,7 @@ body {
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, filter .2s ease, background .2s ease;
 }
 
 .aba-btn.ativa {
@@ -65,6 +66,7 @@ body {
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, filter .2s ease, background .2s ease;
 }
 
 .filtro-btn.ativo {
@@ -101,11 +103,35 @@ body {
     box-shadow: 0 4px 10px rgba(0,0,0,.08);
     font-size: 14px;
     cursor: pointer;
-    transition: transform .15s ease;
+    transition: transform .15s ease, box-shadow .2s ease;
 }
 
 .card:hover {
     transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+}
+
+.aba-btn:hover,
+.aba-btn:focus-visible,
+.filtro-btn:hover,
+.filtro-btn:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 14px rgba(15, 23, 42, 0.12);
+    filter: saturate(1.05);
+}
+
+.aba-btn:active,
+.filtro-btn:active {
+    transform: scale(0.98);
+    box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aba-btn,
+    .filtro-btn,
+    .card {
+        transition: none;
+    }
 }
 
 /* ===== CORES POR STATUS ===== */

@@ -12,7 +12,14 @@
     <meta name="theme-color" content="#0f9d58">
 
     <style>
-        body { background: #ffffff; }
+        body {
+            background:
+                radial-gradient(circle at 14% 12%, rgba(14,165,233,.26), transparent 40%),
+                radial-gradient(circle at 84% 20%, rgba(45,212,191,.22), transparent 44%),
+                linear-gradient(165deg, #e8f5ff 0%, #ecfeff 46%, #f8fafc 100%);
+        }
+
+        .app { background: transparent; }
 
         /* ===== MENU ===== */
         .menu-overlay {
@@ -29,8 +36,10 @@
             left: -260px;
             width: 260px;
             height: 100%;
-            background: #fff;
-            box-shadow: 2px 0 10px rgba(0,0,0,.2);
+            background: rgba(255,255,255,.82);
+            box-shadow: 10px 0 26px rgba(15,23,42,.22);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             padding: 16px;
             transition: left .3s ease;
             z-index: 999;
@@ -76,6 +85,10 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            background: rgba(15,118,110,.84) !important;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,.3);
         }
 
         .btn-menu {
@@ -94,18 +107,57 @@
         }
 
         .card {
-            background: #fff;
+            --card-accent: #3b82f6;
+            --card-border: rgba(59,130,246,.34);
+            --card-ring: rgba(59,130,246,.20);
+            --card-title-color: #1d4ed8;
+            --card-value-color: #1e3a8a;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(145deg, rgba(255,255,255,.75), rgba(255,255,255,.43));
             border-radius: 16px;
             padding: 16px;
             text-align: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
+            box-shadow: 0 14px 24px rgba(15,23,42,.10), 0 0 0 1px var(--card-ring);
             text-decoration: none;
             color: #000;
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
         }
 
-        .card-icon { font-size: 36px; margin-bottom: 6px; }
-        .card-title { font-size: 15px; font-weight: bold; }
-        .card-value { margin-top: 6px; font-size: 15px; font-weight: bold; }
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: linear-gradient(120deg, rgba(255,255,255,.6) 0%, rgba(255,255,255,0) 34%);
+        }
+
+        .card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .card:hover,
+        .card:focus-visible {
+            transform: translateY(-3px) scale(1.01);
+            box-shadow: 0 20px 34px rgba(15,23,42,.16), 0 0 0 1px var(--card-ring);
+            border-color: var(--card-accent);
+        }
+
+        .card:active {
+            transform: translateY(0) scale(.99);
+        }
+
+        .card-icon { font-size: 36px; margin-bottom: 6px; filter: saturate(1.1); }
+        .card-title { font-size: 15px; font-weight: bold; color: var(--card-title-color); }
+        .card-value { margin-top: 6px; font-size: 15px; font-weight: bold; color: var(--card-value-color); }
         .card-desc { font-size: 13px; color: #666; margin-top: 4px; }
 
         .card-extra {
@@ -115,13 +167,61 @@
             color: #f57c00;
         }
 
+        @media (prefers-reduced-motion: reduce) {
+            .card {
+                transition: none;
+            }
+        }
+
         /* cores suaves */
-        .clientes { background: #bbd1f3; }
-        .servico { background: #f2f6c0; }
-        .orcamentos { background: #ddf3df; }
-        .agenda { background: #ede7f6; }
-        .financeiro { background: #fbe5bd; }
-        .resumo { background: #fce4ec; }
+        .clientes {
+            --card-accent: #2563eb;
+            --card-border: rgba(37,99,235,.34);
+            --card-ring: rgba(37,99,235,.20);
+            --card-title-color: #1d4ed8;
+            --card-value-color: #1e3a8a;
+            background: linear-gradient(145deg, rgba(141,179,235,.54), rgba(255,255,255,.35));
+        }
+        .servico {
+            --card-accent: #6b8e23;
+            --card-border: rgba(107,142,35,.34);
+            --card-ring: rgba(107,142,35,.20);
+            --card-title-color: #3f6212;
+            --card-value-color: #365314;
+            background: linear-gradient(145deg, rgba(225,236,150,.54), rgba(255,255,255,.35));
+        }
+        .orcamentos {
+            --card-accent: #15803d;
+            --card-border: rgba(21,128,61,.34);
+            --card-ring: rgba(21,128,61,.20);
+            --card-title-color: #166534;
+            --card-value-color: #14532d;
+            background: linear-gradient(145deg, rgba(171,226,177,.52), rgba(255,255,255,.35));
+        }
+        .agenda {
+            --card-accent: #7c3aed;
+            --card-border: rgba(124,58,237,.34);
+            --card-ring: rgba(124,58,237,.20);
+            --card-title-color: #6d28d9;
+            --card-value-color: #5b21b6;
+            background: linear-gradient(145deg, rgba(212,197,238,.55), rgba(255,255,255,.35));
+        }
+        .financeiro {
+            --card-accent: #b45309;
+            --card-border: rgba(180,83,9,.34);
+            --card-ring: rgba(180,83,9,.20);
+            --card-title-color: #92400e;
+            --card-value-color: #78350f;
+            background: linear-gradient(145deg, rgba(245,209,139,.56), rgba(255,255,255,.35));
+        }
+        .resumo {
+            --card-accent: #be185d;
+            --card-border: rgba(190,24,93,.34);
+            --card-ring: rgba(190,24,93,.20);
+            --card-title-color: #9d174d;
+            --card-value-color: #831843;
+            background: linear-gradient(145deg, rgba(245,191,216,.56), rgba(255,255,255,.35));
+        }
     </style>
 </head>
 <body>
@@ -153,43 +253,37 @@
             <div class="card-icon">👤</div>
             <div class="card-title">Clientes</div>
             <div class="card-value" id="totalClientes">0</div>
-            <div class="card-desc">Ativos</div>
-        </a>
+            <div class="card-desc">Ativos</div></a>
 
         <a href="pages/servico.html" class="card servico">
             <div class="card-icon">🛠️</div>
             <div class="card-title">Serviços</div>
             <div class="card-value" id="servicosPendentes">0</div>
-            <div class="card-desc">Pendentes</div>
-        </a>
+            <div class="card-desc">Pendentes</div></a>
 
         <a href="pages/orcamentos.html" class="card orcamentos">
             <div class="card-icon">📄</div>
             <div class="card-title">Orçamentos</div>
             <div class="card-value" id="totalOrcamentos">0</div>
             <div class="card-desc">Gerados</div>
-            <div class="card-extra" id="orcPendentes"></div>
-        </a>
+            <div class="card-extra" id="orcPendentes"></div></a>
 
         <a href="pages/agenda.html" class="card agenda">
             <div class="card-icon">📅</div>
             <div class="card-title">Agenda</div>
             <div class="card-value" id="proximoRetorno">—</div>
-            <div class="card-desc">Próximo retorno</div>
-        </a>
+            <div class="card-desc">Próximo retorno</div></a>
 
         <a href="pages/financeiro.html" class="card financeiro">
             <div class="card-icon">💰</div>
             <div class="card-title">Financeiro</div>
             <div class="card-value" id="saldoMes">R$ 0,00</div>
-            <div class="card-desc">Saldo do mês</div>
-        </a>
+            <div class="card-desc">Saldo do mês</div></a>
 
         <a href="pages/resumo.html" class="card resumo">
             <div class="card-icon">📊</div>
             <div class="card-title">Resumo mensal</div>
-            <div class="card-desc">Fechamento</div>
-        </a>
+            <div class="card-desc">Fechamento</div></a>
 
     </div>
 </div>
@@ -285,3 +379,5 @@ overlay.onclick = () => {
     overlay.style.display = "none";
 };
 </script>
+
+

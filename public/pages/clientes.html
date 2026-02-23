@@ -8,13 +8,68 @@
   <link rel="stylesheet" href="../css/style.css" />
 
   <style>
+    body {
+      background:
+        radial-gradient(circle at 15% 10%, rgba(14, 165, 233, 0.28), transparent 38%),
+        radial-gradient(circle at 82% 25%, rgba(45, 212, 191, 0.24), transparent 40%),
+        linear-gradient(170deg, #e6f4ff 0%, #ecfeff 46%, #f8fafc 100%);
+      min-height: 100vh;
+    }
+
+    .app {
+      background: transparent;
+    }
+
+    .header {
+      background: rgba(10, 124, 255, 0.78) !important;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-primary {
+      background: rgba(10, 124, 255, 0.9) !important;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 12px 22px rgba(10, 124, 255, 0.2);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+    }
+
     .cliente-card {
-      background: #fff;
-      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(
+        140deg,
+        rgba(255, 255, 255, 0.72),
+        rgba(255, 255, 255, 0.4)
+      );
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      border-radius: 14px;
       padding: 12px;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      margin-bottom: 12px;
+      box-shadow: 0 16px 28px rgba(15, 23, 42, 0.12);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       font-size: 14px;
+    }
+
+    .cliente-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: linear-gradient(
+        120deg,
+        rgba(255, 255, 255, 0.58) 0%,
+        rgba(255, 255, 255, 0) 34%
+      );
+    }
+
+    .cliente-card > * {
+      position: relative;
+      z-index: 1;
     }
 
     .cliente-resumo {
@@ -28,17 +83,20 @@
     }
 
     .btn-detalhes {
-      background: none;
-      border: none;
-      color: #1976d2;
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 999px;
+      padding: 6px 12px;
+      color: #0a4ea9;
       font-size: 13px;
       cursor: pointer;
+      transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
     }
 
     .cliente-detalhes {
       margin-top: 8px;
       padding-top: 8px;
-      border-top: 1px solid #eee;
+      border-top: 1px solid rgba(255, 255, 255, 0.6);
       font-size: 13px;
     }
 
@@ -48,13 +106,40 @@
 
     .btn-arquivar {
       margin-top: 6px;
-      background: #f44336;
+      background: rgba(244, 67, 54, 0.92);
       color: #fff;
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.4);
       border-radius: 8px;
       padding: 6px 10px;
       font-size: 13px;
       cursor: pointer;
+      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+    }
+
+    .btn-primary:hover,
+    .btn-primary:focus-visible,
+    .btn-detalhes:hover,
+    .btn-detalhes:focus-visible,
+    .btn-arquivar:hover,
+    .btn-arquivar:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(15, 23, 42, 0.14);
+      filter: saturate(1.05);
+    }
+
+    .btn-primary:active,
+    .btn-detalhes:active,
+    .btn-arquivar:active {
+      transform: scale(0.98);
+      box-shadow: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn-primary,
+      .btn-detalhes,
+      .btn-arquivar {
+        transition: none;
+      }
     }
   </style>
 </head>

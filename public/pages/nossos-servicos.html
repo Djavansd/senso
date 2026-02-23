@@ -6,24 +6,57 @@
 <title>Nossos serviços</title>
 <link rel="stylesheet" href="../css/style.css" />
 <style>
-body { background:#f7f8fa; }
+body {
+    background:
+      radial-gradient(circle at 14% 12%, rgba(14,165,233,.25), transparent 40%),
+      radial-gradient(circle at 84% 20%, rgba(45,212,191,.22), transparent 43%),
+      linear-gradient(165deg, #e8f5ff 0%, #ecfeff 45%, #f8fafc 100%);
+}
+.app { background: transparent; }
+.header {
+    background: rgba(10,124,255,.78);
+    color:#fff;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom:1px solid rgba(255,255,255,.25);
+}
 .content { padding:12px; }
 .intro {
-    background: linear-gradient(135deg, #0f766e, #0ea5a4);
+    background: linear-gradient(135deg, rgba(15,118,110,.88), rgba(14,165,164,.78));
     color:#fff;
     border-radius:14px;
     padding:14px;
     margin-bottom:12px;
+    border:1px solid rgba(255,255,255,.35);
+    box-shadow:0 14px 26px rgba(15,118,110,.20);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 .intro h3 { margin:0 0 6px; font-size:18px; }
 .intro p { margin:0; font-size:13px; opacity:.95; }
 .service-card {
-    background:#fff;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(145deg, rgba(255,255,255,.74), rgba(255,255,255,.42));
     border-radius:14px;
-    box-shadow:0 4px 10px rgba(0,0,0,.06);
+    box-shadow:0 16px 28px rgba(15,23,42,.12);
     padding:12px;
-    margin-bottom:10px;
-    border:1px solid #eef0f3;
+    margin-bottom:12px;
+    border:1px solid rgba(255,255,255,.7);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+.service-card::before {
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background: linear-gradient(120deg, rgba(255,255,255,.58) 0%, rgba(255,255,255,0) 34%);
+}
+.service-card > * {
+    position:relative;
+    z-index:1;
 }
 .service-card h4 { margin:0 0 6px; font-size:16px; }
 .service-card p { margin:0 0 8px; font-size:13px; color:#4b5563; }
@@ -48,11 +81,13 @@ body { background:#f7f8fa; }
     font-weight:700;
 }
 .btn-whats {
-    background:#22c55e;
+    background:rgba(34,197,94,.92);
+    border:1px solid rgba(255,255,255,.35);
     color:#fff;
 }
 .btn-back {
-    background:#e5e7eb;
+    background:rgba(229,231,235,.72);
+    border:1px solid rgba(255,255,255,.5);
     color:#111827;
 }
 </style>
