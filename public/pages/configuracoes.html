@@ -72,6 +72,15 @@ select {
     <div class="content">
         <div class="card">
             <div class="group">
+                <label for="businessType">Tipo de negocio</label>
+                <select id="businessType">
+                    <option value="mecanica">Mecanico</option>
+                    <option value="prestador">Prestador de servico</option>
+                </select>
+                <div class="muted">Define campos de cliente e orcamento do app.</div>
+            </div>
+
+            <div class="group">
                 <label for="primaryColor">Cor principal do app</label>
                 <input id="primaryColor" type="color" value="#0a7cff">
                 <div class="muted">Essa cor sera aplicada nos cabecalhos e botoes.</div>
@@ -146,6 +155,7 @@ select {
 const primaryColorInput = document.getElementById("primaryColor");
 const buttonTextColorInput = document.getElementById("buttonTextColor");
 const buttonSecondaryTextColorInput = document.getElementById("buttonSecondaryTextColor");
+const businessTypeInput = document.getElementById("businessType");
 const logoInput = document.getElementById("logoInput");
 const logoPreview = document.getElementById("logoPreview");
 const btnSalvar = document.getElementById("btnSalvar");
@@ -159,6 +169,7 @@ const companyAddressInput = document.getElementById("companyAddress");
 const companyPhoneInput = document.getElementById("companyPhone");
 
 let logoDataUrl = "";
+let profileChanged = false;
 
 function renderLogoPreview() {
     if (!logoDataUrl) {
@@ -180,6 +191,13 @@ function applyCompanyDocumentFieldState() {
 }
 
 const settings = getAppSettings();
+const perfilAtivo = (
+    window.SensoProfile &&
+    typeof window.SensoProfile.getActiveProfile === "function"
+)
+    ? window.SensoProfile.getActiveProfile()
+    : { id: "mecanica" };
+businessTypeInput.value = perfilAtivo.id === "prestador" ? "prestador" : "mecanica";
 primaryColorInput.value = settings.primaryColor || "#0a7cff";
 buttonTextColorInput.value = settings.buttonTextColor || "#ffffff";
 buttonSecondaryTextColorInput.value = settings.buttonSecondaryTextColor || "#111827";
@@ -266,6 +284,14 @@ btnRemoverLogo.addEventListener("click", () => {
 });
 
 btnSalvar.addEventListener("click", () => {
+    const perfilSelecionado = businessTypeInput.value === "prestador" ? "prestador" : "mecanica";
+    const mudouPerfil = perfilSelecionado !== (perfilAtivo.id || "mecanica");
+    if (window.SensoProfile && typeof window.SensoProfile.setActiveProfile === "function") {
+        profileChanged = mudouPerfil
+            ? (window.SensoProfile.setActiveProfile(perfilSelecionado) || false)
+            : false;
+    }
+
     saveAppSettings({
         primaryColor: primaryColorInput.value,
         buttonTextColor: buttonTextColorInput.value,
@@ -280,6 +306,12 @@ btnSalvar.addEventListener("click", () => {
         companyAddress: companyAddressInput.value.trim(),
         companyPhone: companyPhoneInput.value.trim()
     });
+
+    if (profileChanged) {
+        alert("Configuracoes salvas. O app sera recarregado para aplicar o tipo de negocio.");
+        window.location.replace("../index.html");
+        return;
+    }
 
     alert("Configuracoes salvas.");
 });

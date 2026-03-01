@@ -93,6 +93,32 @@
       transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
     }
 
+    .cliente-acoes {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-whatsapp {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      background: #25d366;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+    }
+
+    .btn-whatsapp:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     .cliente-detalhes {
       margin-top: 8px;
       padding-top: 8px;
@@ -118,6 +144,8 @@
 
     .btn-primary:hover,
     .btn-primary:focus-visible,
+    .btn-whatsapp:hover,
+    .btn-whatsapp:focus-visible,
     .btn-detalhes:hover,
     .btn-detalhes:focus-visible,
     .btn-arquivar:hover,
@@ -128,6 +156,7 @@
     }
 
     .btn-primary:active,
+    .btn-whatsapp:active,
     .btn-detalhes:active,
     .btn-arquivar:active {
       transform: scale(0.98);
@@ -136,6 +165,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       .btn-primary,
+      .btn-whatsapp,
       .btn-detalhes,
       .btn-arquivar {
         transition: none;
@@ -166,10 +196,14 @@
 
   <script>
     const lista = document.getElementById("lista");
+    const modoMecanica = (
+      window.SensoProfile &&
+      typeof window.SensoProfile.getActiveProfile === "function" &&
+      window.SensoProfile.getActiveProfile()?.id === "mecanica"
+    );
 
-    // ===== FORMATAR DOCUMENTO BR (CPF / CNPJ) =====
     function formatarDocumentoBR(doc) {
-      if (!doc) return "Documento não informado";
+      if (!doc) return "Documento nao informado";
 
       const v = doc.replace(/\D/g, "");
 
@@ -187,6 +221,14 @@
       return doc;
     }
 
+    function normalizarTelefoneWhats(telefone) {
+      const digitos = String(telefone || "").replace(/\D/g, "");
+      if (!digitos) return "";
+      if (digitos.startsWith("55")) return digitos;
+      if (digitos.length >= 10 && digitos.length <= 11) return `55${digitos}`;
+      return digitos;
+    }
+
     function renderClientes() {
       const clientes = listarClientesAtivos();
       lista.innerHTML = "";
@@ -199,27 +241,42 @@
       clientes.forEach(c => {
         const card = document.createElement("div");
         card.className = "cliente-card";
+        const telefoneWhats = normalizarTelefoneWhats(c.telefone);
+        const companyName = String(getAppSettings()?.companyName || "").trim();
+        const remetente = companyName || (modoMecanica ? "oficina" : "empresa");
+        const mensagemWhats = modoMecanica
+          ? `Ola ${c.nome || ""}, aqui e da ${remetente}. Podemos falar sobre seu veiculo?`
+          : `Ola ${c.nome || ""}, aqui e da ${remetente}. Podemos falar sobre seu atendimento?`;
+        const detalhesVeiculo = modoMecanica
+          ? `
+            Modelo: ${c.modeloCarro || "Modelo nao informado"}<br>
+            Placa: ${c.placaCarro || "Placa nao informada"}<br>
+            Cor: ${c.corCarro || "Cor nao informada"}<br>
+          `
+          : "";
 
         card.innerHTML = `
           <div class="cliente-resumo">
             <div class="cliente-info">
               <strong>${c.nome}</strong><br>
-              📞 ${c.telefone}
+              Telefone: ${c.telefone || "Sem telefone"}
             </div>
-            <button class="btn-detalhes">Ver</button>
+            <div class="cliente-acoes">
+              <button class="btn-whatsapp" title="Chamar no WhatsApp" aria-label="Chamar no WhatsApp" ${telefoneWhats ? "" : "disabled"}>WA</button>
+              <button class="btn-detalhes">Ver</button>
+            </div>
           </div>
 
           <div class="cliente-detalhes hidden">
-            📍 ${c.endereco || "Endereço não informado"}<br>
-            📄 ${formatarDocumentoBR(c.documento)}<br>
-            🚗 ${c.modeloCarro || "Modelo não informado"}<br>
-            🔖 ${c.placaCarro || "Placa não informada"}<br>
-            🎨 ${c.corCarro || "Cor não informada"}<br>
+            Endereco: ${c.endereco || "Endereco nao informado"}<br>
+            Documento: ${formatarDocumentoBR(c.documento)}<br>
+            ${detalhesVeiculo}
             <button class="btn-arquivar">Arquivar</button>
           </div>
         `;
 
         const btnDetalhes = card.querySelector(".btn-detalhes");
+        const btnWhats = card.querySelector(".btn-whatsapp");
         const detalhes = card.querySelector(".cliente-detalhes");
         const btnArquivar = card.querySelector(".btn-arquivar");
 
@@ -233,6 +290,15 @@
           if (!confirm("Arquivar este cliente?")) return;
           arquivarCliente(c.id);
           renderClientes();
+        };
+
+        btnWhats.onclick = () => {
+          if (!telefoneWhats) {
+            alert("Cliente sem telefone valido para WhatsApp.");
+            return;
+          }
+          const url = `https://wa.me/${telefoneWhats}?text=${encodeURIComponent(mensagemWhats)}`;
+          window.open(url, "_blank");
         };
 
         lista.appendChild(card);
@@ -249,3 +315,5 @@
 </body>
 
 </html>
+
+

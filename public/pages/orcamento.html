@@ -236,7 +236,10 @@ table tr {
     <div class="bloco">
         <strong>CLIENTE:</strong> <span id="clienteNome"></span><br>
         CPF/CNPJ: <span id="clienteDoc"></span><br>
-        ENDEREÇO: <span id="clienteEndereco"></span>
+        ENDEREÇO: <span id="clienteEndereco"></span><br>
+        <span id="linhaClienteModelo">MODELO: <span id="clienteModeloCarro"></span><br></span>
+        <span id="linhaClientePlaca">PLACA: <span id="clientePlacaCarro"></span><br></span>
+        <span id="linhaClienteCor">COR: <span id="clienteCorCarro"></span></span>
     </div>
     <div class="bloco">
         <strong>TELEFONE:</strong> <span id="clienteTelefone"></span><br>
@@ -293,6 +296,17 @@ table tr {
 const id = new URLSearchParams(location.search).get("id");
 const data = getData();
 const orc = data.orcamentos.find(o => o.id === id);
+const clienteCadastro = (data.clientes || []).find(c => c.id === orc?.cliente?.id);
+const clienteDados = {
+    ...(orc?.cliente || {}),
+    ...(clienteCadastro || {})
+};
+const modoMecanica = (
+    window.SensoProfile &&
+    typeof window.SensoProfile.getActiveProfile === "function" &&
+    window.SensoProfile.getActiveProfile()?.id === "mecanica"
+);
+
 
 if (!orc) {
     alert("Orçamento não encontrado");
@@ -301,11 +315,20 @@ if (!orc) {
 }
 
 dataEmissao.textContent = new Date(orc.criadoEm).toLocaleDateString("pt-BR");
-clienteNome.textContent = orc.cliente.nome;
-clienteDoc.textContent = formatarDocumentoBR(orc.cliente.documento) || "—";
-clienteEndereco.textContent = orc.cliente.endereco || "—";
-clienteTelefone.textContent = orc.cliente.telefone || "—";
+clienteNome.textContent = clienteDados.nome || "—";
+clienteDoc.textContent = formatarDocumentoBR(clienteDados.documento) || "—";
+clienteEndereco.textContent = clienteDados.endereco || "—";
+clienteTelefone.textContent = clienteDados.telefone || "—";
+clienteModeloCarro.textContent = clienteDados.modeloCarro || "—";
+clientePlacaCarro.textContent = clienteDados.placaCarro || "—";
+clienteCorCarro.textContent = clienteDados.corCarro || "—";
 formaPagamento.textContent = orc.formaPagamento || "—";
+
+if (!modoMecanica) {
+    linhaClienteModelo.style.display = "none";
+    linhaClientePlaca.style.display = "none";
+    linhaClienteCor.style.display = "none";
+}
 
 tabelaItens.innerHTML = "";
 orc.itens.forEach(i => {
@@ -494,21 +517,27 @@ async function gerarBlobPdfOrcamento() {
 
         // Dados cliente
         const clienteGap = 6;
-        const clienteBoxH = 26;
+        const clienteBoxH = modoMecanica ? 40 : 26;
         drawRect(m, y, leftColW, clienteBoxH);
         drawRect(m + leftColW + clienteGap, y, rightColW, clienteBoxH);
 
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(10.5);
-        pdf.text(`CLIENTE: ${orc?.cliente?.nome || "—"}`, m + 4, y + 8);
+        pdf.text(`CLIENTE: ${clienteDados?.nome || "—"}`, m + 4, y + 8);
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(9.6);
-        pdf.text(`CPF/CNPJ: ${formatarDocumentoBR(String(orc?.cliente?.documento || "").trim()) || "—"}`, m + 4, y + 13.8);
-        const endCli = String(orc?.cliente?.endereco || "—");
+        pdf.text(`CPF/CNPJ: ${formatarDocumentoBR(String(clienteDados?.documento || "").trim()) || "—"}`, m + 4, y + 13.8);
+        const endCli = String(clienteDados?.endereco || "—");
         const endCliText = pdf.splitTextToSize(`ENDERECO: ${endCli}`, leftColW - 8);
         pdf.text(endCliText, m + 4, y + 19.5);
 
-        const telCli = formatarTelefoneBR(String(orc?.cliente?.telefone || "").trim()) || "—";
+        if (modoMecanica) {
+            pdf.text(`MODELO: ${String(clienteDados?.modeloCarro || "—")}`, m + 4, y + 27.2);
+            pdf.text(`PLACA: ${String(clienteDados?.placaCarro || "—")}`, m + 4, y + 32.8);
+            pdf.text(`COR: ${String(clienteDados?.corCarro || "—")}`, m + 4, y + 38.4);
+        }
+
+        const telCli = formatarTelefoneBR(String(clienteDados?.telefone || "").trim()) || "—";
         const fp = String(orc?.formaPagamento || "").trim() || "—";
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(10.5);
@@ -673,8 +702,8 @@ async function enviarWhatsAppPDF() {
         const file = typeof File === "function"
             ? new File([blob], fileName, { type: "application/pdf" })
             : null;
-        const telefone = normalizarTelefoneWhats(orc?.cliente?.telefone);
-        const msg = `Ola ${orc?.cliente?.nome || ""}, segue seu orcamento ${orc?.numero || ""}.`;
+        const telefone = normalizarTelefoneWhats(clienteDados?.telefone);
+        const msg = `Ola ${clienteDados?.nome || ""}, segue seu orcamento ${orc?.numero || ""}.`;
         const waUrl = telefone
             ? `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`
             : `https://wa.me/?text=${encodeURIComponent(msg)}`;
@@ -723,4 +752,6 @@ function recusar() {
 
 </body>
 </html>
+
+
 

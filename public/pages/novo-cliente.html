@@ -37,18 +37,18 @@
                         <input id="documento" placeholder="Opcional" />
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group campo-veiculo">
                         <label>Modelo do carro</label>
                         <input id="modeloCarro" name="modeloCarro" list="sugestoesModeloCarro" placeholder="Opcional" autocomplete="on" />
                         <datalist id="sugestoesModeloCarro"></datalist>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group campo-veiculo">
                         <label>Placa</label>
                         <input id="placaCarro" placeholder="Opcional" />
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group campo-veiculo">
                         <label>Cor</label>
                         <input id="corCarro" placeholder="Opcional" />
                     </div>
@@ -82,6 +82,24 @@
         const sugestoesModeloCarro = document.getElementById("sugestoesModeloCarro");
         const placaCarro = document.getElementById("placaCarro");
         const corCarro = document.getElementById("corCarro");
+        const camposVeiculo = document.querySelectorAll(".campo-veiculo");
+        const modoMecanica = (
+            window.SensoProfile &&
+            typeof window.SensoProfile.getActiveProfile === "function" &&
+            window.SensoProfile.getActiveProfile()?.id === "mecanica"
+        );
+
+        function aplicarModoFormularioCliente() {
+            camposVeiculo.forEach(campo => {
+                campo.style.display = modoMecanica ? "" : "none";
+            });
+
+            if (!modoMecanica) {
+                modeloCarro.value = "";
+                placaCarro.value = "";
+                corCarro.value = "";
+            }
+        }
 
         function carregarSugestoesModeloCarro() {
             const modelosUnicos = new Map();
@@ -124,11 +142,13 @@
             return /^[A-Z]{3}-[0-9]{4}$/.test(value) || /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(value);
         }
 
-        carregarSugestoesModeloCarro();
-
-        placaCarro.addEventListener("input", () => {
-            placaCarro.value = normalizarPlaca(placaCarro.value);
-        });
+        aplicarModoFormularioCliente();
+        if (modoMecanica) {
+            carregarSugestoesModeloCarro();
+            placaCarro.addEventListener("input", () => {
+                placaCarro.value = normalizarPlaca(placaCarro.value);
+            });
+        }
 
         form.onsubmit = function (e) {
             e.preventDefault();
@@ -140,8 +160,10 @@
                 return;
             }
 
-            const placaNormalizada = normalizarPlaca(placaCarro.value);
-            if (!placaValida(placaNormalizada)) {
+            const placaNormalizada = modoMecanica
+                ? normalizarPlaca(placaCarro.value)
+                : "";
+            if (modoMecanica && !placaValida(placaNormalizada)) {
                 alert("Placa inválida. Use ABC-1234 ou ABC1D23 (Mercosul).");
                 placaCarro.focus();
                 return;
@@ -153,9 +175,9 @@
                 telefone: telefoneFormatado,
                 endereco: endereco.value.trim() || "",
                 documento: documento.value.trim() || "",
-                modeloCarro: modeloCarro.value.trim() || "",
-                placaCarro: placaNormalizada || "",
-                corCarro: corCarro.value.trim() || ""
+                modeloCarro: modoMecanica ? (modeloCarro.value.trim() || "") : "",
+                placaCarro: modoMecanica ? (placaNormalizada || "") : "",
+                corCarro: modoMecanica ? (corCarro.value.trim() || "") : ""
             });
 
             // envia direto para a tela inicial sem empilhar retornos no historico
@@ -166,3 +188,4 @@
 </body>
 
 </html>
+

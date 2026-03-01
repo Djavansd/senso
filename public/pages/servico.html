@@ -131,10 +131,24 @@ textarea {
     <datalist id="sugestoesServico"></datalist>
 
     <label>Valor unitário</label>
-    <input id="itemValor" required />
+    <input
+        id="itemValor"
+        type="text"
+        inputmode="decimal"
+        pattern="^\d+([.,]\d{0,2})?$"
+        placeholder="Ex: 10,50"
+        required
+    />
 
     <label>Quantidade</label>
-    <input id="itemQtd" type="number" value="1" min="1" required />
+    <input
+        id="itemQtd"
+        type="text"
+        inputmode="numeric"
+        pattern="^\d+$"
+        value="1"
+        required
+    />
 
     <button type="submit">Adicionar Item</button>
 </form>
@@ -206,6 +220,54 @@ const sugestoesServico = document.getElementById("sugestoesServico");
 const itemDescricao = document.getElementById("itemDescricao");
 const itemValor = document.getElementById("itemValor");
 const itemQtd = document.getElementById("itemQtd");
+const modoMecanica = (
+    window.SensoProfile &&
+    typeof window.SensoProfile.getActiveProfile === "function" &&
+    window.SensoProfile.getActiveProfile()?.id === "mecanica"
+);
+
+function limparQtdInput(valor) {
+    return String(valor || "").replace(/\D/g, "");
+}
+
+function limparValorInput(valor) {
+    const somentePermitidos = String(valor || "")
+        .replace(/[^\d.,]/g, "")
+        .replace(/\./g, ",");
+
+    const indiceVirgula = somentePermitidos.indexOf(",");
+    if (indiceVirgula < 0) {
+        return somentePermitidos.replace(/\D/g, "");
+    }
+
+    const parteInteira = somentePermitidos.slice(0, indiceVirgula).replace(/\D/g, "");
+    const parteDecimal = somentePermitidos
+        .slice(indiceVirgula + 1)
+        .replace(/\D/g, "")
+        .slice(0, 2);
+
+    return `${parteInteira},${parteDecimal}`;
+}
+
+function parseQtd(valor) {
+    const limpo = limparQtdInput(valor);
+    const numero = Number(limpo);
+    return Number.isFinite(numero) && numero >= 0 ? Math.trunc(numero) : 0;
+}
+
+function parseValorBR(valor) {
+    const limpo = limparValorInput(valor).replace(",", ".");
+    const numero = Number(limpo);
+    return Number.isFinite(numero) && numero >= 0 ? numero : 0;
+}
+
+itemQtd.addEventListener("input", () => {
+    itemQtd.value = limparQtdInput(itemQtd.value);
+});
+
+itemValor.addEventListener("input", () => {
+    itemValor.value = limparValorInput(itemValor.value);
+});
 
 const itens = [];
 const sugestoesDescricaoMap = new Map();
@@ -300,15 +362,21 @@ function renderResumoClienteSelecionado() {
         return;
     }
 
+    const detalhesVeiculo = modoMecanica
+        ? `
+            🚗 ${c.modeloCarro || "—"}<br>
+            🔖 ${c.placaCarro || "—"}<br>
+            🎨 ${c.corCarro || "—"}
+        `
+        : "";
+
     clienteResumo.innerHTML = `
         <strong>${c.nome}</strong><br>
         <div class="cliente-mini">
             📞 ${c.telefone || "—"}<br>
             📍 ${c.endereco || "—"}<br>
             📄 ${formatarDocumentoBR(c.documento) || "—"}<br>
-            🚗 ${c.modeloCarro || "—"}<br>
-            🔖 ${c.placaCarro || "—"}<br>
-            🎨 ${c.corCarro || "—"}
+            ${detalhesVeiculo}
         </div>
     `;
     clienteResumo.classList.remove("hidden");
@@ -330,12 +398,13 @@ formItem.onsubmit = e => {
     e.preventDefault();
 
     const desc = itemDescricao.value.trim();
-    const valor = Number(itemValor.value.replace(",", "."));
-    const qtd = Number(itemQtd.value);
+    const valor = parseValorBR(itemValor.value);
+    const qtd = parseQtd(itemQtd.value);
 
-    if (!desc || valor <= 0 || qtd <= 0) return;
+    if (!desc || valor < 0 || qtd < 0) return;
 
-    itens.push({ descricao: desc, total: valor * qtd });
+    const subtotal = Number.isFinite(valor * qtd) ? (valor * qtd) : 0;
+    itens.push({ descricao: desc, total: subtotal });
     registrarSugestaoDescricao(desc);
     renderSugestoesDescricao();
 
@@ -349,11 +418,12 @@ function renderItens() {
     listaItens.innerHTML = "";
 
     itens.forEach(i => {
-        total += i.total;
+        const subtotal = Number(i?.total);
+        total += Number.isFinite(subtotal) ? subtotal : 0;
         listaItens.innerHTML += `
             <div class="item-servico">
                 <span>${i.descricao}</span>
-                <span class="item-valor">R$ ${formatarMoedaBR(i.total)}</span>
+                <span class="item-valor">R$ ${formatarMoedaBR(Number.isFinite(subtotal) ? subtotal : 0)}</span>
             </div>
         `;
     });
@@ -398,12 +468,15 @@ if (intervaloSelect.value === "nenhum") {
             telefone: c.telefone || "",
             endereco: c.endereco || "",
             documento: c.documento || "",
-            modeloCarro: c.modeloCarro || "",
-            placaCarro: c.placaCarro || "",
-            corCarro: c.corCarro || ""
+            modeloCarro: modoMecanica ? (c.modeloCarro || "") : "",
+            placaCarro: modoMecanica ? (c.placaCarro || "") : "",
+            corCarro: modoMecanica ? (c.corCarro || "") : ""
         },
         itens: itens.slice(),
-        totalGeral: itens.reduce((s,i)=>s+i.total,0),
+        totalGeral: itens.reduce((s, i) => {
+            const subtotal = Number(i?.total);
+            return s + (Number.isFinite(subtotal) ? subtotal : 0);
+        }, 0),
         observacoes: observacoesServico.value.trim(),
         formaPagamento: formaPagamento.value || "",
         status: "pendente",
@@ -504,4 +577,3 @@ renderServicos();
 </script>
 </body>
 </html>
-
