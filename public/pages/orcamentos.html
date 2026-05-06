@@ -220,6 +220,7 @@ body {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth-guard.js"></script>
+<script src="../js/core/plans.js"></script>
 <script src="../js/core/profile.js"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
@@ -232,10 +233,24 @@ const filtrosStatus = document.getElementById("filtrosStatus");
 let statusAtivo = "";
 let abaAtiva = "atual";
 
-function getTodos() {
-    const todosOrdenados = (getData().orcamentos || [])
+function parseDataSeguro(value) {
+    const d = new Date(value || "");
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function getDataReferenciaOrcamento(o) {
+    return (
+        parseDataSeguro(o.criadoEm) ||
+        parseDataSeguro(o.aprovadoEm) ||
+        parseDataSeguro(o.recusadoEm) ||
+        new Date()
+    );
+}
+
+function getTodos(data) {
+    const todosOrdenados = (data.orcamentos || [])
         .slice()
-        .sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
+        .sort((a, b) => getDataReferenciaOrcamento(b) - getDataReferenciaOrcamento(a));
 
     const vistosPorServico = new Set();
     return todosOrdenados.filter(o => {
@@ -268,7 +283,7 @@ function render(lista) {
     let ultimoGrupo = "";
 
     lista.forEach(o => {
-        const d = new Date(o.criadoEm);
+        const d = getDataReferenciaOrcamento(o);
         const grupo = d.toLocaleDateString("pt-BR", {
             month: "long",
             year: "numeric"
@@ -295,8 +310,8 @@ function render(lista) {
         };
 
         card.innerHTML = `
-            <div class="card-numero">📄 ${o.numero}</div>
-            <div class="card-cliente">${o.cliente.nome}</div>
+            <div class="card-numero">📄 ${escapeHtml(o.numero)}</div>
+            <div class="card-cliente">${escapeHtml(o.cliente?.nome || "")}</div>
             <div class="card-data">
                 ${d.toLocaleDateString("pt-BR")}
             </div>
@@ -319,17 +334,31 @@ function render(lista) {
 }
 
 function aplicarFiltros() {
-    const todos = getTodos();
+    const data = getData();
+    const todos = getTodos(data);
+    const servicosComRetornoAtivo = new Set(
+        (data.agenda || [])
+            .filter(a => a.status === "agendado" && a.origemServicoId)
+            .map(a => a.origemServicoId)
+    );
     const termo = busca.value.toLowerCase().trim();
+
     const filtrados = todos.filter(o => {
-        const dataOrc = new Date(o.criadoEm);
-        const isMesAtual =
+        const dataOrc = getDataReferenciaOrcamento(o);
+        const isMesAtual = (
             dataOrc.getMonth() === mesAtual &&
-            dataOrc.getFullYear() === anoAtual;
-        const passaAba = abaAtiva === "atual" ? isMesAtual : !isMesAtual;
+            dataOrc.getFullYear() === anoAtual
+        );
+        const temRetornoAtivo = !!(
+            o.origemServicoId &&
+            servicosComRetornoAtivo.has(o.origemServicoId)
+        );
+        const passaAba = abaAtiva === "atual"
+            ? (isMesAtual || temRetornoAtivo)
+            : (!isMesAtual && !temRetornoAtivo);
         const passaStatus = !statusAtivo || o.status === statusAtivo;
         const passaBusca = !termo ||
-            o.cliente.nome.toLowerCase().includes(termo);
+            String(o.cliente?.nome || "").toLowerCase().includes(termo);
         return passaAba && passaStatus && passaBusca;
     });
 

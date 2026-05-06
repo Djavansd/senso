@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com; style-src 'unsafe-inline' 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';" />
     <title>Entrar - Senso</title>
     <style>
         :root {
@@ -93,10 +94,10 @@
         <p>Entre com sua conta para acessar seus dados.</p>
 
         <label for="email">Email</label>
-        <input id="email" type="email" autocomplete="email" />
+        <input id="email" type="email" autocomplete="email" maxlength="120" spellcheck="false" />
 
         <label for="senha">Senha</label>
-        <input id="senha" type="password" autocomplete="current-password" />
+        <input id="senha" type="password" autocomplete="current-password" maxlength="128" />
 
         <div class="actions">
             <button class="btn-primary" id="btnEntrar">Entrar</button>
@@ -115,10 +116,34 @@
         const btnEntrar = document.getElementById("btnEntrar");
         const btnCriar = document.getElementById("btnCriar");
         const nextParam = new URLSearchParams(window.location.search).get("next");
+        const DANGEROUS_INPUT = [
+            /<\s*\/?\s*(script|iframe|object|embed|link|meta|style|svg|img|form|input|button)[\s>/]/i,
+            /\bjavascript\s*:/i,
+            /\bon[a-z]+\s*=/i,
+            /\b(select|insert|update|delete|drop|alter|create|truncate|union|exec)\b[\s\S]*(\bfrom\b|\bwhere\b|\btable\b|\binto\b|;|--|\/\*)/i,
+            /['"]\s*(or|and)\s+['"]?\w+['"]?\s*=\s*['"]?\w+/i
+        ];
 
         function getSafeNext() {
-            if (nextParam && nextParam.startsWith("/")) return nextParam;
+            if (nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")) return nextParam;
             return "/index.html";
+        }
+
+        function emailSeguro() {
+            const email = emailEl.value.trim().normalize("NFKC");
+            const formatoEmail = /^[^\s@<>()[\]'"`;]+@[^\s@<>()[\]'"`;]+\.[^\s@<>()[\]'"`;]+$/;
+
+            if (DANGEROUS_INPUT.some(regex => regex.test(email))) {
+                setStatus("Entrada bloqueada por seguranca.");
+                return "";
+            }
+
+            if (!formatoEmail.test(email)) {
+                setStatus("Informe um email valido.");
+                return "";
+            }
+
+            return email;
         }
 
         function initFirebaseAuth() {
@@ -150,10 +175,11 @@
         }
 
         async function login() {
-            const email = emailEl.value.trim();
+            const email = emailSeguro();
             const senha = senhaEl.value;
 
             if (!email || !senha) {
+                if (!email) return;
                 setStatus("Informe email e senha.");
                 return;
             }
@@ -163,15 +189,16 @@
                 await firebase.auth().signInWithEmailAndPassword(email, senha);
                 setStatus("");
             } catch (err) {
-                setStatus(err && err.message ? err.message : "Falha no login.");
+                setStatus("Email ou senha invalidos.");
             }
         }
 
         async function criarConta() {
-            const email = emailEl.value.trim();
+            const email = emailSeguro();
             const senha = senhaEl.value;
 
             if (!email || !senha) {
+                if (!email) return;
                 setStatus("Informe email e senha.");
                 return;
             }
@@ -186,7 +213,7 @@
                 await firebase.auth().createUserWithEmailAndPassword(email, senha);
                 setStatus("");
             } catch (err) {
-                setStatus(err && err.message ? err.message : "Falha ao criar conta.");
+                setStatus("Nao foi possivel criar a conta com esses dados.");
             }
         }
 

@@ -108,8 +108,75 @@ function normalizeData(input) {
     data.orcamentos ||= [];
     data.correcoes ||= [];
     data.updatedAt = Number(data.updatedAt || 0);
+    sanitizarObjetoSeguro(data);
 
     return data;
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+}
+
+function contemCodigoPerigoso(value) {
+    const texto = String(value || "");
+    return [
+        /<\s*\/?\s*(script|iframe|object|embed|link|meta|style|svg|img|form|input|button)[\s>/]/i,
+        /\bjavascript\s*:/i,
+        /\bon[a-z]+\s*=/i,
+        /\b(select|insert|update|delete|drop|alter|create|truncate|union|exec)\b[\s\S]*(\bfrom\b|\bwhere\b|\btable\b|\binto\b|;|--|\/\*)/i,
+        /['"]\s*(or|and)\s+['"]?\w+['"]?\s*=\s*['"]?\w+/i
+    ].some(regex => regex.test(texto));
+}
+
+function limparTextoSeguro(value, maxLength = 200) {
+    return String(value || "")
+        .normalize("NFKC")
+        .replace(/[\u0000-\u001F\u007F]/g, " ")
+        .replace(/[<>`]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, maxLength);
+}
+
+function sanitizarObjetoSeguro(value, seen = new WeakSet()) {
+    if (!value || typeof value !== "object") return value;
+    if (seen.has(value)) return value;
+    seen.add(value);
+
+    if (Array.isArray(value)) {
+        value.forEach((item, index) => {
+            if (typeof item === "string") {
+                value[index] = limparTextoSeguro(item, 1000);
+                return;
+            }
+            sanitizarObjetoSeguro(item, seen);
+        });
+        return value;
+    }
+
+    Object.keys(value).forEach(key => {
+        const item = value[key];
+        if (typeof item === "string") {
+            value[key] = limparTextoSeguro(item, 1000);
+            return;
+        }
+        sanitizarObjetoSeguro(item, seen);
+    });
+
+    return value;
+}
+
+function validarTextoUsuario(value, nomeCampo = "campo", maxLength = 200) {
+    const texto = String(value || "");
+    if (contemCodigoPerigoso(texto)) {
+        throw new Error(`${nomeCampo} contem texto invalido ou codigo bloqueado.`);
+    }
+    return limparTextoSeguro(texto, maxLength);
 }
 
 function parseDataSafe(raw) {

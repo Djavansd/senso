@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -14,9 +14,9 @@
     <style>
         body {
             background:
-                radial-gradient(circle at 14% 12%, rgba(14,165,233,.26), transparent 40%),
-                radial-gradient(circle at 84% 20%, rgba(45,212,191,.22), transparent 44%),
-                linear-gradient(165deg, #e8f5ff 0%, #ecfeff 46%, #f8fafc 100%);
+                radial-gradient(circle at 12% 10%, rgba(6,182,212,.34), transparent 42%),
+                radial-gradient(circle at 86% 18%, rgba(249,115,22,.25), transparent 44%),
+                linear-gradient(165deg, #dbeafe 0%, #cffafe 50%, #e0f2fe 100%);
         }
 
         .app { background: transparent; }
@@ -25,7 +25,7 @@
         .menu-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,.4);
+            background: rgba(2,6,23,.55);
             display: none;
             z-index: 998;
         }
@@ -36,8 +36,8 @@
             left: -260px;
             width: 260px;
             height: 100%;
-            background: rgba(255,255,255,.82);
-            box-shadow: 10px 0 26px rgba(15,23,42,.22);
+            background: rgba(255,255,255,.9);
+            box-shadow: 12px 0 28px rgba(2,6,23,.28);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
             padding: 16px;
@@ -51,22 +51,29 @@
             display: block;
             padding: 10px 8px;
             font-size: 15px;
-            color: #333;
+            color: #0f172a;
             text-decoration: none;
             border-radius: 8px;
         }
         .menu-link.destaque {
-            background: #fff8e1;
+            background: #ffedd5;
             color: #b45309;
             font-weight: 700;
-            border: 1px solid #facc15;
+            border: 1px solid #fdba74;
+        }
+        .menu-link.pagamento {
+            background: #dcfce7;
+            color: #166534;
+            font-weight: 800;
+            border: 1px solid #86efac;
+            margin-top: 8px;
         }
         .menu-link.destaque::after {
             content: " NOVO";
             font-size: 11px;
             font-weight: 800;
             color: #ffffff;
-            background: #f59e0b;
+            background: #ea580c;
             border-radius: 999px;
             padding: 2px 6px;
             margin-left: 6px;
@@ -74,8 +81,8 @@
         }
 
         .menu-link.active {
-            background: #e8f5e9;
-            color: #0f9d58;
+            background: #ccfbf1;
+            color: #0f766e;
             font-weight: bold;
         }
 
@@ -85,10 +92,12 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            background: rgba(15,118,110,.84) !important;
+            background: linear-gradient(100deg, rgba(15,118,110,.96), rgba(14,165,233,.94)) !important;
+            color: #ffffff;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255,255,255,.3);
+            border-bottom: 1px solid rgba(255,255,255,.28);
+            box-shadow: 0 10px 22px rgba(15,118,110,.24);
         }
 
         .btn-menu {
@@ -96,6 +105,49 @@
             left: 12px;
             font-size: 22px;
             cursor: pointer;
+        }
+
+        .agenda-alert {
+            width: calc(100% - 28px);
+            margin: 14px 14px 0;
+            border: 1px solid rgba(234,88,12,.45);
+            border-radius: 14px;
+            padding: 12px 14px;
+            background: linear-gradient(145deg, rgba(255,247,237,.96), rgba(255,237,213,.9));
+            color: #7c2d12;
+            box-shadow: 0 14px 24px rgba(124,45,18,.16);
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .agenda-alert.hidden {
+            display: none;
+        }
+
+        .agenda-alert-title {
+            display: block;
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1.3;
+        }
+
+        .agenda-alert-desc {
+            display: block;
+            margin-top: 4px;
+            font-size: 12px;
+            color: #9a3412;
+            line-height: 1.35;
+        }
+
+        .payment-alert {
+            border-color: rgba(220,38,38,.42);
+            background: linear-gradient(145deg, rgba(254,242,242,.98), rgba(254,226,226,.92));
+            color: #7f1d1d;
+            box-shadow: 0 14px 24px rgba(127,29,29,.15);
+        }
+
+        .payment-alert .agenda-alert-desc {
+            color: #991b1b;
         }
 
         /* ===== DASHBOARD ===== */
@@ -108,20 +160,20 @@
 
         .card {
             --card-accent: #3b82f6;
-            --card-border: rgba(59,130,246,.34);
-            --card-ring: rgba(59,130,246,.20);
-            --card-title-color: #1d4ed8;
-            --card-value-color: #1e3a8a;
+            --card-border: rgba(59,130,246,.48);
+            --card-ring: rgba(59,130,246,.30);
+            --card-title-color: #0f172a;
+            --card-value-color: #0f172a;
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: linear-gradient(145deg, rgba(255,255,255,.75), rgba(255,255,255,.43));
+            background: linear-gradient(145deg, rgba(255,255,255,.95), rgba(255,255,255,.76));
             border-radius: 16px;
             padding: 16px;
             text-align: center;
-            box-shadow: 0 14px 24px rgba(15,23,42,.10), 0 0 0 1px var(--card-ring);
+            box-shadow: 0 14px 28px rgba(2,6,23,.14), 0 0 0 1px var(--card-ring);
             text-decoration: none;
             color: #000;
             border: 1px solid var(--card-border);
@@ -136,7 +188,7 @@
             inset: 0;
             z-index: 0;
             pointer-events: none;
-            background: linear-gradient(120deg, rgba(255,255,255,.6) 0%, rgba(255,255,255,0) 34%);
+            background: linear-gradient(120deg, rgba(255,255,255,.7) 0%, rgba(255,255,255,0) 36%);
         }
 
         .card > * {
@@ -147,7 +199,7 @@
         .card:hover,
         .card:focus-visible {
             transform: translateY(-3px) scale(1.01);
-            box-shadow: 0 20px 34px rgba(15,23,42,.16), 0 0 0 1px var(--card-ring);
+            box-shadow: 0 22px 36px rgba(2,6,23,.2), 0 0 0 1px var(--card-ring);
             border-color: var(--card-accent);
         }
 
@@ -155,16 +207,16 @@
             transform: translateY(0) scale(.99);
         }
 
-        .card-icon { font-size: 36px; margin-bottom: 6px; filter: saturate(1.1); }
+        .card-icon { font-size: 36px; margin-bottom: 6px; filter: saturate(1.15); }
         .card-title { font-size: 15px; font-weight: bold; color: var(--card-title-color); }
         .card-value { margin-top: 6px; font-size: 15px; font-weight: bold; color: var(--card-value-color); }
-        .card-desc { font-size: 13px; color: #666; margin-top: 4px; }
+        .card-desc { font-size: 13px; color: #334155; margin-top: 4px; }
 
         .card-extra {
             margin-top: 6px;
             font-size: 12px;
             font-weight: bold;
-            color: #f57c00;
+            color: #c2410c;
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -173,54 +225,54 @@
             }
         }
 
-        /* cores suaves */
+        /* cores mais vibrantes */
         .clientes {
             --card-accent: #2563eb;
-            --card-border: rgba(37,99,235,.34);
-            --card-ring: rgba(37,99,235,.20);
-            --card-title-color: #1d4ed8;
-            --card-value-color: #1e3a8a;
-            background: linear-gradient(145deg, rgba(141,179,235,.54), rgba(255,255,255,.35));
+            --card-border: rgba(37,99,235,.48);
+            --card-ring: rgba(37,99,235,.3);
+            --card-title-color: #1e3a8a;
+            --card-value-color: #1e40af;
+            background: linear-gradient(145deg, rgba(147,197,253,.64), rgba(255,255,255,.7));
         }
         .servico {
-            --card-accent: #6b8e23;
-            --card-border: rgba(107,142,35,.34);
-            --card-ring: rgba(107,142,35,.20);
-            --card-title-color: #3f6212;
-            --card-value-color: #365314;
-            background: linear-gradient(145deg, rgba(225,236,150,.54), rgba(255,255,255,.35));
+            --card-accent: #16a34a;
+            --card-border: rgba(22,163,74,.48);
+            --card-ring: rgba(22,163,74,.3);
+            --card-title-color: #14532d;
+            --card-value-color: #166534;
+            background: linear-gradient(145deg, rgba(134,239,172,.64), rgba(255,255,255,.7));
         }
         .orcamentos {
-            --card-accent: #15803d;
-            --card-border: rgba(21,128,61,.34);
-            --card-ring: rgba(21,128,61,.20);
-            --card-title-color: #166534;
-            --card-value-color: #14532d;
-            background: linear-gradient(145deg, rgba(171,226,177,.52), rgba(255,255,255,.35));
+            --card-accent: #0f766e;
+            --card-border: rgba(15,118,110,.48);
+            --card-ring: rgba(15,118,110,.3);
+            --card-title-color: #134e4a;
+            --card-value-color: #115e59;
+            background: linear-gradient(145deg, rgba(153,246,228,.64), rgba(255,255,255,.7));
         }
         .agenda {
-            --card-accent: #7c3aed;
-            --card-border: rgba(124,58,237,.34);
-            --card-ring: rgba(124,58,237,.20);
-            --card-title-color: #6d28d9;
-            --card-value-color: #5b21b6;
-            background: linear-gradient(145deg, rgba(212,197,238,.55), rgba(255,255,255,.35));
+            --card-accent: #0284c7;
+            --card-border: rgba(2,132,199,.48);
+            --card-ring: rgba(2,132,199,.3);
+            --card-title-color: #0c4a6e;
+            --card-value-color: #075985;
+            background: linear-gradient(145deg, rgba(125,211,252,.64), rgba(255,255,255,.7));
         }
         .financeiro {
-            --card-accent: #b45309;
-            --card-border: rgba(180,83,9,.34);
-            --card-ring: rgba(180,83,9,.20);
-            --card-title-color: #92400e;
-            --card-value-color: #78350f;
-            background: linear-gradient(145deg, rgba(245,209,139,.56), rgba(255,255,255,.35));
+            --card-accent: #f59e0b;
+            --card-border: rgba(245,158,11,.48);
+            --card-ring: rgba(245,158,11,.3);
+            --card-title-color: #78350f;
+            --card-value-color: #92400e;
+            background: linear-gradient(145deg, rgba(253,230,138,.68), rgba(255,255,255,.72));
         }
         .resumo {
-            --card-accent: #be185d;
-            --card-border: rgba(190,24,93,.34);
-            --card-ring: rgba(190,24,93,.20);
-            --card-title-color: #9d174d;
-            --card-value-color: #831843;
-            background: linear-gradient(145deg, rgba(245,191,216,.56), rgba(255,255,255,.35));
+            --card-accent: #ea580c;
+            --card-border: rgba(234,88,12,.48);
+            --card-ring: rgba(234,88,12,.3);
+            --card-title-color: #7c2d12;
+            --card-value-color: #9a3412;
+            background: linear-gradient(145deg, rgba(254,205,170,.68), rgba(255,255,255,.72));
         }
     </style>
 </head>
@@ -237,6 +289,7 @@
     <a class="menu-link" href="pages/financeiro.html">💰 Financeiro</a>
     <a class="menu-link" href="pages/resumo.html">📊 Resumo mensal</a>
     <a class="menu-link" href="pages/configuracoes.html">⚙️ Configuracoes</a>
+    <a class="menu-link pagamento" href="pages/pagamento-app.html">💳 Pagamento do app</a>
     <a class="menu-link destaque" href="pages/nossos-servicos.html">🚀 Nossos serviços</a>
 
 </div>
@@ -246,6 +299,16 @@
         <span class="btn-menu" id="btnMenu">☰</span>
         Início
     </div>
+
+    <button id="agendaAlert" class="agenda-alert hidden" type="button">
+        <span id="agendaAlertTitle" class="agenda-alert-title"></span>
+        <span class="agenda-alert-desc">Toque aqui para marcar como visto.</span>
+    </button>
+
+    <button id="paymentAlert" class="agenda-alert payment-alert hidden" type="button">
+        <span id="paymentAlertTitle" class="agenda-alert-title"></span>
+        <span id="paymentAlertDesc" class="agenda-alert-desc"></span>
+    </button>
 
     <div class="dashboard">
 
@@ -293,6 +356,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/auth-guard.js"></script>
+<script src="js/core/plans.js"></script>
 <script src="js/core/profile.js"></script>
 <script src="js/domains/mecanica/domain.js"></script>
 <script src="js/app.js"></script>
@@ -314,11 +378,18 @@ function renderHomeDashboard() {
         pendentes > 0 ? `🔔 ${pendentes} pendente(s)` : "";
 
     const agora = new Date();
+    const mesAtual = agora.getMonth();
+    const anoAtual = agora.getFullYear();
     let saldo = 0;
     listarFinanceiroValido(data).forEach(f => {
         const d = new Date(f.data);
-        if (d.getMonth() === agora.getMonth() &&
-            d.getFullYear() === agora.getFullYear()) {
+        if (Number.isNaN(d.getTime())) return;
+        const noMesAtual = (
+            d.getMonth() === mesAtual &&
+            d.getFullYear() === anoAtual
+        );
+
+        if (noMesAtual) {
             saldo += (f.tipo === "saida" ? -f.valor : f.valor);
         }
     });
@@ -352,16 +423,199 @@ function renderProximoRetorno() {
     proximoEl.textContent = "—";
 }
 
+function getAgendaAlertDismissKey() {
+    const storageKey = typeof getStorageKey === "function" ? getStorageKey() : "anon";
+    return `senso:agendaAlertDismissed:${storageKey}`;
+}
+
+function getAgendaAlertDismissed() {
+    try {
+        return JSON.parse(localStorage.getItem(getAgendaAlertDismissKey()) || "null");
+    } catch {
+        return null;
+    }
+}
+
+function getLocalDateKey(date = new Date()) {
+    const ano = date.getFullYear();
+    const mes = String(date.getMonth() + 1).padStart(2, "0");
+    const dia = String(date.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+}
+
+function getAgendaPendenciasHoje(data) {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    return (data.agenda || [])
+        .filter(a => {
+            if (a.status !== "agendado" || !a.dataRetorno) return false;
+            const retorno = new Date(a.dataRetorno);
+            if (Number.isNaN(retorno.getTime())) return false;
+            retorno.setHours(0, 0, 0, 0);
+            return retorno <= hoje;
+        })
+        .sort((a, b) => new Date(a.dataRetorno) - new Date(b.dataRetorno));
+}
+
+function renderAgendaAlert() {
+    const alertEl = document.getElementById("agendaAlert");
+    const titleEl = document.getElementById("agendaAlertTitle");
+    if (!alertEl || !titleEl) return;
+
+    const data = getData();
+    const pendencias = getAgendaPendenciasHoje(data);
+
+    if (!pendencias.length) {
+        alertEl.classList.add("hidden");
+        return;
+    }
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const hojeQtd = pendencias.filter(a => {
+        const retorno = new Date(a.dataRetorno);
+        retorno.setHours(0, 0, 0, 0);
+        return retorno.getTime() === hoje.getTime();
+    }).length;
+    const atrasadasQtd = pendencias.length - hojeQtd;
+    const assinatura = pendencias.map(a => a.id || a.dataRetorno).sort().join("|");
+    const hojeKey = getLocalDateKey(hoje);
+    const dismissed = getAgendaAlertDismissed();
+
+    if (dismissed?.date === hojeKey && dismissed?.signature === assinatura) {
+        alertEl.classList.add("hidden");
+        return;
+    }
+
+    const partes = [];
+    if (hojeQtd) partes.push(`${hojeQtd} para hoje`);
+    if (atrasadasQtd) partes.push(`${atrasadasQtd} atrasada(s)`);
+
+    titleEl.textContent = `Manutencao pendente: ${partes.join(" e ")}`;
+    alertEl.dataset.dismissDate = hojeKey;
+    alertEl.dataset.dismissSignature = assinatura;
+    alertEl.classList.remove("hidden");
+}
+
+document.getElementById("agendaAlert")?.addEventListener("click", event => {
+    const btn = event.currentTarget;
+    localStorage.setItem(getAgendaAlertDismissKey(), JSON.stringify({
+        date: btn.dataset.dismissDate || getLocalDateKey(),
+        signature: btn.dataset.dismissSignature || ""
+    }));
+    btn.classList.add("hidden");
+});
+
+function formatarDataPagamento(value) {
+    if (!value) return "";
+    const data = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
+    if (Number.isNaN(data.getTime())) return "";
+    return data.toLocaleDateString("pt-BR");
+}
+
+function normalizarDataPagamento(value) {
+    if (!value) return null;
+    const data = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
+    if (Number.isNaN(data.getTime())) return null;
+    data.setHours(0, 0, 0, 0);
+    return data;
+}
+
+function renderPaymentAlertFromData(uid, aviso) {
+    const alertEl = document.getElementById("paymentAlert");
+    const titleEl = document.getElementById("paymentAlertTitle");
+    const descEl = document.getElementById("paymentAlertDesc");
+    if (!alertEl || !titleEl || !descEl) return;
+
+    if (!aviso?.active) {
+        alertEl.classList.add("hidden");
+        return;
+    }
+
+    const vencimentoData = normalizarDataPagamento(aviso.dueDate);
+    const diasAviso = Number.isFinite(Number(aviso.reminderDays))
+        ? Math.max(0, Number(aviso.reminderDays))
+        : 3;
+
+    if (vencimentoData) {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const inicioAviso = new Date(vencimentoData);
+        inicioAviso.setDate(inicioAviso.getDate() - diasAviso);
+
+        if (hoje < inicioAviso) {
+            alertEl.classList.add("hidden");
+            return;
+        }
+    }
+
+    const vencimento = formatarDataPagamento(aviso.dueDate);
+    let mensagemPadrao = "Existe uma mensalidade em aberto. Apos o pagamento, envie o comprovante pelo WhatsApp para liberarmos a baixa. O app podera ser bloqueado em caso de falta de pagamento.";
+
+    if (vencimentoData) {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const diffDias = Math.round((vencimentoData - hoje) / 86400000);
+
+        if (diffDias > 1) {
+            mensagemPadrao = `Sua mensalidade vence em ${diffDias} dias (${vencimento}). Apos o pagamento, envie o comprovante pelo WhatsApp. O app podera ser bloqueado em caso de falta de pagamento.`;
+        } else if (diffDias === 1) {
+            mensagemPadrao = `Sua mensalidade vence amanha (${vencimento}). Apos o pagamento, envie o comprovante pelo WhatsApp. O app podera ser bloqueado em caso de falta de pagamento.`;
+        } else if (diffDias === 0) {
+            mensagemPadrao = `Sua mensalidade vence hoje (${vencimento}). Apos o pagamento, envie o comprovante pelo WhatsApp. O app podera ser bloqueado em caso de falta de pagamento.`;
+        } else {
+            mensagemPadrao = `Existe uma mensalidade em aberto desde ${vencimento}. Apos o pagamento, envie o comprovante pelo WhatsApp para liberarmos a baixa. O app podera ser bloqueado em caso de falta de pagamento.`;
+        }
+    }
+
+    titleEl.textContent = aviso.title || "Aviso de pagamento pendente";
+    descEl.textContent = aviso.message || mensagemPadrao;
+    alertEl.dataset.uid = uid || "";
+    alertEl.classList.remove("hidden");
+}
+
+async function carregarPaymentAlert() {
+    const alertEl = document.getElementById("paymentAlert");
+    if (!alertEl) return;
+
+    const uid = window.SensoAuth?.uid || getAuthUid?.();
+    if (!uid || !window.firebase?.firestore) {
+        alertEl.classList.add("hidden");
+        return;
+    }
+
+    try {
+        const doc = await window.firebase
+            .firestore()
+            .collection("billingAlerts")
+            .doc(uid)
+            .get();
+
+        renderPaymentAlertFromData(uid, doc.exists ? doc.data() : null);
+    } catch (_err) {
+        alertEl.classList.add("hidden");
+    }
+}
+
 window.addEventListener("senso-live-update", () => {
     renderHomeDashboard();
     renderProximoRetorno();
+    renderAgendaAlert();
+    carregarPaymentAlert();
+});
+
+window.addEventListener("senso-auth-ready", () => {
+    carregarPaymentAlert();
 });
 
 renderHomeDashboard();
 renderProximoRetorno();
+renderAgendaAlert();
+carregarPaymentAlert();
 </script>
 
-</body>
+</body> 
 
 </html>
 <script>

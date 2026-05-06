@@ -214,6 +214,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth-guard.js"></script>
+<script src="../js/core/plans.js"></script>
 <script src="../js/core/profile.js"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
@@ -229,19 +230,39 @@ const abasPeriodo = document.getElementById("abasPeriodo");
 let mesAtual;
 let abaAtiva = "atual";
 
+function mesmoMesFinanceiro(f, ano, mes){
+  if(!f?.data)return false;
+  const d = new Date(f.data);
+  if(Number.isNaN(d.getTime()))return false;
+  return d.getMonth() === mes && d.getFullYear() === ano;
+}
+
+function getFinanceiroFiltradoPorAba(data){
+  const hoje = new Date();
+  const mesHoje = hoje.getMonth();
+  const anoHoje = hoje.getFullYear();
+
+  return listarFinanceiroValido(data).filter(f => {
+    const d = new Date(f.data);
+    if(Number.isNaN(d.getTime()))return false;
+    const isMesAtual = d.getMonth() === mesHoje && d.getFullYear() === anoHoje;
+
+    return abaAtiva === "atual"
+      ? isMesAtual
+      : !isMesAtual;
+  });
+}
+
 /* MESES */
 function carregarMeses(){
   const hoje = new Date();
   const mesHoje = hoje.getMonth();
   const anoHoje = hoje.getFullYear();
   const meses=new Set();
-  listarFinanceiroValido().forEach(f=>{
+  const data = getData();
+  getFinanceiroFiltradoPorAba(data).forEach(f=>{
     const d=new Date(f.data);
-    const isMesAtual = d.getMonth()===mesHoje && d.getFullYear()===anoHoje;
-    const incluir = abaAtiva==="atual" ? isMesAtual : !isMesAtual;
-    if(incluir){
-      meses.add(`${d.getFullYear()}-${d.getMonth()}`);
-    }
+    meses.add(`${d.getFullYear()}-${d.getMonth()}`);
   });
 
   if(!meses.size && abaAtiva==="atual"){
@@ -256,6 +277,10 @@ function carregarMeses(){
     opt.textContent=new Date(a,me).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
     filtroMes.appendChild(opt);
   });
+
+  if(mesAtual && [...filtroMes.options].some(opt => opt.value === mesAtual)){
+    filtroMes.value = mesAtual;
+  }
 
   if(!filtroMes.options.length){
     const opt=document.createElement("option");
@@ -278,9 +303,10 @@ function calcularSaldo(){
   }
   const [a,m]=mesAtual.split("-").map(Number);
   let saldo=0;
-  listarFinanceiroValido().forEach(f=>{
-    const d=new Date(f.data);
-    if(d.getMonth()===m && d.getFullYear()===a){
+  const data = getData();
+
+  getFinanceiroFiltradoPorAba(data).forEach(f=>{
+    if(mesmoMesFinanceiro(f, a, m)){
       saldo += f.tipo==="saida"? -f.valor : f.valor;
     }
   });
@@ -306,7 +332,13 @@ btnManual.onclick=()=>{
 
 /* GANHO */
 btnGanho.onclick=()=>{
-  const d=ganhoDescricao.value.trim();
+  let d;
+  try {
+    d=validarTextoUsuario(ganhoDescricao.value, "Descricao do ganho", 120);
+  } catch (err) {
+    alert(err.message || "Texto bloqueado por seguranca.");
+    return;
+  }
   const v=Number(ganhoValor.value.replace(",",".")); 
   if(!d||v<=0)return;
 
@@ -327,7 +359,13 @@ btnGanho.onclick=()=>{
 
 /* GASTO */
 btnGasto.onclick=()=>{
-  const d=gastoDescricao.value.trim();
+  let d;
+  try {
+    d=validarTextoUsuario(gastoDescricao.value, "Descricao do gasto", 120);
+  } catch (err) {
+    alert(err.message || "Texto bloqueado por seguranca.");
+    return;
+  }
   const v=Number(gastoValor.value.replace(",",".")); 
   if(!d||v<=0)return;
 
@@ -416,23 +454,22 @@ function renderExtrato(){
   }
   listaExtrato.innerHTML="";
   const [a,m]=mesAtual.split("-").map(Number);
-  listarFinanceiroValido()
-    .filter(f=>{
-      const d=new Date(f.data);
-      return d.getMonth()===m && d.getFullYear()===a;
-    })
+  const data = getData();
+
+  getFinanceiroFiltradoPorAba(data)
+    .filter(f=>mesmoMesFinanceiro(f, a, m))
     .sort((a,b)=>new Date(b.data)-new Date(a.data))
     .forEach(f=>{
       const info = descricaoExtrato(f);
       listaExtrato.innerHTML+=`
         <div class="item ${f.tipo}">
           <div class="item-left">
-            <div class="item-titulo">${info.titulo}</div>
-            ${info.sub ? `<div class="item-sub">${info.sub}</div>` : ""}
+            <div class="item-titulo">${escapeHtml(info.titulo)}</div>
+            ${info.sub ? `<div class="item-sub">${escapeHtml(info.sub)}</div>` : ""}
           </div>
           <div class="item-right">
             ${f.tipo==="saida"?"-":"+"} R$ ${formatarMoedaBR(f.valor)}
-            <button class="btn-del" onclick="apagarLancamento('${f.id}')">🗑️</button>
+            <button class="btn-del" onclick="apagarLancamento('${escapeHtml(f.id)}')">🗑️</button>
           </div>
         </div>`;
     });
@@ -444,7 +481,7 @@ function renderExtrato(){
 
 /* GERAL */
 function renderTudo(){carregarMeses();calcularSaldo();}
-filtroMes.onchange=()=>{mesAtual=filtroMes.value;renderTudo();}
+filtroMes.onchange=()=>{mesAtual=filtroMes.value;calcularSaldo();}
 abasPeriodo.onclick=(event)=>{
   const btn = event.target.closest(".aba-btn");
   if(!btn)return;

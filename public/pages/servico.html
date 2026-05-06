@@ -143,9 +143,11 @@ textarea {
     <label>Quantidade</label>
     <input
         id="itemQtd"
-        type="text"
+        type="number"
         inputmode="numeric"
         pattern="^\d+$"
+        min="1"
+        step="1"
         value="1"
         required
     />
@@ -202,6 +204,7 @@ textarea {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth-guard.js"></script>
+<script src="../js/core/plans.js"></script>
 <script src="../js/core/profile.js"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
@@ -227,7 +230,8 @@ const modoMecanica = (
 );
 
 function limparQtdInput(valor) {
-    return String(valor || "").replace(/\D/g, "");
+    const normalizado = String(valor || "").normalize("NFKC");
+    return normalizado.replace(/[^\d]/g, "");
 }
 
 function limparValorInput(valor) {
@@ -252,7 +256,7 @@ function limparValorInput(valor) {
 function parseQtd(valor) {
     const limpo = limparQtdInput(valor);
     const numero = Number(limpo);
-    return Number.isFinite(numero) && numero >= 0 ? Math.trunc(numero) : 0;
+    return Number.isFinite(numero) && numero >= 1 ? Math.trunc(numero) : 0;
 }
 
 function parseValorBR(valor) {
@@ -263,6 +267,11 @@ function parseValorBR(valor) {
 
 itemQtd.addEventListener("input", () => {
     itemQtd.value = limparQtdInput(itemQtd.value);
+});
+
+itemQtd.addEventListener("blur", () => {
+    const qtd = parseQtd(itemQtd.value);
+    itemQtd.value = String(qtd >= 1 ? qtd : 1);
 });
 
 itemValor.addEventListener("input", () => {
@@ -310,7 +319,7 @@ function renderSugestoesDescricao() {
         .sort((a, b) => a.localeCompare(b, "pt-BR"));
 
     sugestoesServico.innerHTML = opcoes
-        .map(opcao => `<option value="${opcao.replace(/"/g, "&quot;")}"></option>`)
+        .map(opcao => `<option value="${escapeHtml(opcao)}"></option>`)
         .join("");
 }
 
@@ -364,18 +373,18 @@ function renderResumoClienteSelecionado() {
 
     const detalhesVeiculo = modoMecanica
         ? `
-            🚗 ${c.modeloCarro || "—"}<br>
-            🔖 ${c.placaCarro || "—"}<br>
-            🎨 ${c.corCarro || "—"}
+            🚗 ${escapeHtml(c.modeloCarro || "—")}<br>
+            🔖 ${escapeHtml(c.placaCarro || "—")}<br>
+            🎨 ${escapeHtml(c.corCarro || "—")}
         `
         : "";
 
     clienteResumo.innerHTML = `
-        <strong>${c.nome}</strong><br>
+        <strong>${escapeHtml(c.nome)}</strong><br>
         <div class="cliente-mini">
-            📞 ${c.telefone || "—"}<br>
-            📍 ${c.endereco || "—"}<br>
-            📄 ${formatarDocumentoBR(c.documento) || "—"}<br>
+            📞 ${escapeHtml(c.telefone || "—")}<br>
+            📍 ${escapeHtml(c.endereco || "—")}<br>
+            📄 ${escapeHtml(formatarDocumentoBR(c.documento) || "—")}<br>
             ${detalhesVeiculo}
         </div>
     `;
@@ -397,14 +406,30 @@ clienteSelect.onchange = () => {
 formItem.onsubmit = e => {
     e.preventDefault();
 
-    const desc = itemDescricao.value.trim();
+    let desc;
+    try {
+        desc = validarTextoUsuario(itemDescricao.value, "Descricao do servico", 120);
+    } catch (err) {
+        alert(err.message || "Texto bloqueado por seguranca.");
+        return;
+    }
     const valor = parseValorBR(itemValor.value);
     const qtd = parseQtd(itemQtd.value);
 
-    if (!desc || valor < 0 || qtd < 0) return;
+    if (!desc || valor < 0) return;
+    if (qtd < 1) {
+        alert("Quantidade deve ser um numero inteiro maior ou igual a 1.");
+        itemQtd.focus();
+        return;
+    }
 
     const subtotal = Number.isFinite(valor * qtd) ? (valor * qtd) : 0;
-    itens.push({ descricao: desc, total: subtotal });
+    itens.push({
+        descricao: desc,
+        quantidade: qtd,
+        valorUnitario: valor,
+        total: subtotal
+    });
     registrarSugestaoDescricao(desc);
     renderSugestoesDescricao();
 
@@ -419,10 +444,16 @@ function renderItens() {
 
     itens.forEach(i => {
         const subtotal = Number(i?.total);
+        const quantidade = Number(i?.quantidade);
+        const valorUnitario = Number(i?.valorUnitario);
+        const qtd = Number.isFinite(quantidade) && quantidade > 0 ? quantidade : 1;
+        const unit = Number.isFinite(valorUnitario) && valorUnitario >= 0
+            ? valorUnitario
+            : (qtd > 0 && Number.isFinite(subtotal) ? (subtotal / qtd) : 0);
         total += Number.isFinite(subtotal) ? subtotal : 0;
         listaItens.innerHTML += `
             <div class="item-servico">
-                <span>${i.descricao}</span>
+                <span>${escapeHtml(i.descricao)} (${qtd} x R$ ${formatarMoedaBR(unit)})</span>
                 <span class="item-valor">R$ ${formatarMoedaBR(Number.isFinite(subtotal) ? subtotal : 0)}</span>
             </div>
         `;
@@ -457,6 +488,13 @@ if (intervaloSelect.value === "nenhum") {
     intervaloValor = Number(intervaloSelect.value);
 }
 
+    let observacoesSeguras;
+    try {
+        observacoesSeguras = validarTextoUsuario(observacoesServico.value, "Observacoes", 500);
+    } catch (err) {
+        alert(err.message || "Texto bloqueado por seguranca.");
+        return;
+    }
 
     const c = clientesAtivos.find(x => x.id === clienteSelect.value);
 
@@ -477,7 +515,7 @@ if (intervaloSelect.value === "nenhum") {
             const subtotal = Number(i?.total);
             return s + (Number.isFinite(subtotal) ? subtotal : 0);
         }, 0),
-        observacoes: observacoesServico.value.trim(),
+        observacoes: observacoesSeguras,
         formaPagamento: formaPagamento.value || "",
         status: "pendente",
         intervaloTipo,
@@ -513,27 +551,20 @@ function renderServicos() {
         const orcamentoExistente = (getData().orcamentos || [])
             .find(o => o.origemServicoId === s.id);
         const orcamentoRecusado = orcamentoExistente?.status === "recusado";
-        const acaoOrcamento = orcamentoExistente
-            ? `location.href='orcamento.html?id=${orcamentoExistente.id}'`
-            : `
-                        const n = gerarOrcamentoDoServico('${s.id}');
-                        if(n){
-                          const o = getData().orcamentos.find(x=>x.numero===n);
-                          if(o) location.href='orcamento.html?id='+o.id;
-                        }
-                    `;
         const textoBotaoOrcamento = orcamentoExistente
             ? "📄 Abrir orçamento"
             : "📄 Gerar orçamento";
+        const servicoIdAttr = escapeHtml(s.id);
+        const orcamentoIdAttr = escapeHtml(orcamentoExistente?.id || "");
 
         listaServicos.innerHTML += `
             <div class="resumo-card">
-                <strong>${s.cliente.nome}</strong><br>
+                <strong>${escapeHtml(s.cliente.nome)}</strong><br>
                 <small>${data}</small><br>
                 Total: <strong>R$ ${formatarMoedaBR(s.totalGeral)}</strong><br>
 
-                ${s.observacoes ? `<em>📝 ${s.observacoes}</em><br>` : ""}
-                ${s.formaPagamento ? `<em>💳 ${s.formaPagamento}</em><br>` : ""}
+                ${s.observacoes ? `<em>📝 ${escapeHtml(s.observacoes)}</em><br>` : ""}
+                ${s.formaPagamento ? `<em>💳 ${escapeHtml(s.formaPagamento)}</em><br>` : ""}
 
                 <span class="status-${s.status}">
                     ${orcamentoRecusado ? "❌ Recusado" :
@@ -542,19 +573,20 @@ function renderServicos() {
                       "🔁 Corrigido"}
                 </span><br>
 
-                <button class="btn-orcamento"
-                    onclick="${acaoOrcamento}">
+                <button class="btn-orcamento btn-gerar-orcamento"
+                    data-servico-id="${servicoIdAttr}"
+                    data-orcamento-id="${orcamentoIdAttr}">
                     ${textoBotaoOrcamento}
                 </button>
 
                 ${
                     s.status === "pendente" && !orcamentoRecusado
-                    ? `<button onclick="executarServico('${s.id}'); renderServicos();">
+                    ? `<button class="btn-executar-servico" data-servico-id="${servicoIdAttr}">
                         ▶️ Executar serviço
                        </button>`
                     : (s.status === "executado" || orcamentoRecusado)
                     ? `<button class="btn-corrigir"
-                        onclick="estornarServico('${s.id}'); renderServicos();">
+                        data-servico-id="${servicoIdAttr}">
                         ⚠️ Corrigir serviço
                        </button>`
                     : ""
@@ -563,9 +595,30 @@ function renderServicos() {
         `;
     });
 
-    listaServicos
-        .querySelectorAll('button[onclick*="executarServico("]')
-        .forEach(btn => btn.remove());
+    listaServicos.querySelectorAll(".btn-gerar-orcamento").forEach(btn => {
+        btn.onclick = () => {
+            const orcamentoId = btn.dataset.orcamentoId || "";
+            if (orcamentoId) {
+                location.href = "orcamento.html?id=" + encodeURIComponent(orcamentoId);
+                return;
+            }
+
+            const n = gerarOrcamentoDoServico(btn.dataset.servicoId);
+            if (n) {
+                const o = getData().orcamentos.find(x => x.numero === n);
+                if (o) location.href = "orcamento.html?id=" + encodeURIComponent(o.id);
+            }
+        };
+    });
+
+    listaServicos.querySelectorAll(".btn-executar-servico").forEach(btn => btn.remove());
+
+    listaServicos.querySelectorAll(".btn-corrigir").forEach(btn => {
+        btn.onclick = () => {
+            estornarServico(btn.dataset.servicoId);
+            renderServicos();
+        };
+    });
 }
 
 window.addEventListener("senso-live-update", () => {

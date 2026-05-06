@@ -19,38 +19,38 @@
 
                     <div class="form-group">
                         <label>Nome *</label>
-                        <input id="nome" required />
+                        <input id="nome" required maxlength="120" />
                     </div>
 
                     <div class="form-group">
                         <label>Telefone *</label>
-                        <input id="telefone" required />
+                        <input id="telefone" required maxlength="20" />
                     </div>
 
                     <div class="form-group">
                         <label>Endereço</label>
-                        <input id="endereco" placeholder="Opcional" />
+                        <input id="endereco" placeholder="Opcional" maxlength="180" />
                     </div>
 
                     <div class="form-group">
                         <label>CPF / CNPJ</label>
-                        <input id="documento" placeholder="Opcional" />
+                        <input id="documento" placeholder="Opcional" maxlength="24" />
                     </div>
 
                     <div class="form-group campo-veiculo">
                         <label>Modelo do carro</label>
-                        <input id="modeloCarro" name="modeloCarro" list="sugestoesModeloCarro" placeholder="Opcional" autocomplete="on" />
+                        <input id="modeloCarro" name="modeloCarro" list="sugestoesModeloCarro" placeholder="Opcional" autocomplete="on" maxlength="80" />
                         <datalist id="sugestoesModeloCarro"></datalist>
                     </div>
 
                     <div class="form-group campo-veiculo">
                         <label>Placa</label>
-                        <input id="placaCarro" placeholder="Opcional" />
+                        <input id="placaCarro" placeholder="Opcional" maxlength="8" />
                     </div>
 
                     <div class="form-group campo-veiculo">
                         <label>Cor</label>
-                        <input id="corCarro" placeholder="Opcional" />
+                        <input id="corCarro" placeholder="Opcional" maxlength="40" />
                     </div>
 
                     <button class="btn-primary" type="submit">Salvar</button>
@@ -66,6 +66,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="../js/firebase-config.js"></script>
     <script src="../js/auth-guard.js"></script>
+    <script src="../js/core/plans.js"></script>
     <script src="../js/core/profile.js"></script>
     <script src="../js/domains/mecanica/domain.js"></script>
     <script src="../js/app.js"></script>
@@ -118,7 +119,7 @@
                 .sort((a, b) => a.localeCompare(b, "pt-BR"));
 
             sugestoesModeloCarro.innerHTML = opcoes
-                .map(modelo => `<option value="${modelo.replace(/"/g, "&quot;")}"></option>`)
+                .map(modelo => `<option value="${escapeHtml(modelo)}"></option>`)
                 .join("");
         }
 
@@ -153,6 +154,29 @@
         form.onsubmit = function (e) {
             e.preventDefault();
 
+            let nomeSeguro;
+            let enderecoSeguro;
+            let documentoSeguro;
+            let modeloSeguro;
+            let corSegura;
+
+            try {
+                nomeSeguro = validarTextoUsuario(nome.value, "Nome", 120);
+                enderecoSeguro = validarTextoUsuario(endereco.value, "Endereco", 180);
+                documentoSeguro = validarTextoUsuario(documento.value, "Documento", 24);
+                modeloSeguro = validarTextoUsuario(modeloCarro.value, "Modelo do carro", 80);
+                corSegura = validarTextoUsuario(corCarro.value, "Cor", 40);
+            } catch (err) {
+                alert(err.message || "Texto bloqueado por seguranca.");
+                return;
+            }
+
+            if (!nomeSeguro) {
+                alert("Informe o nome do cliente.");
+                nome.focus();
+                return;
+            }
+
             const telefoneFormatado = formatarTelefoneBR(telefone.value);
 
             if (telefoneJaExiste(telefoneFormatado)) {
@@ -171,13 +195,13 @@
 
             adicionarCliente({
                 id: gerarId(),
-                nome: nome.value.trim(),
+                nome: nomeSeguro,
                 telefone: telefoneFormatado,
-                endereco: endereco.value.trim() || "",
-                documento: documento.value.trim() || "",
-                modeloCarro: modoMecanica ? (modeloCarro.value.trim() || "") : "",
+                endereco: enderecoSeguro || "",
+                documento: documentoSeguro || "",
+                modeloCarro: modoMecanica ? (modeloSeguro || "") : "",
                 placaCarro: modoMecanica ? (placaNormalizada || "") : "",
-                corCarro: modoMecanica ? (corCarro.value.trim() || "") : ""
+                corCarro: modoMecanica ? (corSegura || "") : ""
             });
 
             // envia direto para a tela inicial sem empilhar retornos no historico

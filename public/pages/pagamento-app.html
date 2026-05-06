@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pagamento do app</title>
+<link rel="stylesheet" href="../css/style.css" />
+<style>
+body {
+    background:
+        radial-gradient(circle at 12% 8%, rgba(20,184,166,.22), transparent 38%),
+        radial-gradient(circle at 84% 18%, rgba(34,197,94,.16), transparent 42%),
+        linear-gradient(165deg, #f0fdfa 0%, #ecfdf5 46%, #f8fafc 100%);
+}
+.app {
+    background:transparent;
+    padding-bottom:24px;
+}
+.header {
+    background:linear-gradient(100deg, rgba(6,78,59,.98), rgba(15,118,110,.96)) !important;
+    color:#fff;
+    border-bottom:1px solid rgba(255,255,255,.18);
+    box-shadow:0 10px 24px rgba(6,78,59,.24);
+}
+.content { padding:14px; }
+.payment-hero {
+    border-radius:18px;
+    padding:18px;
+    color:#fff;
+    background:linear-gradient(145deg, rgba(6,95,70,.94), rgba(20,184,166,.88));
+    box-shadow:0 18px 34px rgba(6,78,59,.26);
+    margin-bottom:14px;
+    border:1px solid rgba(255,255,255,.2);
+}
+.payment-icon {
+    width:46px;
+    height:46px;
+    border-radius:14px;
+    display:grid;
+    place-items:center;
+    background:rgba(255,255,255,.18);
+    margin-bottom:10px;
+}
+.payment-icon::before {
+    content:"PIX";
+    font-size:13px;
+    font-weight:900;
+    letter-spacing:.5px;
+}
+.payment-hero h3 {
+    margin:0 0 6px;
+    font-size:20px;
+}
+.payment-hero p {
+    margin:0;
+    font-size:13px;
+    line-height:1.4;
+    opacity:.95;
+}
+.current-plan {
+    background:#ffffff;
+    border:1px solid rgba(20,184,166,.34);
+    border-radius:16px;
+    padding:14px;
+    box-shadow:0 14px 26px rgba(15,23,42,.1);
+    margin-bottom:14px;
+}
+.current-plan-label {
+    color:#0f766e;
+    font-size:12px;
+    font-weight:900;
+    text-transform:uppercase;
+}
+.current-plan-title {
+    margin-top:6px;
+    color:#111827;
+    font-size:20px;
+    font-weight:900;
+}
+.current-plan-meta {
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:10px;
+}
+.current-plan-pill {
+    display:inline-flex;
+    align-items:center;
+    min-height:26px;
+    padding:5px 9px;
+    border-radius:999px;
+    background:#ecfdf5;
+    color:#0f766e;
+    font-size:12px;
+    font-weight:800;
+}
+.current-plan-pill.blocked {
+    background:#fef2f2;
+    color:#b91c1c;
+}
+.current-plan-note {
+    margin-top:9px;
+    color:#475569;
+    font-size:12px;
+    line-height:1.4;
+}
+.payment-card {
+    background:rgba(255,255,255,.95);
+    border:1px solid rgba(20,184,166,.28);
+    border-radius:14px;
+    padding:14px;
+    box-shadow:0 14px 26px rgba(15,23,42,.12);
+    margin-bottom:12px;
+}
+.payment-line {
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 0;
+    border-bottom:1px solid #ccfbf1;
+    font-size:14px;
+}
+.payment-line:last-child { border-bottom:none; }
+.payment-label {
+    color:#0f766e;
+    font-weight:700;
+}
+.payment-value {
+    color:#111827;
+    font-weight:800;
+    text-align:right;
+    word-break:break-word;
+}
+.payment-actions {
+    display:grid;
+    gap:10px;
+    margin-top:12px;
+}
+.btn-copy,
+.btn-back,
+.btn-whatsapp {
+    width:100%;
+    border:none;
+    border-radius:10px;
+    padding:11px 12px;
+    font-weight:800;
+    text-align:center;
+    text-decoration:none;
+    cursor:pointer;
+    box-sizing:border-box;
+}
+.btn-copy { background:#0f766e; color:#fff; }
+.btn-whatsapp { background:#16a34a; color:#fff; display:block; }
+.btn-back { background:#e5e7eb; color:#111827; display:block; }
+.note {
+    font-size:12px;
+    line-height:1.4;
+    color:#0f766e;
+    margin-top:10px;
+}
+.plan-list {
+    display:grid;
+    gap:12px;
+    margin-bottom:14px;
+}
+.plan-option {
+    position:relative;
+    overflow:hidden;
+    background:rgba(255,255,255,.96);
+    border:1px solid rgba(20,184,166,.34);
+    border-radius:18px;
+    padding:16px;
+    box-shadow:0 18px 32px rgba(6,78,59,.18);
+}
+.plan-option::before {
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:linear-gradient(120deg, rgba(20,184,166,.13), transparent 42%);
+}
+.plan-option > * {
+    position:relative;
+    z-index:1;
+}
+.plan-option.pro {
+    color:#fff;
+    background:linear-gradient(145deg, #065f46, #0f766e 62%, #14b8a6);
+    border:1px solid rgba(255,255,255,.35);
+    box-shadow:0 22px 38px rgba(6,78,59,.34);
+}
+.plan-title {
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    align-items:flex-start;
+    color:#111827;
+    font-weight:900;
+    font-size:15px;
+}
+.plan-option.pro .plan-title,
+.plan-option.pro .plan-price,
+.plan-option.pro .plan-desc,
+.plan-option.pro .plan-feature {
+    color:#fff;
+}
+.plan-price {
+    color:#0f766e;
+    font-size:24px;
+    font-weight:900;
+    line-height:1;
+    text-align:right;
+    white-space:nowrap;
+}
+.plan-price small {
+    display:block;
+    margin-top:3px;
+    color:inherit;
+    font-size:11px;
+    font-weight:800;
+    opacity:.78;
+}
+.plan-desc {
+    margin-top:6px;
+    color:#0f766e;
+    font-size:12px;
+    line-height:1.4;
+}
+.plan-badge {
+    display:inline-flex;
+    align-items:center;
+    min-height:24px;
+    padding:4px 9px;
+    border-radius:999px;
+    background:#ccfbf1;
+    color:#0f766e;
+    font-size:11px;
+    font-weight:900;
+    margin-bottom:10px;
+    text-transform:uppercase;
+}
+.plan-option.pro .plan-badge {
+    background:rgba(255,255,255,.18);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.25);
+}
+.plan-features {
+    display:grid;
+    gap:7px;
+    margin:12px 0 0;
+    padding:0;
+    list-style:none;
+}
+.plan-feature {
+    color:#134e4a;
+    font-size:12px;
+    line-height:1.35;
+}
+.plan-feature::before {
+    content:"OK";
+    display:inline-block;
+    margin-right:6px;
+    color:#10b981;
+    font-weight:900;
+    font-size:10px;
+}
+.plan-option.pro .plan-feature::before {
+    color:#bbf7d0;
+}
+.plan-cta {
+    display:block;
+    width:100%;
+    margin-top:14px;
+    padding:11px 12px;
+    border-radius:12px;
+    background:#0f766e;
+    color:#fff;
+    font-size:13px;
+    font-weight:900;
+    text-align:center;
+    text-decoration:none;
+}
+.plan-option.pro .plan-cta {
+    background:#ffffff;
+    color:#0f766e;
+}
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="header">Pagamento do app</div>
+
+    <div class="content">
+        <div class="payment-hero">
+            <div class="payment-icon" aria-hidden="true"></div>
+            <h3>Planos e pagamento</h3>
+            <p>Escolha seu plano Senso. Ao clicar em escolher, o WhatsApp abre com o plano preenchido para confirmar a troca.</p>
+        </div>
+
+        <div class="current-plan" aria-live="polite">
+            <div class="current-plan-label">Seu plano atual</div>
+            <div class="current-plan-title" id="currentPlanTitle">Carregando...</div>
+            <div class="current-plan-meta">
+                <span class="current-plan-pill" id="currentPlanStatus">Status</span>
+                <span class="current-plan-pill" id="currentPlanPayment">Pagamento</span>
+                <span class="current-plan-pill" id="currentPlanValidity">Validade</span>
+            </div>
+            <div class="current-plan-note" id="currentPlanNote">
+                Se o plano estiver incorreto, escolha uma opcao abaixo ou fale pelo WhatsApp.
+            </div>
+        </div>
+
+        <div class="plan-list">
+            <div class="plan-option">
+                <div class="plan-badge">Essencial</div>
+                <div class="plan-title">
+                    <span>Plano Basico mensal</span>
+                    <span class="plan-price">R$ 50<small>por mes</small></span>
+                </div>
+                <div class="plan-desc">
+                    Para quem quer usar o Senso com as funcoes principais do dia a dia.
+                </div>
+                <ul class="plan-features">
+                    <li class="plan-feature">Cadastro e consulta de clientes</li>
+                    <li class="plan-feature">Lancamento de servicos</li>
+                    <li class="plan-feature">Geracao e controle de orcamentos</li>
+                    <li class="plan-feature">Agenda de retornos e manutencoes</li>
+                    <li class="plan-feature">Financeiro basico para entradas e saidas</li>
+                    <li class="plan-feature">Resumo mensal do negocio</li>
+                </ul>
+                <a class="plan-cta"
+                   href="https://wa.me/5511992841312?text=Ola%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20Basico%20mensal%20do%20Senso%20de%20R%24%2050%2C00%20por%20mes.%20Apos%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
+                   target="_blank"
+                   rel="noopener noreferrer">Escolher Basico</a>
+            </div>
+
+            <div class="plan-option pro">
+                <div class="plan-badge">Mais indicado</div>
+                <div class="plan-title">
+                    <span>Plano Pro mensal</span>
+                    <span class="plan-price">R$ 70<small>por mes</small></span>
+                </div>
+                <div class="plan-desc">
+                    Para quem quer o Senso completo e acesso as novidades premium.
+                </div>
+                <ul class="plan-features">
+                    <li class="plan-feature">Tudo do Plano Basico</li>
+                    <li class="plan-feature">Acesso a futuras funcoes Pro</li>
+                    <li class="plan-feature">Prioridade nas novidades do app</li>
+                    <li class="plan-feature">Recursos avancados quando forem liberados</li>
+                    <li class="plan-feature">Plano indicado para quem quer evoluir com o Senso</li>
+                    <li class="plan-feature">Mantem clientes, orcamentos, agenda e financeiro ativos</li>
+                </ul>
+                <a class="plan-cta"
+                   href="https://wa.me/5511992841312?text=Ola%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20Pro%20mensal%20do%20Senso%20de%20R%24%2070%2C00%20por%20mes.%20Apos%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
+                   target="_blank"
+                   rel="noopener noreferrer">Escolher Pro</a>
+            </div>
+
+            <div class="plan-option">
+                <div class="plan-badge">Pagamento unico</div>
+                <div class="plan-title">
+                    <span>Basico a vista</span>
+                    <span class="plan-price">R$ 500<small>uma vez</small></span>
+                </div>
+                <div class="plan-desc">
+                    Pagamento unico para usar o Plano Basico sem mensalidade.
+                </div>
+                <ul class="plan-features">
+                    <li class="plan-feature">Inclui os recursos do Plano Basico</li>
+                    <li class="plan-feature">Nao tem cobranca mensal do Basico</li>
+                    <li class="plan-feature">Clientes, servicos, orcamentos, agenda e financeiro</li>
+                    <li class="plan-feature">Melhor para quem prefere pagar uma vez</li>
+                    <li class="plan-feature">Recursos Pro nao estao incluidos no pagamento a vista</li>
+                    <li class="plan-feature">Upgrade para Pro pode ser contratado separadamente depois</li>
+                </ul>
+                <a class="plan-cta"
+                   href="https://wa.me/5511992841312?text=Ola%2C%20quero%20contratar%20o%20Plano%20Basico%20a%20vista%20do%20Senso%20por%20R%24%20500%2C00.%20Entendi%20que%20o%20pagamento%20a%20vista%20libera%20o%20Basico%20e%20que%20recursos%20Pro%20podem%20ser%20contratados%20separadamente.%20Apos%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
+                   target="_blank"
+                   rel="noopener noreferrer">Escolher a vista</a>
+            </div>
+        </div>
+
+        <div class="payment-card" id="pagamento">
+            <div class="payment-line">
+                <span class="payment-label">Basico mensal</span>
+                <span class="payment-value">R$ 50,00 ao mes</span>
+            </div>
+            <div class="payment-line">
+                <span class="payment-label">Pro mensal</span>
+                <span class="payment-value">R$ 70,00 ao mes</span>
+            </div>
+            <div class="payment-line">
+                <span class="payment-label">Basico a vista</span>
+                <span class="payment-value">R$ 500,00</span>
+            </div>
+            <div class="payment-line">
+                <span class="payment-label">Chave Pix</span>
+                <span class="payment-value" id="pixMensal">djavansd85@gmail.com</span>
+            </div>
+            <div class="payment-line">
+                <span class="payment-label">WhatsApp</span>
+                <span class="payment-value">99284-1312</span>
+            </div>
+
+            <div class="payment-actions">
+                <button id="btnCopiarPix" class="btn-copy" type="button">Copiar chave Pix</button>
+                <a class="btn-whatsapp"
+                   href="https://wa.me/5511992841312?text=Ola%2C%20segue%20meu%20comprovante%20de%20pagamento%20do%20app%20Senso."
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    Enviar comprovante pelo WhatsApp
+                </a>
+                <a class="btn-back" href="/index.html">Voltar</a>
+            </div>
+
+            <div class="note">
+                Apos escolher ou trocar o plano, envie o comprovante pelo WhatsApp. O aviso de pagamento no app e retirado apos a confirmacao.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth-guard.js"></script>
+<script src="../js/core/plans.js"></script>
+<script>
+const btnCopiarPix = document.getElementById("btnCopiarPix");
+const pixMensal = document.getElementById("pixMensal");
+const currentPlanTitle = document.getElementById("currentPlanTitle");
+const currentPlanStatus = document.getElementById("currentPlanStatus");
+const currentPlanPayment = document.getElementById("currentPlanPayment");
+const currentPlanValidity = document.getElementById("currentPlanValidity");
+const currentPlanNote = document.getElementById("currentPlanNote");
+
+function formatPlanName(plan) {
+    const plano = plan?.plano === "pro" ? "Pro" : "Basico";
+    const pagamento = plan?.tipoPagamento === "avista" ? "a vista" : "mensal";
+    return `${plano} ${pagamento}`;
+}
+
+function formatStatus(plan) {
+    return plan?.status === "bloqueado" ? "Bloqueado" : "Ativo";
+}
+
+function formatPayment(plan) {
+    return plan?.tipoPagamento === "avista" ? "Pagamento a vista" : "Pagamento mensal";
+}
+
+function formatValidity(plan) {
+    if (plan?.tipoPagamento === "avista") return "Sem mensalidade";
+    if (!plan?.validade) return "Validade nao informada";
+
+    const date = new Date(`${plan.validade}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return `Validade: ${plan.validade}`;
+    return `Validade: ${date.toLocaleDateString("pt-BR")}`;
+}
+
+function renderCurrentPlan(plan) {
+    const currentPlan = plan || window.SensoPlans?.getCurrentPlan?.() || {
+        plano: "basico",
+        status: "ativo",
+        tipoPagamento: "mensal",
+        validade: null
+    };
+
+    currentPlanTitle.textContent = formatPlanName(currentPlan);
+    currentPlanStatus.textContent = formatStatus(currentPlan);
+    currentPlanPayment.textContent = formatPayment(currentPlan);
+    currentPlanValidity.textContent = formatValidity(currentPlan);
+    currentPlanStatus.classList.toggle("blocked", currentPlan.status === "bloqueado");
+
+    if (currentPlan.status === "bloqueado") {
+        currentPlanNote.textContent = "Seu acesso esta marcado como bloqueado. Envie o comprovante pelo WhatsApp para regularizar.";
+        return;
+    }
+
+    if (currentPlan.tipoPagamento === "avista") {
+        currentPlanNote.textContent = "Seu plano Basico a vista esta ativo. Recursos Pro podem ser contratados separadamente.";
+        return;
+    }
+
+    currentPlanNote.textContent = "Se quiser trocar de plano, escolha uma opcao abaixo e envie o comprovante pelo WhatsApp.";
+}
+
+function syncSensoPlansState(plan) {
+    if (!plan || !window.SensoPlans?.state) return;
+    window.SensoPlans.state.ready = true;
+    window.SensoPlans.state.loading = false;
+    window.SensoPlans.state.data = {
+        plano: plan.plano === "pro" ? "pro" : "basico",
+        status: plan.status === "bloqueado" ? "bloqueado" : "ativo",
+        tipoPagamento: plan.tipoPagamento === "avista" ? "avista" : "mensal",
+        validade: plan.validade ?? null
+    };
+}
+
+function getCurrentUid() {
+    return window.SensoAuth?.uid || window.firebase?.auth?.()?.currentUser?.uid || null;
+}
+
+function waitForAuthUser() {
+    const uid = getCurrentUid();
+    if (uid) return Promise.resolve(uid);
+
+    return new Promise(resolve => {
+        let done = false;
+        const finish = uidValue => {
+            if (done) return;
+            done = true;
+            window.removeEventListener("senso-auth-ready", onReady);
+            resolve(uidValue || getCurrentUid());
+        };
+        const onReady = event => finish(event?.detail?.uid);
+
+        window.addEventListener("senso-auth-ready", onReady);
+        setTimeout(() => finish(null), 4000);
+    });
+}
+
+async function loadPlanDirectly(uid) {
+    if (!uid || !window.firebase?.firestore) return null;
+
+    const snapshot = await window.firebase
+        .firestore()
+        .collection("users")
+        .doc(uid)
+        .get();
+
+    return snapshot.exists ? snapshot.data() : null;
+}
+
+function refreshCurrentPlan(uid) {
+    waitForAuthUser()
+        .then(authUid => {
+            const resolvedUid = uid || authUid;
+            return loadPlanDirectly(resolvedUid)
+                .then(plan => {
+                    if (plan) {
+                        syncSensoPlansState(plan);
+                        renderCurrentPlan(plan);
+                        return plan;
+                    }
+
+                    if (!window.SensoPlans?.ensureUserPlan) {
+                        renderCurrentPlan();
+                        return null;
+                    }
+
+                    return window.SensoPlans
+                        .ensureUserPlan(resolvedUid)
+                        .then(nextPlan => {
+                            renderCurrentPlan(nextPlan);
+                            return nextPlan;
+                        });
+                });
+        })
+        .catch(err => {
+            console.warn("Nao foi possivel atualizar o plano atual.", err);
+            renderCurrentPlan();
+        });
+}
+
+btnCopiarPix.addEventListener("click", async () => {
+    const pix = pixMensal.textContent.trim();
+    try {
+        await navigator.clipboard.writeText(pix);
+        alert("Chave Pix copiada.");
+    } catch (_err) {
+        alert(`Chave Pix: ${pix}`);
+    }
+});
+
+window.addEventListener("senso-plan-ready", () => {
+    refreshCurrentPlan();
+});
+
+window.addEventListener("senso-auth-ready", event => {
+    refreshCurrentPlan(event?.detail?.uid);
+});
+
+renderCurrentPlan();
+refreshCurrentPlan();
+</script>
+</body>
+</html>

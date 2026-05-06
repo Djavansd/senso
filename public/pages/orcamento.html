@@ -286,6 +286,7 @@ table tr {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth-guard.js"></script>
+<script src="../js/core/plans.js"></script>
 <script src="../js/core/profile.js"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
@@ -306,6 +307,63 @@ const modoMecanica = (
     typeof window.SensoProfile.getActiveProfile === "function" &&
     window.SensoProfile.getActiveProfile()?.id === "mecanica"
 );
+
+function resolverValoresItem(item) {
+    const toNumberFlexible = (value) => {
+        if (typeof value === "number") return value;
+        if (typeof value === "string") {
+            const normalized = value.trim().replace(/\s+/g, "").replace(",", ".");
+            const num = Number(normalized);
+            return Number.isFinite(num) ? num : NaN;
+        }
+        const num = Number(value);
+        return Number.isFinite(num) ? num : NaN;
+    };
+
+    const subtotalRaw = toNumberFlexible(item?.total);
+    const subtotal = Number.isFinite(subtotalRaw) && subtotalRaw >= 0 ? subtotalRaw : 0;
+
+    const qtdRaw = toNumberFlexible(item?.quantidade ?? item?.qtd);
+    const quantidade = Number.isFinite(qtdRaw) && qtdRaw > 0 ? Math.trunc(qtdRaw) : 1;
+
+    const unitRaw = toNumberFlexible(item?.valorUnitario ?? item?.valor);
+    const valorUnitario = Number.isFinite(unitRaw) && unitRaw >= 0
+        ? unitRaw
+        : (quantidade > 0 ? (subtotal / quantidade) : subtotal);
+
+    return { quantidade, valorUnitario, subtotal };
+}
+
+function formatarQuantidade(qtd) {
+    const inteira = Math.trunc(Number(qtd) || 0);
+    return String(inteira > 0 ? inteira : 1);
+}
+
+function sincronizarItensOrcamentoComServico() {
+    const servicoOrigem = (data.servicos || []).find(s => s.id === orc?.origemServicoId);
+    if (!servicoOrigem || !Array.isArray(servicoOrigem.itens) || !Array.isArray(orc?.itens)) return;
+
+    let alterou = false;
+    orc.itens = orc.itens.map((itemOrc, idx) => {
+        const itemServico = servicoOrigem.itens[idx];
+        if (!itemServico) return itemOrc;
+
+        const qtdFaltando = itemOrc?.quantidade == null && itemOrc?.qtd == null;
+        const valorFaltando = itemOrc?.valorUnitario == null && itemOrc?.valor == null;
+        if (!qtdFaltando && !valorFaltando) return itemOrc;
+
+        alterou = true;
+        return {
+            ...itemOrc,
+            quantidade: qtdFaltando ? itemServico?.quantidade ?? itemServico?.qtd : itemOrc.quantidade,
+            valorUnitario: valorFaltando ? itemServico?.valorUnitario ?? itemServico?.valor : itemOrc.valorUnitario
+        };
+    });
+
+    if (alterou) saveData(data);
+}
+
+sincronizarItensOrcamentoComServico();
 
 
 if (!orc) {
@@ -332,12 +390,13 @@ if (!modoMecanica) {
 
 tabelaItens.innerHTML = "";
 orc.itens.forEach(i => {
+    const { quantidade, valorUnitario, subtotal } = resolverValoresItem(i);
     tabelaItens.innerHTML += `
         <tr>
             <td>${i.descricao}</td>
-            <td>1</td>
-            <td>R$ ${formatarMoedaBR(i.total)}</td>
-            <td>R$ ${formatarMoedaBR(i.total)}</td>
+            <td>${formatarQuantidade(quantidade)}</td>
+            <td>R$ ${formatarMoedaBR(valorUnitario)}</td>
+            <td>R$ ${formatarMoedaBR(subtotal)}</td>
         </tr>
     `;
 });
@@ -598,6 +657,7 @@ async function gerarBlobPdfOrcamento() {
 
         (orc.itens || []).forEach(item => {
             const descricao = String(item?.descricao || "—");
+            const { quantidade, valorUnitario, subtotal } = resolverValoresItem(item);
             const lines = pdf.splitTextToSize(descricao, colDesc - 5);
             const cellH = Math.max(10.5, lines.length * lineGap + 4);
 
@@ -615,9 +675,9 @@ async function gerarBlobPdfOrcamento() {
 
             const baselineY = y + Math.min(cellH - 3.5, 7.5);
             pdf.text(lines, m + 4, y + 6.2);
-            pdf.text("1", m + colDesc + (colQtd / 2), baselineY, { align: "center" });
-            pdf.text(money(item?.total), m + colDesc + colQtd + 3, baselineY);
-            pdf.text(money(item?.total), m + colDesc + colQtd + colValor + 3, baselineY);
+            pdf.text(formatarQuantidade(quantidade), m + colDesc + (colQtd / 2), baselineY, { align: "center" });
+            pdf.text(money(valorUnitario), m + colDesc + colQtd + 3, baselineY);
+            pdf.text(money(subtotal), m + colDesc + colQtd + colValor + 3, baselineY);
             y += cellH;
         });
 

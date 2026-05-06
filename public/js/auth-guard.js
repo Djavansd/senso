@@ -30,6 +30,39 @@
         );
     }
 
+    function inferUserName(user) {
+        const displayName = String(user?.displayName || "").trim();
+        if (displayName) return displayName;
+
+        const email = String(user?.email || "").trim();
+        if (email.includes("@")) {
+            return email.split("@")[0];
+        }
+
+        return "";
+    }
+
+    function syncUserIdentity(user) {
+        if (!user?.uid || !window.firebase?.firestore) return;
+
+        const nome = inferUserName(user);
+        const payload = {
+            uid: user.uid,
+            email: String(user.email || ""),
+            nome,
+            updatedAt: new Date().toISOString()
+        };
+
+        window.firebase
+            .firestore()
+            .collection("users")
+            .doc(user.uid)
+            .set(payload, { merge: true })
+            .catch(() => {
+                // Evita quebrar fluxo de auth por erro de sincronizacao.
+            });
+    }
+
     window.SensoAuth = window.SensoAuth || {
         ready: false,
         user: null,
@@ -70,6 +103,8 @@
         } catch (_err) {
             // Ignora erro de storage.
         }
+
+        syncUserIdentity(user);
 
         if (isLoginPage()) {
             const params = new URLSearchParams(window.location.search);

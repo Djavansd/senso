@@ -190,6 +190,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="../js/firebase-config.js"></script>
   <script src="../js/auth-guard.js"></script>
+  <script src="../js/core/plans.js"></script>
   <script src="../js/core/profile.js"></script>
   <script src="../js/domains/mecanica/domain.js"></script>
   <script src="../js/app.js"></script>
@@ -249,17 +250,17 @@
           : `Ola ${c.nome || ""}, aqui e da ${remetente}. Podemos falar sobre seu atendimento?`;
         const detalhesVeiculo = modoMecanica
           ? `
-            Modelo: ${c.modeloCarro || "Modelo nao informado"}<br>
-            Placa: ${c.placaCarro || "Placa nao informada"}<br>
-            Cor: ${c.corCarro || "Cor nao informada"}<br>
+            Modelo: ${escapeHtml(c.modeloCarro || "Modelo nao informado")}<br>
+            Placa: ${escapeHtml(c.placaCarro || "Placa nao informada")}<br>
+            Cor: ${escapeHtml(c.corCarro || "Cor nao informada")}<br>
           `
           : "";
 
         card.innerHTML = `
           <div class="cliente-resumo">
             <div class="cliente-info">
-              <strong>${c.nome}</strong><br>
-              Telefone: ${c.telefone || "Sem telefone"}
+              <strong>${escapeHtml(c.nome)}</strong><br>
+              Telefone: ${escapeHtml(c.telefone || "Sem telefone")}
             </div>
             <div class="cliente-acoes">
               <button class="btn-whatsapp" title="Chamar no WhatsApp" aria-label="Chamar no WhatsApp" ${telefoneWhats ? "" : "disabled"}>WA</button>
@@ -268,8 +269,8 @@
           </div>
 
           <div class="cliente-detalhes hidden">
-            Endereco: ${c.endereco || "Endereco nao informado"}<br>
-            Documento: ${formatarDocumentoBR(c.documento)}<br>
+            Endereco: ${escapeHtml(c.endereco || "Endereco nao informado")}<br>
+            Documento: ${escapeHtml(formatarDocumentoBR(c.documento))}<br>
             ${detalhesVeiculo}
             <button class="btn-arquivar">Arquivar</button>
           </div>
