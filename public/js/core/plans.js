@@ -14,6 +14,7 @@
         uid: null,
         error: null,
         loadPromise: null,
+        unsubscribe: null,
         data: { ...DEFAULT_PLAN }
     };
 
@@ -75,6 +76,7 @@
         state.uid = uid;
 
         const docRef = global.firebase.firestore().collection("users").doc(uid);
+        startPlanListener(uid, docRef);
 
         state.loadPromise = docRef.get()
             .then(snapshot => {
@@ -89,6 +91,22 @@
             });
 
         return state.loadPromise;
+    }
+
+    function startPlanListener(uid, docRef) {
+        if (state.unsubscribe && state.uid === uid) return;
+
+        if (state.unsubscribe) {
+            state.unsubscribe();
+            state.unsubscribe = null;
+        }
+
+        state.unsubscribe = docRef.onSnapshot(snapshot => {
+            const current = snapshot.exists ? (snapshot.data() || {}) : {};
+            setState(uid, { ...DEFAULT_PLAN, ...current });
+        }, err => {
+            console.warn("Nao foi possivel acompanhar o plano em tempo real.", err);
+        });
     }
 
     function canUse(featureName) {
