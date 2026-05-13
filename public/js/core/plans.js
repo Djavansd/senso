@@ -7,6 +7,10 @@
         validade: null,
         tipoPagamento: "mensal"
     });
+    const BASIC_MONTHLY_LIMITS = Object.freeze({
+        clientes: 50,
+        servicos: 150
+    });
 
     const state = {
         ready: false,
@@ -32,11 +36,21 @@
         }
     }
 
+    function normalizeTipoPagamento(value) {
+        const texto = String(value || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g, "")
+            .toLowerCase();
+
+        return texto === "avista" ? "avista" : "mensal";
+    }
+
     function normalizePlan(input) {
         const data = input && typeof input === "object" ? input : {};
         const plano = data.plano === "pro" ? "pro" : "basico";
         const status = data.status === "bloqueado" ? "bloqueado" : "ativo";
-        const tipoPagamento = data.tipoPagamento === "avista" ? "avista" : "mensal";
+        const tipoPagamento = normalizeTipoPagamento(data.tipoPagamento);
 
         return {
             plano,
@@ -78,7 +92,8 @@
         const docRef = global.firebase.firestore().collection("users").doc(uid);
         startPlanListener(uid, docRef);
 
-        state.loadPromise = docRef.get()
+        state.loadPromise = docRef.get({ source: "server" })
+            .catch(() => docRef.get())
             .then(snapshot => {
                 const current = snapshot.exists ? (snapshot.data() || {}) : {};
                 setState(uid, { ...DEFAULT_PLAN, ...current });
@@ -120,13 +135,32 @@
         return true;
     }
 
+    function isBasicMonthly(plan) {
+        const current = normalizePlan(plan || state.data);
+        return current.plano === "basico" && current.tipoPagamento === "mensal";
+    }
+
+    function getUsageLimits(plan) {
+        if (!isBasicMonthly(plan)) {
+            return {
+                clientes: Infinity,
+                servicos: Infinity
+            };
+        }
+
+        return { ...BASIC_MONTHLY_LIMITS };
+    }
+
     global.SensoPlans = {
         defaults: DEFAULT_PLAN,
+        basicMonthlyLimits: BASIC_MONTHLY_LIMITS,
         state,
         ensureUserPlan,
         getCurrentPlan: () => ({ ...state.data }),
         isBasic: () => state.data.plano === "basico",
         isPro: () => state.data.plano === "pro",
+        isBasicMonthly,
+        getUsageLimits,
         isActive: () => state.data.status === "ativo",
         isBlocked: () => state.data.status === "bloqueado",
         canUse

@@ -43,7 +43,7 @@
     }
 
     function syncUserIdentity(user) {
-        if (!user?.uid || !window.firebase?.firestore) return;
+        if (!user?.uid || !window.firebase?.firestore) return Promise.resolve(null);
 
         const nome = inferUserName(user);
         const payload = {
@@ -53,14 +53,39 @@
             updatedAt: new Date().toISOString()
         };
 
-        window.firebase
+        const userRef = window.firebase
             .firestore()
             .collection("users")
-            .doc(user.uid)
-            .set(payload, { merge: true })
+            .doc(user.uid);
+
+        return userRef
+            .get()
+            .then(snapshot => {
+                if (!snapshot.exists) {
+                    return userRef
+                        .set({
+                            ...payload,
+                            autorizado: false
+                        })
+                        .then(() => ({ ...payload, autorizado: false }));
+                }
+
+                return userRef
+                    .set(payload, { merge: true })
+                    .then(() => ({
+                        ...snapshot.data(),
+                        ...payload
+                    }));
+            })
             .catch(() => {
                 // Evita quebrar fluxo de auth por erro de sincronizacao.
+                return null;
             });
+    }
+
+    function redirectToPendingAccess() {
+        if (isLoginPage()) return;
+        window.location.replace(`${LOGIN_PATH}?access=pending`);
     }
 
     window.SensoAuth = window.SensoAuth || {
@@ -104,17 +129,22 @@
             // Ignora erro de storage.
         }
 
-        syncUserIdentity(user);
+        syncUserIdentity(user).then(userData => {
+            if (userData?.autorizado === false) {
+                firebase.auth().signOut().finally(redirectToPendingAccess);
+                return;
+            }
 
-        if (isLoginPage()) {
-            const params = new URLSearchParams(window.location.search);
-            const next = params.get("next");
-            const safeNext = next && next.startsWith("/") ? next : "/index.html";
-            window.location.replace(safeNext);
-            return;
-        }
+            if (isLoginPage()) {
+                const params = new URLSearchParams(window.location.search);
+                const next = params.get("next");
+                const safeNext = next && next.startsWith("/") ? next : "/index.html";
+                window.location.replace(safeNext);
+                return;
+            }
 
-        window.dispatchEvent(new CustomEvent("senso-auth-ready", { detail: { uid: user.uid } }));
+            window.dispatchEvent(new CustomEvent("senso-auth-ready", { detail: { uid: user.uid } }));
+        });
     });
 
     window.sensoRequireAuth = function () {

@@ -28,6 +28,11 @@
                     </div>
 
                     <div class="form-group">
+                        <label>Telefone 2</label>
+                        <input id="telefone2" placeholder="Opcional" maxlength="20" />
+                    </div>
+
+                    <div class="form-group">
                         <label>Endereço</label>
                         <input id="endereco" placeholder="Opcional" maxlength="180" />
                     </div>
@@ -77,6 +82,7 @@
 
         const nome = document.getElementById("nome");
         const telefone = document.getElementById("telefone");
+        const telefone2 = document.getElementById("telefone2");
         const endereco = document.getElementById("endereco");
         const documento = document.getElementById("documento");
         const modeloCarro = document.getElementById("modeloCarro");
@@ -178,9 +184,21 @@
             }
 
             const telefoneFormatado = formatarTelefoneBR(telefone.value);
+            const telefone2Formatado = formatarTelefoneBR(telefone2.value);
 
             if (telefoneJaExiste(telefoneFormatado)) {
                 alert("Cliente já cadastrado com esse telefone.");
+                return;
+            }
+
+            if (telefone2Formatado && telefone2Formatado === telefoneFormatado) {
+                alert("O telefone 2 precisa ser diferente do telefone principal.");
+                telefone2.focus();
+                return;
+            }
+
+            if (telefone2Formatado && telefoneJaExiste(telefone2Formatado)) {
+                alert("Cliente já cadastrado com esse telefone 2.");
                 return;
             }
 
@@ -193,16 +211,18 @@
                 return;
             }
 
-            adicionarCliente({
+            const clienteSalvo = adicionarCliente({
                 id: gerarId(),
                 nome: nomeSeguro,
                 telefone: telefoneFormatado,
+                telefone2: telefone2Formatado,
                 endereco: enderecoSeguro || "",
                 documento: documentoSeguro || "",
                 modeloCarro: modoMecanica ? (modeloSeguro || "") : "",
                 placaCarro: modoMecanica ? (placaNormalizada || "") : "",
                 corCarro: modoMecanica ? (corSegura || "") : ""
             });
+            if (!clienteSalvo) return;
 
             // envia direto para a tela inicial sem empilhar retornos no historico
             window.location.replace("../index.html");

@@ -104,6 +104,30 @@ body {
     font-size:12px;
     line-height:1.4;
 }
+.current-plan-usage {
+    display:none;
+    grid-template-columns:1fr;
+    gap:6px;
+    margin-top:10px;
+    padding:10px;
+    border-radius:12px;
+    background:#f0fdfa;
+    border:1px solid #ccfbf1;
+    color:#134e4a;
+    font-size:12px;
+    line-height:1.35;
+}
+.current-plan-usage.visible {
+    display:grid;
+}
+.usage-row {
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+}
+.usage-row strong {
+    color:#0f766e;
+}
 .payment-card {
     background:rgba(255,255,255,.95);
     border:1px solid rgba(20,184,166,.28);
@@ -308,6 +332,7 @@ body {
             <div class="current-plan-note" id="currentPlanNote">
                 Se o plano estiver incorreto, escolha uma opcao abaixo ou fale pelo WhatsApp.
             </div>
+            <div class="current-plan-usage" id="currentPlanUsage"></div>
         </div>
 
         <div class="plan-list">
@@ -321,8 +346,8 @@ body {
                     Para quem quer usar o Senso com as funcoes principais do dia a dia.
                 </div>
                 <ul class="plan-features">
-                    <li class="plan-feature">Cadastro e consulta de clientes</li>
-                    <li class="plan-feature">Lancamento de servicos</li>
+                    <li class="plan-feature">Ate 50 clientes ativos</li>
+                    <li class="plan-feature">Ate 150 servicos cadastrados</li>
                     <li class="plan-feature">Geracao e controle de orcamentos</li>
                     <li class="plan-feature">Agenda de retornos e manutencoes</li>
                     <li class="plan-feature">Financeiro basico para entradas e saidas</li>
@@ -338,21 +363,22 @@ body {
                 <div class="plan-badge">Mais indicado</div>
                 <div class="plan-title">
                     <span>Plano Pro mensal</span>
-                    <span class="plan-price">R$ 70<small>por mes</small></span>
+                    <span class="plan-price">R$ 100<small>por mes</small></span>
                 </div>
                 <div class="plan-desc">
-                    Para quem quer o Senso completo e acesso as novidades premium.
+                    Para quem quer o Senso completo, sem os limites do Basico mensal e com acesso as novidades premium.
                 </div>
                 <ul class="plan-features">
-                    <li class="plan-feature">Tudo do Plano Basico</li>
-                    <li class="plan-feature">Acesso a futuras funcoes Pro</li>
-                    <li class="plan-feature">Prioridade nas novidades do app</li>
-                    <li class="plan-feature">Recursos avancados quando forem liberados</li>
+                    <li class="plan-feature">Clientes e servicos sem limite do Basico mensal</li>
+                    <li class="plan-feature">Cadastro, consulta e historico de clientes e veiculos</li>
+                    <li class="plan-feature">Servicos, orcamentos, agenda e financeiro ativos</li>
+                    <li class="plan-feature">Resumo mensal do negocio e acompanhamento de resultados</li>
+                    <li class="plan-feature">Acesso a futuras funcoes Pro e recursos avancados</li>
+                    <li class="plan-feature">Prioridade nas novidades e melhorias do app</li>
                     <li class="plan-feature">Plano indicado para quem quer evoluir com o Senso</li>
-                    <li class="plan-feature">Mantem clientes, orcamentos, agenda e financeiro ativos</li>
                 </ul>
                 <a class="plan-cta"
-                   href="https://wa.me/5511992841312?text=Ola%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20Pro%20mensal%20do%20Senso%20de%20R%24%2070%2C00%20por%20mes.%20Apos%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
+                   href="https://wa.me/5511992841312?text=Ola%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20Pro%20mensal%20do%20Senso%20de%20R%24%20100%2C00%20por%20mes.%20Apos%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
                    target="_blank"
                    rel="noopener noreferrer">Escolher Pro</a>
             </div>
@@ -364,14 +390,15 @@ body {
                     <span class="plan-price">R$ 500<small>uma vez</small></span>
                 </div>
                 <div class="plan-desc">
-                    Pagamento unico para usar o Plano Basico sem mensalidade.
+                    Pagamento unico para usar o Plano Basico sem mensalidade, ideal para quem prefere manter o essencial.
                 </div>
                 <ul class="plan-features">
                     <li class="plan-feature">Inclui os recursos do Plano Basico</li>
                     <li class="plan-feature">Nao tem cobranca mensal do Basico</li>
                     <li class="plan-feature">Clientes, servicos, orcamentos, agenda e financeiro</li>
                     <li class="plan-feature">Melhor para quem prefere pagar uma vez</li>
-                    <li class="plan-feature">Recursos Pro nao estao incluidos no pagamento a vista</li>
+                    <li class="plan-feature">Nao inclui atualizacoes e novidades exclusivas do Pro</li>
+                    <li class="plan-feature">Pode ter limites de uso definidos em futuras versoes</li>
                     <li class="plan-feature">Upgrade para Pro pode ser contratado separadamente depois</li>
                 </ul>
                 <a class="plan-cta"
@@ -388,7 +415,7 @@ body {
             </div>
             <div class="payment-line">
                 <span class="payment-label">Pro mensal</span>
-                <span class="payment-value">R$ 70,00 ao mes</span>
+                <span class="payment-value">R$ 100,00 ao mes</span>
             </div>
             <div class="payment-line">
                 <span class="payment-label">Basico a vista</span>
@@ -435,10 +462,92 @@ const currentPlanStatus = document.getElementById("currentPlanStatus");
 const currentPlanPayment = document.getElementById("currentPlanPayment");
 const currentPlanValidity = document.getElementById("currentPlanValidity");
 const currentPlanNote = document.getElementById("currentPlanNote");
+const currentPlanUsage = document.getElementById("currentPlanUsage");
+const FALLBACK_PLAN = Object.freeze({
+    plano: "basico",
+    status: "ativo",
+    tipoPagamento: "mensal",
+    validade: null
+});
+
+function normalizeTipoPagamento(value) {
+    const texto = String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "")
+        .toLowerCase();
+
+    return texto === "avista" ? "avista" : "mensal";
+}
+
+function getActiveProfileId() {
+    try {
+        return localStorage.getItem("senso:activeProfile") || "mecanica";
+    } catch (_err) {
+        return "mecanica";
+    }
+}
+
+function getCurrentUid() {
+    return window.SensoAuth?.uid || window.firebase?.auth?.()?.currentUser?.uid || null;
+}
+
+function getLocalAppData() {
+    const profileId = getActiveProfileId();
+    const uid = getCurrentUid();
+    const keys = uid
+        ? [`appData:${profileId}:uid:${uid}`, "appData"]
+        : [`appData:${profileId}:anon`, "appData"];
+
+    for (const key of keys) {
+        try {
+            const data = JSON.parse(localStorage.getItem(key) || "null");
+            if (data && typeof data === "object") return data;
+        } catch (_err) {
+            // Continua tentando a proxima chave.
+        }
+    }
+
+    return { clientes: [], servicos: [] };
+}
+
+function getUsageSummary() {
+    const data = getLocalAppData();
+    const clientesAtivos = Array.isArray(data.clientes)
+        ? data.clientes.filter(c => !c?.arquivado).length
+        : 0;
+    const servicos = Array.isArray(data.servicos) ? data.servicos.length : 0;
+
+    return { clientesAtivos, servicos };
+}
+
+function isBasicMonthlyPlan(plan) {
+    return (plan?.plano !== "pro") && normalizeTipoPagamento(plan?.tipoPagamento) === "mensal";
+}
+
+function renderUsageNotice(plan) {
+    if (!currentPlanUsage) return;
+
+    if (!isBasicMonthlyPlan(plan)) {
+        currentPlanUsage.classList.remove("visible");
+        currentPlanUsage.innerHTML = "";
+        return;
+    }
+
+    const limits = window.SensoPlans?.basicMonthlyLimits || { clientes: 50, servicos: 150 };
+    const usage = getUsageSummary();
+
+    currentPlanUsage.innerHTML = `
+        <div>Seu Plano Basico mensal inclui:</div>
+        <div class="usage-row"><span>Clientes ativos</span><strong>${usage.clientesAtivos}/${limits.clientes}</strong></div>
+        <div class="usage-row"><span>Servicos cadastrados</span><strong>${usage.servicos}/${limits.servicos}</strong></div>
+    `;
+    currentPlanUsage.classList.add("visible");
+}
 
 function formatPlanName(plan) {
     const plano = plan?.plano === "pro" ? "Pro" : "Basico";
-    const pagamento = plan?.tipoPagamento === "avista" ? "a vista" : "mensal";
+    const pagamento = normalizeTipoPagamento(plan?.tipoPagamento) === "avista" ? "a vista" : "mensal";
     return `${plano} ${pagamento}`;
 }
 
@@ -447,11 +556,11 @@ function formatStatus(plan) {
 }
 
 function formatPayment(plan) {
-    return plan?.tipoPagamento === "avista" ? "Pagamento a vista" : "Pagamento mensal";
+    return normalizeTipoPagamento(plan?.tipoPagamento) === "avista" ? "Pagamento a vista" : "Pagamento mensal";
 }
 
 function formatValidity(plan) {
-    if (plan?.tipoPagamento === "avista") return "Sem mensalidade";
+    if (normalizeTipoPagamento(plan?.tipoPagamento) === "avista") return "Sem mensalidade";
     if (!plan?.validade) return "Validade nao informada";
 
     const date = new Date(`${plan.validade}T00:00:00`);
@@ -459,26 +568,46 @@ function formatValidity(plan) {
     return `Validade: ${date.toLocaleDateString("pt-BR")}`;
 }
 
+function renderLoadingPlan() {
+    currentPlanTitle.textContent = "Carregando...";
+    currentPlanStatus.textContent = "Status";
+    currentPlanPayment.textContent = "Pagamento";
+    currentPlanValidity.textContent = "Validade";
+    currentPlanStatus.classList.remove("blocked");
+    currentPlanNote.textContent = "Buscando seu plano contratado...";
+    if (currentPlanUsage) {
+        currentPlanUsage.classList.remove("visible");
+        currentPlanUsage.innerHTML = "";
+    }
+}
+
 function renderCurrentPlan(plan) {
-    const currentPlan = plan || window.SensoPlans?.getCurrentPlan?.() || {
-        plano: "basico",
-        status: "ativo",
-        tipoPagamento: "mensal",
-        validade: null
-    };
+    const hasExplicitPlan = !!plan;
+    const plansReady = !!window.SensoPlans?.state?.ready;
+    const currentPlan = hasExplicitPlan
+        ? plan
+        : plansReady
+            ? window.SensoPlans.getCurrentPlan()
+            : null;
+
+    if (!currentPlan) {
+        renderLoadingPlan();
+        return;
+    }
 
     currentPlanTitle.textContent = formatPlanName(currentPlan);
     currentPlanStatus.textContent = formatStatus(currentPlan);
     currentPlanPayment.textContent = formatPayment(currentPlan);
     currentPlanValidity.textContent = formatValidity(currentPlan);
     currentPlanStatus.classList.toggle("blocked", currentPlan.status === "bloqueado");
+    renderUsageNotice(currentPlan);
 
     if (currentPlan.status === "bloqueado") {
         currentPlanNote.textContent = "Seu acesso esta marcado como bloqueado. Envie o comprovante pelo WhatsApp para regularizar.";
         return;
     }
 
-    if (currentPlan.tipoPagamento === "avista") {
+    if (normalizeTipoPagamento(currentPlan.tipoPagamento) === "avista") {
         currentPlanNote.textContent = "Seu plano Basico a vista esta ativo. Recursos Pro podem ser contratados separadamente.";
         return;
     }
@@ -493,13 +622,9 @@ function syncSensoPlansState(plan) {
     window.SensoPlans.state.data = {
         plano: plan.plano === "pro" ? "pro" : "basico",
         status: plan.status === "bloqueado" ? "bloqueado" : "ativo",
-        tipoPagamento: plan.tipoPagamento === "avista" ? "avista" : "mensal",
+        tipoPagamento: normalizeTipoPagamento(plan.tipoPagamento),
         validade: plan.validade ?? null
     };
-}
-
-function getCurrentUid() {
-    return window.SensoAuth?.uid || window.firebase?.auth?.()?.currentUser?.uid || null;
 }
 
 function waitForAuthUser() {
@@ -524,11 +649,17 @@ function waitForAuthUser() {
 async function loadPlanDirectly(uid) {
     if (!uid || !window.firebase?.firestore) return null;
 
-    const snapshot = await window.firebase
+    const docRef = window.firebase
         .firestore()
         .collection("users")
-        .doc(uid)
-        .get();
+        .doc(uid);
+
+    let snapshot;
+    try {
+        snapshot = await docRef.get({ source: "server" });
+    } catch (_err) {
+        snapshot = await docRef.get();
+    }
 
     return snapshot.exists ? snapshot.data() : null;
 }
@@ -560,7 +691,7 @@ function refreshCurrentPlan(uid) {
         })
         .catch(err => {
             console.warn("Nao foi possivel atualizar o plano atual.", err);
-            renderCurrentPlan();
+            renderCurrentPlan(FALLBACK_PLAN);
         });
 }
 
@@ -582,7 +713,7 @@ window.addEventListener("senso-auth-ready", event => {
     refreshCurrentPlan(event?.detail?.uid);
 });
 
-renderCurrentPlan();
+renderLoadingPlan();
 refreshCurrentPlan();
 </script>
 </body>

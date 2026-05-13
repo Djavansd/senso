@@ -350,13 +350,15 @@ function renderClienteOptions(filtroTexto) {
         if (!filtro) return true;
         const nome = String(c.nome || "").toLocaleLowerCase("pt-BR");
         const telefone = String(c.telefone || "").toLocaleLowerCase("pt-BR");
-        return nome.includes(filtro) || telefone.includes(filtro);
+        const telefone2 = String(c.telefone2 || "").toLocaleLowerCase("pt-BR");
+        return nome.includes(filtro) || telefone.includes(filtro) || telefone2.includes(filtro);
     });
 
     filtrados.forEach(c => {
         const opt = document.createElement("option");
         opt.value = c.id;
-        opt.textContent = c.telefone ? `${c.nome} - ${c.telefone}` : c.nome;
+        const telefones = listarTelefonesCliente(c).join(" / ");
+        opt.textContent = telefones ? `${c.nome} - ${telefones}` : c.nome;
         clienteSelect.appendChild(opt);
     });
 
@@ -382,7 +384,7 @@ function renderResumoClienteSelecionado() {
     clienteResumo.innerHTML = `
         <strong>${escapeHtml(c.nome)}</strong><br>
         <div class="cliente-mini">
-            📞 ${escapeHtml(c.telefone || "—")}<br>
+            📞 ${escapeHtml(listarTelefonesCliente(c).join(" / ") || "—")}<br>
             📍 ${escapeHtml(c.endereco || "—")}<br>
             📄 ${escapeHtml(formatarDocumentoBR(c.documento) || "—")}<br>
             ${detalhesVeiculo}
@@ -498,12 +500,13 @@ if (intervaloSelect.value === "nenhum") {
 
     const c = clientesAtivos.find(x => x.id === clienteSelect.value);
 
-    salvarServico({
+    const servicoSalvo = salvarServico({
         id: gerarId(),
         cliente: {
             id: c.id,
             nome: c.nome,
             telefone: c.telefone || "",
+            telefone2: c.telefone2 || "",
             endereco: c.endereco || "",
             documento: c.documento || "",
             modeloCarro: modoMecanica ? (c.modeloCarro || "") : "",
@@ -522,6 +525,7 @@ if (intervaloSelect.value === "nenhum") {
         intervaloValor,
         criadoEm: new Date().toISOString()
     });
+    if (!servicoSalvo) return;
 
     itens.length = 0;
     observacoesServico.value = "";

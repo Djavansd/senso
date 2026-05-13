@@ -383,8 +383,11 @@ function gerarId() {
 // =========================
 function adicionarCliente(cliente) {
     const data = getData();
+    if (!podeAdicionarCliente(data)) return false;
+
     data.clientes.push(cliente);
     saveData(data);
+    return true;
 }
 
 function listarClientesAtivos() {
@@ -399,9 +402,61 @@ function arquivarCliente(id) {
 }
 
 function telefoneJaExiste(telefone) {
+    const telefoneNormalizado = String(telefone || "").trim();
+    if (!telefoneNormalizado) return false;
+
     return getData().clientes.some(
-        c => !c.arquivado && c.telefone === telefone
+        c => !c.arquivado && (
+            c.telefone === telefoneNormalizado ||
+            c.telefone2 === telefoneNormalizado
+        )
     );
+}
+
+function getUsageLimits() {
+    if (window.SensoPlans && typeof window.SensoPlans.getUsageLimits === "function") {
+        return window.SensoPlans.getUsageLimits();
+    }
+
+    return {
+        clientes: Infinity,
+        servicos: Infinity
+    };
+}
+
+function limiteFinito(valor) {
+    return Number.isFinite(Number(valor));
+}
+
+function mostrarAlertaLimite(recurso, limite) {
+    alert(
+        `Limite do Plano Basico mensal atingido: ${limite} ${recurso}. ` +
+        "Para continuar cadastrando, altere o cliente para o Plano Pro."
+    );
+}
+
+function podeAdicionarCliente(dataRef) {
+    const data = dataRef || getData();
+    const limite = getUsageLimits().clientes;
+    if (!limiteFinito(limite)) return true;
+
+    const totalAtivos = (data.clientes || []).filter(c => !c.arquivado).length;
+    if (totalAtivos < limite) return true;
+
+    mostrarAlertaLimite("clientes ativos", limite);
+    return false;
+}
+
+function podeAdicionarServico(dataRef) {
+    const data = dataRef || getData();
+    const limite = getUsageLimits().servicos;
+    if (!limiteFinito(limite)) return true;
+
+    const totalServicos = (data.servicos || []).length;
+    if (totalServicos < limite) return true;
+
+    mostrarAlertaLimite("servicos", limite);
+    return false;
 }
 
 // =========================
@@ -434,8 +489,31 @@ function formatarDocumentoBR(doc) {
     return doc;
 }
 
+function listarTelefonesCliente(cliente) {
+    const telefones = [
+        cliente?.telefone,
+        cliente?.telefone2
+    ]
+        .map(t => formatarTelefoneBR(String(t || "").trim()))
+        .filter(Boolean);
+
+    return Array.from(new Set(telefones));
+}
+
+function listarTelefonesEmpresa(settings) {
+    const telefones = [
+        settings?.companyPhone,
+        settings?.companyPhone2
+    ]
+        .map(t => formatarTelefoneBR(String(t || "").trim()))
+        .filter(Boolean);
+
+    return Array.from(new Set(telefones));
+}
+
 function formatarDocumentoPorTipo(doc, tipo) {
     const v = String(doc || "").replace(/\D/g, "");
+    if (tipo === "none") return "";
     const t = tipo === "cpf" ? "cpf" : "cnpj";
 
     if (t === "cpf") {
@@ -479,8 +557,11 @@ function montarDescricaoServicoFinanceiro(servico) {
 // =========================
 function salvarServico(servico) {
     const data = getData();
+    if (!podeAdicionarServico(data)) return false;
+
     data.servicos.push(servico);
     saveData(data);
+    return true;
 }
 
 // ❌ NÃO executa mais serviço manualmente
@@ -686,12 +767,17 @@ function getAppSettings() {
         settings = {};
     }
 
-    const resolvedDocument = settings.companyDocument || profileDefaults.companyDocument || "00.000.000/0001-00";
+    const hasSettingDocument = Object.prototype.hasOwnProperty.call(settings, "companyDocument");
+    const resolvedDocument = hasSettingDocument
+        ? String(settings.companyDocument || "")
+        : (profileDefaults.companyDocument || "00.000.000/0001-00");
     const resolvedDocumentType = (
-        settings.companyDocumentType === "cpf" || settings.companyDocumentType === "cnpj"
+        settings.companyDocumentType === "none" ||
+        settings.companyDocumentType === "cpf" ||
+        settings.companyDocumentType === "cnpj"
     )
         ? settings.companyDocumentType
-        : inferCompanyDocumentType(resolvedDocument);
+        : (resolvedDocument ? inferCompanyDocumentType(resolvedDocument) : "none");
 
     return {
         primaryColor: settings.primaryColor || profileDefaults.primaryColor || "#0a7cff",
@@ -702,7 +788,9 @@ function getAppSettings() {
         companyDocument: resolvedDocument,
         companyDocumentType: resolvedDocumentType,
         companyAddress: settings.companyAddress || profileDefaults.companyAddress || "Sao Paulo",
-        companyPhone: settings.companyPhone || profileDefaults.companyPhone || "(11) 90000-0000"
+        companyPhone: settings.companyPhone || profileDefaults.companyPhone || "(11) 90000-0000",
+        companyPhone2: settings.companyPhone2 || profileDefaults.companyPhone2 || "",
+        headerServices: String(settings.headerServices || "").slice(0, 120)
     };
 }
 
@@ -766,13 +854,14 @@ function applyBudgetCompanyInfo(settings) {
     if (!empresaEl) return;
 
     const companyName = settings.companyName || "PROICE CLIMATIZACAO";
-    const companyDocument = settings.companyDocument || "42.937.499/0001-08";
-    const companyDocumentType = settings.companyDocumentType === "cpf" ? "cpf" : "cnpj";
+    const companyDocument = settings.companyDocument || "";
+    const companyDocumentType = ["cpf", "cnpj", "none"].includes(settings.companyDocumentType)
+        ? settings.companyDocumentType
+        : inferCompanyDocumentType(companyDocument);
     const companyDocumentLabel = companyDocumentType === "cpf" ? "CPF" : "CNPJ";
     const companyDocumentFormatted = formatarDocumentoPorTipo(companyDocument, companyDocumentType);
     const companyAddress = settings.companyAddress || "Sao Paulo";
-    const companyPhone = settings.companyPhone || "(11) 99284-1312";
-    const companyPhoneFormatted = formatarTelefoneBR(companyPhone);
+    const companyPhonesFormatted = listarTelefonesEmpresa(settings).join(" / ") || "—";
 
     empresaEl.innerHTML = "";
 
@@ -781,10 +870,12 @@ function applyBudgetCompanyInfo(settings) {
     empresaEl.appendChild(strong);
     empresaEl.appendChild(document.createElement("br"));
 
-    empresaEl.appendChild(
-        document.createTextNode(`${companyDocumentLabel}: ${companyDocumentFormatted}`)
-    );
-    empresaEl.appendChild(document.createElement("br"));
+    if (companyDocumentType !== "none" && companyDocumentFormatted) {
+        empresaEl.appendChild(
+            document.createTextNode(`${companyDocumentLabel}: ${companyDocumentFormatted}`)
+        );
+        empresaEl.appendChild(document.createElement("br"));
+    }
 
     empresaEl.appendChild(
         document.createTextNode(`Endereco: ${companyAddress}`)
@@ -792,7 +883,7 @@ function applyBudgetCompanyInfo(settings) {
     empresaEl.appendChild(document.createElement("br"));
 
     empresaEl.appendChild(
-        document.createTextNode(`Telefone: ${companyPhoneFormatted}`)
+        document.createTextNode(`Telefone: ${companyPhonesFormatted}`)
     );
 }
 

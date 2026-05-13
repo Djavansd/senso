@@ -48,6 +48,41 @@ body { background:#eee; }
     text-align:center;
     font-size:13px;
 }
+.cabecalho-lateral {
+    width:240px;
+    flex-shrink:0;
+}
+.info-opcionais {
+    display:none;
+    position:relative;
+    border:1px solid #c9c9c9;
+    border-radius:6px;
+    margin-top:8px;
+    padding:7px 8px 8px 12px;
+    font-size:11px;
+    line-height:1.35;
+    background:#fff;
+    overflow:hidden;
+}
+.info-opcionais::before {
+    content:"";
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:4px;
+    background:var(--app-primary);
+}
+.info-opcionais strong {
+    display:inline-block;
+    margin:0 0 5px;
+    padding:2px 7px;
+    background:var(--app-primary);
+    color:#fff;
+    border-radius:999px;
+    font-size:11px;
+    line-height:1.2;
+}
 .bloco {
     border:1px solid #000;
     margin-top:10px;
@@ -175,6 +210,14 @@ table tr {
         max-width:260px !important;
         margin-bottom:8px !important;
     }
+
+    .cabecalho {
+        flex-wrap:wrap;
+    }
+
+    .cabecalho-lateral {
+        width:100%;
+    }
 }
 
 @media print {
@@ -226,9 +269,15 @@ table tr {
         Endereço: São Paulo<br>
         📞 (11) 99284-1312
     </div>
-    <div class="caixa-data">
-        DATA DE EMISSÃO<br>
-        <strong id="dataEmissao">—</strong>
+    <div class="cabecalho-lateral">
+        <div class="caixa-data">
+            DATA DE EMISSÃO<br>
+            <strong id="dataEmissao">—</strong>
+        </div>
+        <div class="info-opcionais" id="infoOpcionaisBox">
+            <strong>SERVICOS</strong>
+            <span id="infoOpcionaisTexto"></span>
+        </div>
     </div>
 </div>
 
@@ -307,6 +356,8 @@ const modoMecanica = (
     typeof window.SensoProfile.getActiveProfile === "function" &&
     window.SensoProfile.getActiveProfile()?.id === "mecanica"
 );
+const settingsOrcamento = getAppSettings();
+const servicosCabecalhoOrcamento = String(settingsOrcamento.headerServices || "").trim().slice(0, 120);
 
 function resolverValoresItem(item) {
     const toNumberFlexible = (value) => {
@@ -376,7 +427,7 @@ dataEmissao.textContent = new Date(orc.criadoEm).toLocaleDateString("pt-BR");
 clienteNome.textContent = clienteDados.nome || "—";
 clienteDoc.textContent = formatarDocumentoBR(clienteDados.documento) || "—";
 clienteEndereco.textContent = clienteDados.endereco || "—";
-clienteTelefone.textContent = clienteDados.telefone || "—";
+clienteTelefone.textContent = listarTelefonesCliente(clienteDados).join(" / ") || "—";
 clienteModeloCarro.textContent = clienteDados.modeloCarro || "—";
 clientePlacaCarro.textContent = clienteDados.placaCarro || "—";
 clienteCorCarro.textContent = clienteDados.corCarro || "—";
@@ -386,6 +437,11 @@ if (!modoMecanica) {
     linhaClienteModelo.style.display = "none";
     linhaClientePlaca.style.display = "none";
     linhaClienteCor.style.display = "none";
+}
+
+if (servicosCabecalhoOrcamento) {
+    infoOpcionaisBox.style.display = "block";
+    infoOpcionaisTexto.textContent = servicosCabecalhoOrcamento;
 }
 
 tabelaItens.innerHTML = "";
@@ -554,12 +610,20 @@ async function gerarBlobPdfOrcamento() {
         pdf.text((settings.companyName || "PROICE CLIMATIZACAO"), m, headerBaseY + logoBoxH + 10);
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(8.8);
-        const companyDocType = inferCompanyDocumentType(settings.companyDocument || "");
+        const companyDocType = ["cpf", "cnpj", "none"].includes(settings.companyDocumentType)
+            ? settings.companyDocumentType
+            : inferCompanyDocumentType(settings.companyDocument || "");
         const companyDocLabel = companyDocType === "cpf" ? "CPF" : "CNPJ";
         const companyDocValue = formatarDocumentoPorTipo(settings.companyDocument || "", companyDocType);
-        pdf.text(`${companyDocLabel}: ${companyDocValue || "—"}`, m, headerBaseY + logoBoxH + 15.2);
-        pdf.text(`Endereco: ${settings.companyAddress || "—"}`, m, headerBaseY + logoBoxH + 19.7);
-        pdf.text(`Telefone: ${formatarTelefoneBR(settings.companyPhone || "") || "—"}`, m, headerBaseY + logoBoxH + 24.2);
+        const companyLines = [];
+        if (companyDocType !== "none" && companyDocValue) {
+            companyLines.push(`${companyDocLabel}: ${companyDocValue}`);
+        }
+        companyLines.push(`Endereco: ${settings.companyAddress || "—"}`);
+        companyLines.push(`Telefone: ${listarTelefonesEmpresa(settings).join(" / ") || "—"}`);
+        companyLines.forEach((line, idx) => {
+            pdf.text(line, m, headerBaseY + logoBoxH + 15.2 + (idx * 4.5));
+        });
 
         drawRect(pageW - m - rightColW, headerBaseY + 2, rightColW, 23);
         pdf.setFont("helvetica", "bold");
@@ -572,11 +636,45 @@ async function gerarBlobPdfOrcamento() {
         y = headerBaseY + logoBoxH + 27;
         pdf.setDrawColor(100, 100, 100);
         pdf.line(m, y, pageW - m, y);
-        y += 7;
+
+        const servicosCabecalhoPdf = String(settings.headerServices || "").trim().slice(0, 120);
+        if (servicosCabecalhoPdf) {
+            y += 4;
+            const servicosLabelW = 24;
+            const servicosLines = pdf.splitTextToSize(
+                servicosCabecalhoPdf,
+                contentW - servicosLabelW - 9
+            ).slice(0, 2);
+            const servicosBoxH = servicosLines.length > 1 ? 12.5 : 8.5;
+
+            pdf.setFillColor(255, 255, 255);
+            pdf.roundedRect(m, y, contentW, servicosBoxH, 1.5, 1.5, "F");
+            pdf.setDrawColor(190, 190, 190);
+            pdf.setLineWidth(0.3);
+            pdf.roundedRect(m, y, contentW, servicosBoxH, 1.5, 1.5);
+            pdf.setFillColor(...colorAccent);
+            pdf.rect(m, y, 1.7, servicosBoxH, "F");
+            pdf.roundedRect(m + 4, y + 2, servicosLabelW - 5, 4.8, 2, 2, "F");
+
+            pdf.setFont("helvetica", "bold");
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFontSize(6.8);
+            pdf.text("SERVICOS", m + 13.5, y + 5.3, { align: "center" });
+            pdf.setFont("helvetica", "normal");
+            pdf.setTextColor(0, 0, 0);
+            pdf.setFontSize(7.8);
+            pdf.text(servicosLines, m + servicosLabelW + 2, y + 5.6);
+            y += servicosBoxH + 5;
+        } else {
+            y += 7;
+        }
 
         // Dados cliente
         const clienteGap = 6;
-        const clienteBoxH = modoMecanica ? 40 : 26;
+        const clienteTelefonesParaAltura = listarTelefonesCliente(clienteDados);
+        const clienteBoxH = modoMecanica
+            ? 40
+            : (clienteTelefonesParaAltura.length > 1 ? 32 : 26);
         drawRect(m, y, leftColW, clienteBoxH);
         drawRect(m + leftColW + clienteGap, y, rightColW, clienteBoxH);
 
@@ -596,20 +694,23 @@ async function gerarBlobPdfOrcamento() {
             pdf.text(`COR: ${String(clienteDados?.corCarro || "—")}`, m + 4, y + 38.4);
         }
 
-        const telCli = formatarTelefoneBR(String(clienteDados?.telefone || "").trim()) || "—";
+        const telefonesCli = clienteTelefonesParaAltura.length ? clienteTelefonesParaAltura : ["—"];
         const fp = String(orc?.formaPagamento || "").trim() || "—";
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(10.5);
         pdf.text("TELEFONE:", m + leftColW + clienteGap + 4, y + 8);
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(9.8);
-        pdf.text(String(telCli), m + leftColW + clienteGap + 4, y + 14);
+        telefonesCli.forEach((tel, idx) => {
+            pdf.text(String(tel), m + leftColW + clienteGap + 4, y + 14 + (idx * 5));
+        });
+        const formaPagamentoY = y + 14 + (telefonesCli.length * 5) + 1;
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(10.5);
-        pdf.text("FORMA PGTO:", m + leftColW + clienteGap + 4, y + 20);
+        pdf.text("FORMA PGTO:", m + leftColW + clienteGap + 4, formaPagamentoY);
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(9.8);
-        pdf.text(String(fp), m + leftColW + clienteGap + 34, y + 20);
+        pdf.text(String(fp), m + leftColW + clienteGap + 34, formaPagamentoY);
 
         y += clienteBoxH + 8;
 
@@ -762,7 +863,7 @@ async function enviarWhatsAppPDF() {
         const file = typeof File === "function"
             ? new File([blob], fileName, { type: "application/pdf" })
             : null;
-        const telefone = normalizarTelefoneWhats(clienteDados?.telefone);
+        const telefone = normalizarTelefoneWhats(clienteDados?.telefone) || normalizarTelefoneWhats(clienteDados?.telefone2);
         const msg = `Ola ${clienteDados?.nome || ""}, segue seu orcamento ${orc?.numero || ""}.`;
         const waUrl = telefone
             ? `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`

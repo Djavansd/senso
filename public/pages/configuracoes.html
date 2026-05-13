@@ -32,6 +32,16 @@ select {
     background:#fff;
     padding:0 10px;
 }
+textarea {
+    width:100%;
+    min-height:72px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    padding:10px;
+    resize:vertical;
+    box-sizing:border-box;
+    font:inherit;
+}
 .logo-preview {
     margin-top:10px;
     min-height:125px;
@@ -113,6 +123,7 @@ select {
             <div class="group">
                 <label for="companyDocumentType">Tipo de documento</label>
                 <select id="companyDocumentType">
+                    <option value="none">Sem documento</option>
                     <option value="cnpj">CNPJ</option>
                     <option value="cpf">CPF</option>
                 </select>
@@ -131,6 +142,17 @@ select {
             <div class="group">
                 <label for="companyPhone">Telefone</label>
                 <input id="companyPhone" type="text" placeholder="(00) 00000-0000">
+            </div>
+
+            <div class="group">
+                <label for="companyPhone2">Telefone 2</label>
+                <input id="companyPhone2" type="text" placeholder="Opcional">
+            </div>
+
+            <div class="group">
+                <label for="headerServices">Servicos no cabecalho do orcamento</label>
+                <textarea id="headerServices" maxlength="120" placeholder="Ex: Motor, cambio, freios, suspensao, troca de oleo"></textarea>
+                <div class="muted"><span id="headerServicesCount">0</span>/120 caracteres. Use uma lista curta para nao quebrar o PDF.</div>
             </div>
 
             <div class="actions">
@@ -168,9 +190,17 @@ const companyDocumentLabel = document.getElementById("companyDocumentLabel");
 const companyDocumentInput = document.getElementById("companyDocument");
 const companyAddressInput = document.getElementById("companyAddress");
 const companyPhoneInput = document.getElementById("companyPhone");
+const companyPhone2Input = document.getElementById("companyPhone2");
+const headerServicesInput = document.getElementById("headerServices");
+const headerServicesCount = document.getElementById("headerServicesCount");
 
 let logoDataUrl = "";
 let profileChanged = false;
+
+function updateHeaderServicesCount() {
+    headerServicesInput.value = headerServicesInput.value.slice(0, 120);
+    headerServicesCount.textContent = String(headerServicesInput.value.length);
+}
 
 function renderLogoPreview() {
     if (!logoDataUrl) {
@@ -182,9 +212,15 @@ function renderLogoPreview() {
 }
 
 function applyCompanyDocumentFieldState() {
+    const isNone = companyDocumentTypeInput.value === "none";
     const isCpf = companyDocumentTypeInput.value === "cpf";
-    companyDocumentLabel.textContent = isCpf ? "CPF" : "CNPJ";
-    companyDocumentInput.placeholder = isCpf ? "000.000.000-00" : "00.000.000/0000-00";
+    companyDocumentLabel.textContent = isNone ? "Documento" : (isCpf ? "CPF" : "CNPJ");
+    companyDocumentInput.placeholder = isNone ? "Sem CPF/CNPJ" : (isCpf ? "000.000.000-00" : "00.000.000/0000-00");
+    companyDocumentInput.disabled = isNone;
+    if (isNone) {
+        companyDocumentInput.value = "";
+        return;
+    }
     companyDocumentInput.value = formatarDocumentoPorTipo(
         companyDocumentInput.value,
         companyDocumentTypeInput.value
@@ -204,10 +240,15 @@ buttonTextColorInput.value = settings.buttonTextColor || "#ffffff";
 buttonSecondaryTextColorInput.value = settings.buttonSecondaryTextColor || "#111827";
 logoDataUrl = settings.logoDataUrl || "";
 companyNameInput.value = settings.companyName || "";
-companyDocumentTypeInput.value = settings.companyDocumentType === "cpf" ? "cpf" : "cnpj";
+companyDocumentTypeInput.value = ["none", "cpf", "cnpj"].includes(settings.companyDocumentType)
+    ? settings.companyDocumentType
+    : "cnpj";
 companyDocumentInput.value = settings.companyDocument || "";
 companyAddressInput.value = settings.companyAddress || "";
 companyPhoneInput.value = settings.companyPhone || "";
+companyPhone2Input.value = settings.companyPhone2 || "";
+headerServicesInput.value = settings.headerServices || "";
+updateHeaderServicesCount();
 renderLogoPreview();
 applyCompanyDocumentFieldState();
 
@@ -255,7 +296,8 @@ buttonSecondaryTextColorInput.addEventListener("input", () => {
 companyDocumentTypeInput.addEventListener("change", () => {
     applyCompanyDocumentFieldState();
     saveAppSettings({
-        companyDocumentType: companyDocumentTypeInput.value
+        companyDocumentType: companyDocumentTypeInput.value,
+        companyDocument: companyDocumentTypeInput.value === "none" ? "" : companyDocumentInput.value
     });
 });
 
@@ -265,6 +307,8 @@ companyDocumentInput.addEventListener("input", () => {
         companyDocumentTypeInput.value
     );
 });
+
+headerServicesInput.addEventListener("input", updateHeaderServicesCount);
 
 logoInput.addEventListener("change", () => {
     const file = logoInput.files && logoInput.files[0];
@@ -300,12 +344,16 @@ btnSalvar.addEventListener("click", () => {
         logoDataUrl,
         companyName: companyNameInput.value.trim(),
         companyDocumentType: companyDocumentTypeInput.value,
-        companyDocument: formatarDocumentoPorTipo(
-            companyDocumentInput.value.trim(),
-            companyDocumentTypeInput.value
+        companyDocument: companyDocumentTypeInput.value === "none"
+            ? ""
+            : formatarDocumentoPorTipo(
+                companyDocumentInput.value.trim(),
+                companyDocumentTypeInput.value
         ),
         companyAddress: companyAddressInput.value.trim(),
-        companyPhone: companyPhoneInput.value.trim()
+        companyPhone: companyPhoneInput.value.trim(),
+        companyPhone2: companyPhone2Input.value.trim(),
+        headerServices: headerServicesInput.value.trim().slice(0, 120)
     });
 
     if (profileChanged) {

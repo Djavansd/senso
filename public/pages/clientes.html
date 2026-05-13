@@ -126,6 +126,154 @@
       font-size: 13px;
     }
 
+    .ultimo-servico-card {
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.68);
+      border-radius: 10px;
+      padding: 10px;
+      margin: 10px 0 8px;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .ultimo-servico-topo {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .ultimo-servico-titulo {
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .ultimo-servico-contador {
+      color: #0a4ea9;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .ultimo-servico-nome {
+      color: #111827;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .ultimo-servico-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      color: #475569;
+      margin-bottom: 8px;
+    }
+
+    .ultimo-servico-itens {
+      margin: 0 0 10px;
+      padding-left: 16px;
+      color: #334155;
+    }
+
+    .ultimo-servico-vazio {
+      color: #64748b;
+      margin-top: 6px;
+    }
+
+    .btn-historico {
+      background: rgba(10, 124, 255, 0.9);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.38);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+    }
+
+    .historico-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.45);
+      padding: 16px;
+    }
+
+    .historico-modal.hidden {
+      display: none;
+    }
+
+    .historico-modal-conteudo {
+      width: min(520px, 100%);
+      max-height: 82vh;
+      overflow: auto;
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 14px 14px 10px 10px;
+      padding: 14px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.24);
+    }
+
+    .historico-modal-topo {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .historico-modal-topo h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .btn-fechar-historico {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 999px;
+      background: #e2e8f0;
+      color: #0f172a;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .historico-item {
+      border-top: 1px solid #e2e8f0;
+      padding: 10px 0;
+    }
+
+    .historico-item:first-child {
+      border-top: none;
+    }
+
+    .historico-item-data {
+      color: #0a4ea9;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .historico-item-total {
+      color: #0f172a;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .historico-item ul {
+      margin: 0 0 6px;
+      padding-left: 16px;
+    }
+
+    .historico-observacoes {
+      color: #475569;
+      font-style: italic;
+    }
+
     .hidden {
       display: none;
     }
@@ -148,6 +296,10 @@
     .btn-whatsapp:focus-visible,
     .btn-detalhes:hover,
     .btn-detalhes:focus-visible,
+    .btn-historico:hover,
+    .btn-historico:focus-visible,
+    .btn-fechar-historico:hover,
+    .btn-fechar-historico:focus-visible,
     .btn-arquivar:hover,
     .btn-arquivar:focus-visible {
       transform: translateY(-1px);
@@ -158,6 +310,8 @@
     .btn-primary:active,
     .btn-whatsapp:active,
     .btn-detalhes:active,
+    .btn-historico:active,
+    .btn-fechar-historico:active,
     .btn-arquivar:active {
       transform: scale(0.98);
       box-shadow: none;
@@ -167,6 +321,8 @@
       .btn-primary,
       .btn-whatsapp,
       .btn-detalhes,
+      .btn-historico,
+      .btn-fechar-historico,
       .btn-arquivar {
         transition: none;
       }
@@ -230,6 +386,142 @@
       return digitos;
     }
 
+    function normalizarPlacaHistorico(placa) {
+      return String(placa || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    }
+
+    function dataServicoTimestamp(servico) {
+      const data = new Date(servico?.executadoEm || servico?.criadoEm || 0);
+      const tempo = data.getTime();
+      return Number.isFinite(tempo) ? tempo : 0;
+    }
+
+    function formatarDataHistorico(data) {
+      const d = new Date(data || 0);
+      if (!Number.isFinite(d.getTime())) return "Data não informada";
+      return d.toLocaleDateString("pt-BR");
+    }
+
+    function obterItensServico(servico) {
+      return Array.isArray(servico?.itens)
+        ? servico.itens
+            .map(item => String(item?.descricao || item?.nome || "").trim())
+            .filter(Boolean)
+        : [];
+    }
+
+    function buscarHistoricoCliente(cliente) {
+      if (!modoMecanica) return [];
+
+      const placaCliente = normalizarPlacaHistorico(cliente?.placaCarro);
+      if (!placaCliente) return [];
+
+      return (getData().servicos || [])
+        .filter(servico => {
+          const placaServico = normalizarPlacaHistorico(
+            servico?.placaCarro || servico?.cliente?.placaCarro
+          );
+          return servico?.status === "executado" && placaServico === placaCliente;
+        })
+        .sort((a, b) => dataServicoTimestamp(b) - dataServicoTimestamp(a));
+    }
+
+    function obterUltimoServico(historico) {
+      return Array.isArray(historico) && historico.length ? historico[0] : null;
+    }
+
+    function montarTextoContadorHistorico(total) {
+      return `${total} ${total === 1 ? "serviço realizado" : "serviços realizados"}`;
+    }
+
+    function renderizarCardUltimoServico(cliente) {
+      if (!modoMecanica) return "";
+
+      const historico = buscarHistoricoCliente(cliente);
+      const ultimoServico = obterUltimoServico(historico);
+      const contador = montarTextoContadorHistorico(historico.length);
+
+      if (!ultimoServico) {
+        return `
+          <div class="ultimo-servico-card">
+            <div class="ultimo-servico-topo">
+              <div class="ultimo-servico-titulo">Último serviço</div>
+              <div class="ultimo-servico-contador">${escapeHtml(contador)}</div>
+            </div>
+            <div class="ultimo-servico-vazio">Nenhum serviço realizado ainda</div>
+          </div>
+        `;
+      }
+
+      const itens = obterItensServico(ultimoServico);
+      const itensResumo = itens.slice(0, 3);
+      const titulo = itensResumo[0] || "Serviço realizado";
+
+      return `
+        <div class="ultimo-servico-card">
+          <div class="ultimo-servico-topo">
+            <div class="ultimo-servico-titulo">Último serviço</div>
+            <div class="ultimo-servico-contador">${escapeHtml(contador)}</div>
+          </div>
+          <div class="ultimo-servico-nome">${escapeHtml(titulo)}</div>
+          <div class="ultimo-servico-meta">
+            <span>${escapeHtml(formatarDataHistorico(ultimoServico.executadoEm || ultimoServico.criadoEm))}</span>
+            <span>R$ ${escapeHtml(formatarMoedaBR(ultimoServico.totalGeral || 0))}</span>
+          </div>
+          ${
+            itensResumo.length
+              ? `<ul class="ultimo-servico-itens">${itensResumo.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+              : ""
+          }
+          <button class="btn-historico" data-cliente-id="${escapeHtml(cliente.id)}">Ver histórico</button>
+        </div>
+      `;
+    }
+
+    function renderizarHistoricoCliente(cliente) {
+      const historico = buscarHistoricoCliente(cliente);
+      const modalExistente = document.getElementById("historicoClienteModal");
+      if (modalExistente) modalExistente.remove();
+
+      const modal = document.createElement("div");
+      modal.id = "historicoClienteModal";
+      modal.className = "historico-modal";
+
+      const itensHtml = historico.length
+        ? historico.map(servico => {
+            const itens = obterItensServico(servico);
+            return `
+              <div class="historico-item">
+                <div class="historico-item-data">${escapeHtml(formatarDataHistorico(servico.executadoEm || servico.criadoEm))}</div>
+                <div class="historico-item-total">R$ ${escapeHtml(formatarMoedaBR(servico.totalGeral || 0))}</div>
+                ${itens.length ? `<ul>${itens.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+                ${servico.observacoes ? `<div class="historico-observacoes">${escapeHtml(servico.observacoes)}</div>` : ""}
+              </div>
+            `;
+          }).join("")
+        : `<p>Nenhum serviço realizado ainda</p>`;
+
+      modal.innerHTML = `
+        <div class="historico-modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="historicoClienteTitulo">
+          <div class="historico-modal-topo">
+            <div>
+              <h3 id="historicoClienteTitulo">Histórico do veículo</h3>
+              <small>${escapeHtml(cliente?.placaCarro || "Placa não informada")} - ${escapeHtml(montarTextoContadorHistorico(historico.length))}</small>
+            </div>
+            <button class="btn-fechar-historico" type="button" aria-label="Fechar histórico">x</button>
+          </div>
+          ${itensHtml}
+        </div>
+      `;
+
+      const fechar = () => modal.remove();
+      modal.querySelector(".btn-fechar-historico").onclick = fechar;
+      modal.onclick = event => {
+        if (event.target === modal) fechar();
+      };
+      document.body.appendChild(modal);
+    }
+
     function renderClientes() {
       const clientes = listarClientesAtivos();
       lista.innerHTML = "";
@@ -242,6 +534,7 @@
       clientes.forEach(c => {
         const card = document.createElement("div");
         card.className = "cliente-card";
+        const telefonesCliente = listarTelefonesCliente(c);
         const telefoneWhats = normalizarTelefoneWhats(c.telefone);
         const companyName = String(getAppSettings()?.companyName || "").trim();
         const remetente = companyName || (modoMecanica ? "oficina" : "empresa");
@@ -255,12 +548,13 @@
             Cor: ${escapeHtml(c.corCarro || "Cor nao informada")}<br>
           `
           : "";
+        const ultimoServicoHtml = renderizarCardUltimoServico(c);
 
         card.innerHTML = `
           <div class="cliente-resumo">
             <div class="cliente-info">
               <strong>${escapeHtml(c.nome)}</strong><br>
-              Telefone: ${escapeHtml(c.telefone || "Sem telefone")}
+              Telefone: ${escapeHtml(telefonesCliente.join(" / ") || "Sem telefone")}
             </div>
             <div class="cliente-acoes">
               <button class="btn-whatsapp" title="Chamar no WhatsApp" aria-label="Chamar no WhatsApp" ${telefoneWhats ? "" : "disabled"}>WA</button>
@@ -272,6 +566,7 @@
             Endereco: ${escapeHtml(c.endereco || "Endereco nao informado")}<br>
             Documento: ${escapeHtml(formatarDocumentoBR(c.documento))}<br>
             ${detalhesVeiculo}
+            ${ultimoServicoHtml}
             <button class="btn-arquivar">Arquivar</button>
           </div>
         `;
@@ -280,6 +575,7 @@
         const btnWhats = card.querySelector(".btn-whatsapp");
         const detalhes = card.querySelector(".cliente-detalhes");
         const btnArquivar = card.querySelector(".btn-arquivar");
+        const btnHistorico = card.querySelector(".btn-historico");
 
         btnDetalhes.onclick = () => {
           detalhes.classList.toggle("hidden");
@@ -301,6 +597,12 @@
           const url = `https://wa.me/${telefoneWhats}?text=${encodeURIComponent(mensagemWhats)}`;
           window.open(url, "_blank");
         };
+
+        if (btnHistorico) {
+          btnHistorico.onclick = () => {
+            renderizarHistoricoCliente(c);
+          };
+        }
 
         lista.appendChild(card);
       });

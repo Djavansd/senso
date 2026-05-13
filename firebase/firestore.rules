@@ -9,16 +9,68 @@ service cloud.firestore {
       return ["uid", "email", "nome", "updatedAt"];
     }
 
+    function userCreateKeys() {
+      return ["uid", "email", "nome", "updatedAt", "autorizado"];
+    }
+
+    function userAccessAllowed(uid) {
+      return isOwner(uid)
+        && exists(/databases/$(database)/documents/users/$(uid))
+        && get(/databases/$(database)/documents/users/$(uid)).data.autorizado != false;
+    }
+
+    function normalizeUserPlan(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    function isBasicMonthly(uid) {
+      let user = normalizeUserPlan(uid);
+      return user.plano != "pro"
+        && user.tipoPagamento != "avista"
+        && user.tipoPagamento != "a vista"
+        && user.tipoPagamento != "à vista";
+    }
+
+    function hasAppDataPayload() {
+      return request.resource.data.keys().hasAll(["data"]);
+    }
+
+    function clientesCount() {
+      return hasAppDataPayload()
+        && request.resource.data.data.keys().hasAll(["clientes"])
+        ? request.resource.data.data.clientes.size()
+        : 0;
+    }
+
+    function servicosCount() {
+      return hasAppDataPayload()
+        && request.resource.data.data.keys().hasAll(["servicos"])
+        ? request.resource.data.data.servicos.size()
+        : 0;
+    }
+
+    function appDataWithinPlan(uid) {
+      return !isBasicMonthly(uid)
+        || (clientesCount() <= 50 && servicosCount() <= 150);
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow create: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(userIdentityKeys());
+        && request.resource.data.keys().hasOnly(userCreateKeys())
+        && request.resource.data.autorizado == false;
       allow update: if isOwner(uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(userIdentityKeys());
       allow delete: if false;
 
+      match /appData/{profileId} {
+        allow read: if userAccessAllowed(uid);
+        allow write: if userAccessAllowed(uid) && appDataWithinPlan(uid);
+      }
+
       match /{document=**} {
-        allow read, write: if isOwner(uid);
+        allow read: if userAccessAllowed(uid);
+        allow write: if false;
       }
     }
 
