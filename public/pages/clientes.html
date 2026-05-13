@@ -411,17 +411,26 @@
     }
 
     function buscarHistoricoCliente(cliente) {
-      if (!modoMecanica) return [];
-
+      const clienteId = String(cliente?.id || "");
+      const clienteNome = String(cliente?.nome || "").trim().toLocaleLowerCase("pt-BR");
       const placaCliente = normalizarPlacaHistorico(cliente?.placaCarro);
-      if (!placaCliente) return [];
 
       return (getData().servicos || [])
         .filter(servico => {
-          const placaServico = normalizarPlacaHistorico(
-            servico?.placaCarro || servico?.cliente?.placaCarro
-          );
-          return servico?.status === "executado" && placaServico === placaCliente;
+          if (servico?.status !== "executado") return false;
+
+          const idServico = String(servico?.cliente?.id || servico?.clienteId || "");
+          if (clienteId && idServico === clienteId) return true;
+
+          if (modoMecanica && placaCliente) {
+            const placaServico = normalizarPlacaHistorico(
+              servico?.placaCarro || servico?.cliente?.placaCarro
+            );
+            if (placaServico === placaCliente) return true;
+          }
+
+          const nomeServico = String(servico?.cliente?.nome || "").trim().toLocaleLowerCase("pt-BR");
+          return !!clienteNome && nomeServico === clienteNome;
         })
         .sort((a, b) => dataServicoTimestamp(b) - dataServicoTimestamp(a));
     }
@@ -434,33 +443,54 @@
       return `${total} ${total === 1 ? "serviço realizado" : "serviços realizados"}`;
     }
 
-    function renderizarCardUltimoServico(cliente) {
-      if (!modoMecanica) return "";
+    function obterTituloUltimoServico() {
+      return modoMecanica ? "Último serviço" : "Último atendimento";
+    }
 
+    function obterTituloHistorico() {
+      return modoMecanica ? "Histórico do veículo" : "Histórico de serviços";
+    }
+
+    function obterTextoHistoricoVazio() {
+      return modoMecanica
+        ? "Nenhum serviço realizado ainda"
+        : "Nenhum atendimento realizado ainda";
+    }
+
+    function montarSubtituloHistorico(cliente, total) {
+      const contador = montarTextoContadorHistorico(total);
+      if (modoMecanica) {
+        return `${cliente?.placaCarro || "Placa não informada"} - ${contador}`;
+      }
+      return `${cliente?.nome || "Cliente"} - ${contador}`;
+    }
+
+    function renderizarCardUltimoServico(cliente) {
       const historico = buscarHistoricoCliente(cliente);
       const ultimoServico = obterUltimoServico(historico);
       const contador = montarTextoContadorHistorico(historico.length);
+      const tituloCard = obterTituloUltimoServico();
 
       if (!ultimoServico) {
         return `
           <div class="ultimo-servico-card">
             <div class="ultimo-servico-topo">
-              <div class="ultimo-servico-titulo">Último serviço</div>
+              <div class="ultimo-servico-titulo">${escapeHtml(tituloCard)}</div>
               <div class="ultimo-servico-contador">${escapeHtml(contador)}</div>
             </div>
-            <div class="ultimo-servico-vazio">Nenhum serviço realizado ainda</div>
+            <div class="ultimo-servico-vazio">${escapeHtml(obterTextoHistoricoVazio())}</div>
           </div>
         `;
       }
 
       const itens = obterItensServico(ultimoServico);
       const itensResumo = itens.slice(0, 3);
-      const titulo = itensResumo[0] || "Serviço realizado";
+      const titulo = itensResumo[0] || (modoMecanica ? "Serviço realizado" : "Atendimento realizado");
 
       return `
         <div class="ultimo-servico-card">
           <div class="ultimo-servico-topo">
-            <div class="ultimo-servico-titulo">Último serviço</div>
+            <div class="ultimo-servico-titulo">${escapeHtml(tituloCard)}</div>
             <div class="ultimo-servico-contador">${escapeHtml(contador)}</div>
           </div>
           <div class="ultimo-servico-nome">${escapeHtml(titulo)}</div>
@@ -499,14 +529,14 @@
               </div>
             `;
           }).join("")
-        : `<p>Nenhum serviço realizado ainda</p>`;
+        : `<p>${escapeHtml(obterTextoHistoricoVazio())}</p>`;
 
       modal.innerHTML = `
         <div class="historico-modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="historicoClienteTitulo">
           <div class="historico-modal-topo">
             <div>
-              <h3 id="historicoClienteTitulo">Histórico do veículo</h3>
-              <small>${escapeHtml(cliente?.placaCarro || "Placa não informada")} - ${escapeHtml(montarTextoContadorHistorico(historico.length))}</small>
+              <h3 id="historicoClienteTitulo">${escapeHtml(obterTituloHistorico())}</h3>
+              <small>${escapeHtml(montarSubtituloHistorico(cliente, historico.length))}</small>
             </div>
             <button class="btn-fechar-historico" type="button" aria-label="Fechar histórico">x</button>
           </div>
