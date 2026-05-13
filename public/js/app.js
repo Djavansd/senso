@@ -23,7 +23,6 @@ const ACTIVE_DOMAIN = (
 const LEGACY_STORAGE_KEY = "appData";
 const LEGACY_SETTINGS_KEY = "appSettings";
 const STORAGE_KEY_BASE = `appData:${ACTIVE_PROFILE.id}`;
-const SETTINGS_KEY_BASE = `appSettings:${ACTIVE_PROFILE.id}`;
 const LAST_UID_KEY = "senso:lastAuthUid";
 
 let cloudHydrationStarted = false;
@@ -61,19 +60,25 @@ function getStorageKey() {
     return `${STORAGE_KEY_BASE}:anon`;
 }
 
-function getSettingsKey() {
-    const uid = getAuthUid();
-    if (uid) return `${SETTINGS_KEY_BASE}:uid:${uid}`;
+function getProfileId(profileId) {
+    const id = String(profileId || ACTIVE_PROFILE.id || "base");
+    return id === "prestador" || id === "mecanica" ? id : "base";
+}
 
-    return `${SETTINGS_KEY_BASE}:anon`;
+function getSettingsKey(profileId) {
+    const uid = getAuthUid();
+    const settingsKeyBase = `appSettings:${getProfileId(profileId)}`;
+    if (uid) return `${settingsKeyBase}:uid:${uid}`;
+
+    return `${settingsKeyBase}:anon`;
 }
 
 function getUidStorageKey(uid) {
     return `${STORAGE_KEY_BASE}:uid:${uid}`;
 }
 
-function getUidSettingsKey(uid) {
-    return `${SETTINGS_KEY_BASE}:uid:${uid}`;
+function getUidSettingsKey(uid, profileId) {
+    return `appSettings:${getProfileId(profileId)}:uid:${uid}`;
 }
 
 function getAnonStorageKey() {
@@ -81,7 +86,7 @@ function getAnonStorageKey() {
 }
 
 function getAnonSettingsKey() {
-    return `${SETTINGS_KEY_BASE}:anon`;
+    return `appSettings:${getProfileId()}:anon`;
 }
 
 function createEmptyData() {
@@ -264,6 +269,17 @@ function migrateLegacyStorageIfNeeded(targetKey, legacyKey) {
     if (legacyRaw === null) return;
 
     localStorage.setItem(targetKey, legacyRaw);
+}
+
+function migrateLegacySettingsIfNeeded(targetKey, profileId) {
+    if (getProfileId(profileId) !== "mecanica") return;
+    migrateLegacyStorageIfNeeded(targetKey, LEGACY_SETTINGS_KEY);
+}
+
+function getProfileDefaults(profileId) {
+    const id = getProfileId(profileId);
+    const profile = window.SensoProfile?.profiles?.[id];
+    return profile?.defaults || (id === ACTIVE_PROFILE.id ? (ACTIVE_PROFILE.defaults || {}) : {});
 }
 
 function getDomainLabel(name, fallback) {
@@ -751,11 +767,12 @@ function estornarServico(servicoId) {
 // =========================
 // CONFIGURACOES VISUAIS
 // =========================
-function getAppSettings() {
-    const settingsKey = getSettingsKey();
-    migrateLegacyStorageIfNeeded(settingsKey, LEGACY_SETTINGS_KEY);
+function getAppSettings(profileId) {
+    const resolvedProfileId = getProfileId(profileId);
+    const settingsKey = getSettingsKey(resolvedProfileId);
+    migrateLegacySettingsIfNeeded(settingsKey, resolvedProfileId);
 
-    const profileDefaults = ACTIVE_PROFILE.defaults || {};
+    const profileDefaults = getProfileDefaults(resolvedProfileId);
     let settings;
     try {
         settings = JSON.parse(localStorage.getItem(settingsKey));
@@ -812,15 +829,18 @@ function notifyLiveUpdate(source) {
     }, 180);
 }
 
-function saveAppSettings(nextSettings) {
-    const current = getAppSettings();
+function saveAppSettings(nextSettings, profileId) {
+    const resolvedProfileId = getProfileId(profileId);
+    const current = getAppSettings(resolvedProfileId);
     const merged = {
         ...current,
         ...(nextSettings || {})
     };
 
-    localStorage.setItem(getSettingsKey(), JSON.stringify(merged));
-    applyAppSettings();
+    localStorage.setItem(getSettingsKey(resolvedProfileId), JSON.stringify(merged));
+    if (resolvedProfileId === ACTIVE_PROFILE.id) {
+        applyAppSettings();
+    }
     notifyLiveUpdate("save-settings");
 }
 

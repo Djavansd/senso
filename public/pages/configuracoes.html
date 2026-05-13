@@ -227,7 +227,6 @@ function applyCompanyDocumentFieldState() {
     );
 }
 
-const settings = getAppSettings();
 const perfilAtivo = (
     window.SensoProfile &&
     typeof window.SensoProfile.getActiveProfile === "function"
@@ -235,22 +234,35 @@ const perfilAtivo = (
     ? window.SensoProfile.getActiveProfile()
     : { id: "mecanica" };
 businessTypeInput.value = perfilAtivo.id === "prestador" ? "prestador" : "mecanica";
-primaryColorInput.value = settings.primaryColor || "#0a7cff";
-buttonTextColorInput.value = settings.buttonTextColor || "#ffffff";
-buttonSecondaryTextColorInput.value = settings.buttonSecondaryTextColor || "#111827";
-logoDataUrl = settings.logoDataUrl || "";
-companyNameInput.value = settings.companyName || "";
-companyDocumentTypeInput.value = ["none", "cpf", "cnpj"].includes(settings.companyDocumentType)
-    ? settings.companyDocumentType
-    : "cnpj";
-companyDocumentInput.value = settings.companyDocument || "";
-companyAddressInput.value = settings.companyAddress || "";
-companyPhoneInput.value = settings.companyPhone || "";
-companyPhone2Input.value = settings.companyPhone2 || "";
-headerServicesInput.value = settings.headerServices || "";
-updateHeaderServicesCount();
-renderLogoPreview();
-applyCompanyDocumentFieldState();
+
+function getPerfilSelecionado() {
+    return businessTypeInput.value === "prestador" ? "prestador" : "mecanica";
+}
+
+function carregarConfiguracoesDoPerfil(profileId) {
+    const settings = getAppSettings(profileId);
+
+    primaryColorInput.value = settings.primaryColor || "#0a7cff";
+    buttonTextColorInput.value = settings.buttonTextColor || "#ffffff";
+    buttonSecondaryTextColorInput.value = settings.buttonSecondaryTextColor || "#111827";
+    logoDataUrl = settings.logoDataUrl || "";
+    logoInput.value = "";
+    companyNameInput.value = settings.companyName || "";
+    companyDocumentTypeInput.value = ["none", "cpf", "cnpj"].includes(settings.companyDocumentType)
+        ? settings.companyDocumentType
+        : "cnpj";
+    companyDocumentInput.value = settings.companyDocument || "";
+    companyAddressInput.value = settings.companyAddress || "";
+    companyPhoneInput.value = settings.companyPhone || "";
+    companyPhone2Input.value = settings.companyPhone2 || "";
+    headerServicesInput.value = settings.headerServices || "";
+
+    updateHeaderServicesCount();
+    renderLogoPreview();
+    applyCompanyDocumentFieldState();
+    aplicarCorEmTempoReal(primaryColorInput.value);
+    aplicarCorTextoBotoesEmTempoReal();
+}
 
 function aplicarCorEmTempoReal(color) {
     document.documentElement.style.setProperty("--app-primary", color);
@@ -276,21 +288,21 @@ primaryColorInput.addEventListener("input", () => {
     aplicarCorEmTempoReal(color);
 
     // salva automaticamente para refletir no app sem precisar atualizar
-    saveAppSettings({ primaryColor: color });
+    saveAppSettings({ primaryColor: color }, getPerfilSelecionado());
 });
 
 buttonTextColorInput.addEventListener("input", () => {
     aplicarCorTextoBotoesEmTempoReal();
     saveAppSettings({
         buttonTextColor: buttonTextColorInput.value
-    });
+    }, getPerfilSelecionado());
 });
 
 buttonSecondaryTextColorInput.addEventListener("input", () => {
     aplicarCorTextoBotoesEmTempoReal();
     saveAppSettings({
         buttonSecondaryTextColor: buttonSecondaryTextColorInput.value
-    });
+    }, getPerfilSelecionado());
 });
 
 companyDocumentTypeInput.addEventListener("change", () => {
@@ -298,7 +310,7 @@ companyDocumentTypeInput.addEventListener("change", () => {
     saveAppSettings({
         companyDocumentType: companyDocumentTypeInput.value,
         companyDocument: companyDocumentTypeInput.value === "none" ? "" : companyDocumentInput.value
-    });
+    }, getPerfilSelecionado());
 });
 
 companyDocumentInput.addEventListener("input", () => {
@@ -309,6 +321,10 @@ companyDocumentInput.addEventListener("input", () => {
 });
 
 headerServicesInput.addEventListener("input", updateHeaderServicesCount);
+
+businessTypeInput.addEventListener("change", () => {
+    carregarConfiguracoesDoPerfil(getPerfilSelecionado());
+});
 
 logoInput.addEventListener("change", () => {
     const file = logoInput.files && logoInput.files[0];
@@ -329,13 +345,8 @@ btnRemoverLogo.addEventListener("click", () => {
 });
 
 btnSalvar.addEventListener("click", () => {
-    const perfilSelecionado = businessTypeInput.value === "prestador" ? "prestador" : "mecanica";
+    const perfilSelecionado = getPerfilSelecionado();
     const mudouPerfil = perfilSelecionado !== (perfilAtivo.id || "mecanica");
-    if (window.SensoProfile && typeof window.SensoProfile.setActiveProfile === "function") {
-        profileChanged = mudouPerfil
-            ? (window.SensoProfile.setActiveProfile(perfilSelecionado) || false)
-            : false;
-    }
 
     saveAppSettings({
         primaryColor: primaryColorInput.value,
@@ -354,7 +365,13 @@ btnSalvar.addEventListener("click", () => {
         companyPhone: companyPhoneInput.value.trim(),
         companyPhone2: companyPhone2Input.value.trim(),
         headerServices: headerServicesInput.value.trim().slice(0, 120)
-    });
+    }, perfilSelecionado);
+
+    if (window.SensoProfile && typeof window.SensoProfile.setActiveProfile === "function") {
+        profileChanged = mudouPerfil
+            ? (window.SensoProfile.setActiveProfile(perfilSelecionado) || false)
+            : false;
+    }
 
     if (profileChanged) {
         alert("Configuracoes salvas. O app sera recarregado para aplicar o tipo de negocio.");
@@ -375,6 +392,8 @@ btnSair.addEventListener("click", async () => {
         alert(err && err.message ? err.message : "Falha ao sair.");
     }
 });
+
+carregarConfiguracoesDoPerfil(getPerfilSelecionado());
 </script>
 
 </body>
