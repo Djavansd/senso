@@ -290,6 +290,19 @@
       transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
     }
 
+    .btn-editar {
+      margin-top: 6px;
+      margin-right: 6px;
+      background: rgba(10, 124, 255, 0.9);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+    }
+
     .btn-primary:hover,
     .btn-primary:focus-visible,
     .btn-whatsapp:hover,
@@ -300,6 +313,8 @@
     .btn-historico:focus-visible,
     .btn-fechar-historico:hover,
     .btn-fechar-historico:focus-visible,
+    .btn-editar:hover,
+    .btn-editar:focus-visible,
     .btn-arquivar:hover,
     .btn-arquivar:focus-visible {
       transform: translateY(-1px);
@@ -312,6 +327,7 @@
     .btn-detalhes:active,
     .btn-historico:active,
     .btn-fechar-historico:active,
+    .btn-editar:active,
     .btn-arquivar:active {
       transform: scale(0.98);
       box-shadow: none;
@@ -323,6 +339,7 @@
       .btn-detalhes,
       .btn-historico,
       .btn-fechar-historico,
+      .btn-editar,
       .btn-arquivar {
         transition: none;
       }
@@ -597,6 +614,7 @@
             Documento: ${escapeHtml(formatarDocumentoBR(c.documento))}<br>
             ${detalhesVeiculo}
             ${ultimoServicoHtml}
+            <button class="btn-editar">Editar</button>
             <button class="btn-arquivar">Arquivar</button>
           </div>
         `;
@@ -604,6 +622,7 @@
         const btnDetalhes = card.querySelector(".btn-detalhes");
         const btnWhats = card.querySelector(".btn-whatsapp");
         const detalhes = card.querySelector(".cliente-detalhes");
+        const btnEditar = card.querySelector(".btn-editar");
         const btnArquivar = card.querySelector(".btn-arquivar");
         const btnHistorico = card.querySelector(".btn-historico");
 
@@ -617,6 +636,10 @@
           if (!confirm("Arquivar este cliente?")) return;
           arquivarCliente(c.id);
           renderClientes();
+        };
+
+        btnEditar.onclick = () => {
+          location.href = "novo-cliente.html?editar=" + encodeURIComponent(c.id);
         };
 
         btnWhats.onclick = () => {

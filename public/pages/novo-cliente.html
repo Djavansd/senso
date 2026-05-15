@@ -90,6 +90,10 @@
         const placaCarro = document.getElementById("placaCarro");
         const corCarro = document.getElementById("corCarro");
         const camposVeiculo = document.querySelectorAll(".campo-veiculo");
+        const clienteEditarId = new URLSearchParams(location.search).get("editar") || "";
+        const clienteEmEdicao = clienteEditarId
+            ? (getData().clientes || []).find(c => c.id === clienteEditarId && !c.arquivado)
+            : null;
         const modoMecanica = (
             window.SensoProfile &&
             typeof window.SensoProfile.getActiveProfile === "function" &&
@@ -149,7 +153,31 @@
             return /^[A-Z]{3}-[0-9]{4}$/.test(value) || /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(value);
         }
 
+        function preencherClienteEdicao() {
+            if (!clienteEditarId) return;
+
+            if (!clienteEmEdicao) {
+                alert("Cliente nao encontrado para edicao.");
+                window.location.replace("clientes.html");
+                return;
+            }
+
+            document.title = "Editar Cliente";
+            document.querySelector(".header").textContent = "Editar Cliente";
+            form.querySelector("button[type='submit']").textContent = "Salvar alteracoes";
+
+            nome.value = clienteEmEdicao.nome || "";
+            telefone.value = clienteEmEdicao.telefone || "";
+            telefone2.value = clienteEmEdicao.telefone2 || "";
+            endereco.value = clienteEmEdicao.endereco || "";
+            documento.value = clienteEmEdicao.documento || "";
+            modeloCarro.value = clienteEmEdicao.modeloCarro || "";
+            placaCarro.value = clienteEmEdicao.placaCarro || "";
+            corCarro.value = clienteEmEdicao.corCarro || "";
+        }
+
         aplicarModoFormularioCliente();
+        preencherClienteEdicao();
         if (modoMecanica) {
             carregarSugestoesModeloCarro();
             placaCarro.addEventListener("input", () => {
@@ -186,7 +214,7 @@
             const telefoneFormatado = formatarTelefoneBR(telefone.value);
             const telefone2Formatado = formatarTelefoneBR(telefone2.value);
 
-            if (telefoneJaExiste(telefoneFormatado)) {
+            if (telefoneJaExiste(telefoneFormatado, clienteEditarId)) {
                 alert("Cliente já cadastrado com esse telefone.");
                 return;
             }
@@ -197,7 +225,7 @@
                 return;
             }
 
-            if (telefone2Formatado && telefoneJaExiste(telefone2Formatado)) {
+            if (telefone2Formatado && telefoneJaExiste(telefone2Formatado, clienteEditarId)) {
                 alert("Cliente já cadastrado com esse telefone 2.");
                 return;
             }
@@ -211,8 +239,7 @@
                 return;
             }
 
-            const clienteSalvo = adicionarCliente({
-                id: gerarId(),
+            const dadosCliente = {
                 nome: nomeSeguro,
                 telefone: telefoneFormatado,
                 telefone2: telefone2Formatado,
@@ -221,15 +248,23 @@
                 modeloCarro: modoMecanica ? (modeloSeguro || "") : "",
                 placaCarro: modoMecanica ? (placaNormalizada || "") : "",
                 corCarro: modoMecanica ? (corSegura || "") : ""
-            });
+            };
+
+            const clienteSalvo = clienteEditarId
+                ? atualizarCliente(clienteEditarId, dadosCliente)
+                : adicionarCliente({
+                    id: gerarId(),
+                    ...dadosCliente
+                });
             if (!clienteSalvo) return;
 
             // envia direto para a tela inicial sem empilhar retornos no historico
-            window.location.replace("../index.html");
+            window.location.replace(clienteEditarId ? "clientes.html" : "../index.html");
         };
     </script>
 
 </body>
 
 </html>
+
 

@@ -60,6 +60,31 @@
       cursor: pointer;
     }
 
+    .btn-editar,
+    .btn-salvar-edicao,
+    .btn-cancelar-edicao {
+      border-radius: 8px;
+      padding: 6px 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .btn-editar {
+      background: #e3f2fd;
+      color: #0d47a1;
+    }
+
+    .btn-salvar-edicao {
+      background: #0f9d58;
+      color: #fff;
+    }
+
+    .btn-cancelar-edicao {
+      background: #eeeeee;
+      color: #444;
+    }
+
     .btn-ver {
       background: none;
       border: none;
@@ -74,6 +99,25 @@
       border-top: 1px solid #eee;
       font-size: 13px;
       display: none;
+    }
+
+    .agenda-edicao {
+      display: none;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #eee;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .agenda-edicao input {
+      flex: 1;
+      min-width: 150px;
+      padding: 7px 8px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 13px;
     }
 
     .badge {
@@ -151,6 +195,31 @@
       return isNaN(x) ? "—" : x.toLocaleDateString("pt-BR");
     }
 
+    function formatarDataInput(d) {
+      const x = new Date(d);
+      if (isNaN(x)) return "";
+      const ano = x.getFullYear();
+      const mes = String(x.getMonth() + 1).padStart(2, "0");
+      const dia = String(x.getDate()).padStart(2, "0");
+      return `${ano}-${mes}-${dia}`;
+    }
+
+    function criarDataRetorno(novaData, dataAtual) {
+      const base = new Date(dataAtual || new Date());
+      const [ano, mes, dia] = String(novaData || "").split("-").map(Number);
+      if (!ano || !mes || !dia) return null;
+      base.setFullYear(ano, mes - 1, dia);
+      return base.toISOString();
+    }
+
+    function atualizarFiltroMes() {
+      const selecionado = filtroMes.value;
+      filtroMes.innerHTML = '<option value="">Todos os meses</option>';
+      popularFiltroMesUmaVez();
+      const existeSelecionado = Array.from(filtroMes.options).some(opt => opt.value === selecionado);
+      filtroMes.value = existeSelecionado ? selecionado : "";
+    }
+
     function popularFiltroMesUmaVez() {
       const data = getData();
       const meses = new Set();
@@ -184,6 +253,28 @@
         saveData(data);
         renderAgenda();
       }
+    }
+
+    function remarcarRetorno(id, novaData) {
+      const data = getData();
+      const item = (data.agenda || []).find(a => a.id === id);
+      if (!item) {
+        alert("Retorno nao encontrado.");
+        return false;
+      }
+
+      const novaDataIso = criarDataRetorno(novaData, item.dataRetorno);
+      if (!novaDataIso) {
+        alert("Informe uma nova data para o retorno.");
+        return false;
+      }
+
+      item.dataRetorno = novaDataIso;
+      item.atualizadoEm = new Date().toISOString();
+      saveData(data);
+      atualizarFiltroMes();
+      renderAgenda();
+      return true;
     }
 
     function gerarMensagemWhats(cliente, dataRetorno) {
@@ -241,9 +332,16 @@
             <a class="btn-whats"
                href="https://wa.me/55${telefone}?text=${msg}"
                target="_blank">📲</a>
+            <button class="btn-editar">Editar</button>
             <button class="btn-arquivar" onclick="arquivar('${escapeHtml(a.id)}')">📁</button>
             <button class="btn-ver">Ver</button>
           </div>
+        </div>
+
+        <div class="agenda-edicao">
+          <input class="input-data-retorno" type="date" value="${escapeHtml(formatarDataInput(a.dataRetorno))}">
+          <button class="btn-salvar-edicao">Salvar</button>
+          <button class="btn-cancelar-edicao">Cancelar</button>
         </div>
 
         <div class="agenda-detalhes">
@@ -262,12 +360,35 @@
       `;
 
         const btnVer = card.querySelector(".btn-ver");
+        const btnEditar = card.querySelector(".btn-editar");
+        const btnSalvarEdicao = card.querySelector(".btn-salvar-edicao");
+        const btnCancelarEdicao = card.querySelector(".btn-cancelar-edicao");
+        const inputDataRetorno = card.querySelector(".input-data-retorno");
         const detalhes = card.querySelector(".agenda-detalhes");
+        const edicao = card.querySelector(".agenda-edicao");
 
         btnVer.onclick = () => {
           const aberto = detalhes.style.display === "block";
           detalhes.style.display = aberto ? "none" : "block";
           btnVer.textContent = aberto ? "Ver" : "Fechar";
+        };
+
+        btnEditar.onclick = () => {
+          const aberto = edicao.style.display === "flex";
+          edicao.style.display = aberto ? "none" : "flex";
+          if (!aberto) {
+            inputDataRetorno.value = formatarDataInput(a.dataRetorno);
+            inputDataRetorno.focus();
+          }
+        };
+
+        btnCancelarEdicao.onclick = () => {
+          edicao.style.display = "none";
+          inputDataRetorno.value = formatarDataInput(a.dataRetorno);
+        };
+
+        btnSalvarEdicao.onclick = () => {
+          remarcarRetorno(a.id, inputDataRetorno.value);
         };
 
         listaAgenda.appendChild(card);

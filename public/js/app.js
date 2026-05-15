@@ -406,6 +406,30 @@ function adicionarCliente(cliente) {
     return true;
 }
 
+function atualizarCliente(id, dadosCliente) {
+    const data = getData();
+    const cliente = data.clientes.find(c => c.id === id && !c.arquivado);
+    if (!cliente) return false;
+
+    Object.assign(cliente, dadosCliente, { id: cliente.id });
+
+    const atualizarClienteVinculado = alvo => {
+        if (!alvo?.cliente || alvo.cliente.id !== id) return;
+        alvo.cliente = {
+            ...alvo.cliente,
+            ...dadosCliente,
+            id
+        };
+    };
+
+    (data.servicos || []).forEach(atualizarClienteVinculado);
+    (data.orcamentos || []).forEach(atualizarClienteVinculado);
+    (data.agenda || []).forEach(atualizarClienteVinculado);
+
+    saveData(data);
+    return true;
+}
+
 function listarClientesAtivos() {
     return getData().clientes.filter(c => !c.arquivado);
 }
@@ -417,12 +441,12 @@ function arquivarCliente(id) {
     saveData(data);
 }
 
-function telefoneJaExiste(telefone) {
+function telefoneJaExiste(telefone, ignorarClienteId = "") {
     const telefoneNormalizado = String(telefone || "").trim();
     if (!telefoneNormalizado) return false;
 
     return getData().clientes.some(
-        c => !c.arquivado && (
+        c => !c.arquivado && c.id !== ignorarClienteId && (
             c.telefone === telefoneNormalizado ||
             c.telefone2 === telefoneNormalizado
         )

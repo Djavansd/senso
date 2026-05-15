@@ -181,6 +181,19 @@ body {
 .status-aprovado { color: #1e8e3e; }
 .status-recusado { color: #d93025; }
 
+.aviso-meses-fechados {
+    margin: 0 14px 12px;
+    padding: 10px 12px;
+    border: 1px solid #f4b4ae;
+    border-left: 4px solid #d93025;
+    border-radius: 10px;
+    background: #fdecea;
+    color: #a50e0e;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
 /* ===== VAZIO ===== */
 .vazio {
     padding: 30px;
@@ -265,18 +278,24 @@ const agora = new Date();
 const mesAtual = agora.getMonth();
 const anoAtual = agora.getFullYear();
 
-function render(lista) {
+function render(lista, totalFechados = 0) {
     conteudo.innerHTML = "";
+
+    if (abaAtiva === "fechados" && totalFechados > 0) {
+        const aviso = document.createElement("div");
+        aviso.className = "aviso-meses-fechados";
+        aviso.textContent = "Meses encerrados ficam arquivados aqui para consulta. A aba Mes atual mostra apenas os orcamentos do mes em andamento.";
+        conteudo.appendChild(aviso);
+    }
 
     if (!lista.length) {
         const textoVazio = abaAtiva === "atual"
             ? "Nenhum orçamento no mês atual"
             : "Nenhum orçamento em meses fechados";
-        conteudo.innerHTML = `
-            <div class="vazio">
-                🔍 ${textoVazio}
-            </div>
-        `;
+        const vazio = document.createElement("div");
+        vazio.className = "vazio";
+        vazio.textContent = textoVazio;
+        conteudo.appendChild(vazio);
         return;
     }
 
@@ -336,12 +355,14 @@ function render(lista) {
 function aplicarFiltros() {
     const data = getData();
     const todos = getTodos(data);
-    const servicosComRetornoAtivo = new Set(
-        (data.agenda || [])
-            .filter(a => a.status === "agendado" && a.origemServicoId)
-            .map(a => a.origemServicoId)
-    );
     const termo = busca.value.toLowerCase().trim();
+    const mesesFechados = todos.filter(o => {
+        const dataOrc = getDataReferenciaOrcamento(o);
+        return !(
+            dataOrc.getMonth() === mesAtual &&
+            dataOrc.getFullYear() === anoAtual
+        );
+    });
 
     const filtrados = todos.filter(o => {
         const dataOrc = getDataReferenciaOrcamento(o);
@@ -349,20 +370,16 @@ function aplicarFiltros() {
             dataOrc.getMonth() === mesAtual &&
             dataOrc.getFullYear() === anoAtual
         );
-        const temRetornoAtivo = !!(
-            o.origemServicoId &&
-            servicosComRetornoAtivo.has(o.origemServicoId)
-        );
         const passaAba = abaAtiva === "atual"
-            ? (isMesAtual || temRetornoAtivo)
-            : (!isMesAtual && !temRetornoAtivo);
+            ? isMesAtual
+            : !isMesAtual;
         const passaStatus = !statusAtivo || o.status === statusAtivo;
         const passaBusca = !termo ||
             String(o.cliente?.nome || "").toLowerCase().includes(termo);
         return passaAba && passaStatus && passaBusca;
     });
 
-    render(filtrados);
+    render(filtrados, mesesFechados.length);
 }
 
 /* ===== BUSCA ===== */
