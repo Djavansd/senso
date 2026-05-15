@@ -73,6 +73,18 @@
     transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
 }
 
+.btn-editar {
+    margin-top:6px;
+    background:#e8f5e9;
+    color:#1b5e20;
+    border:none;
+    padding:6px 10px;
+    border-radius:8px;
+    font-size:13px;
+    cursor:pointer;
+    transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+
 button {
     transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
 }
@@ -92,6 +104,7 @@ button:active {
 @media (prefers-reduced-motion: reduce) {
     button,
     .btn-orcamento,
+    .btn-editar,
     .btn-corrigir {
         transition: none;
     }
@@ -223,6 +236,7 @@ const sugestoesServico = document.getElementById("sugestoesServico");
 const itemDescricao = document.getElementById("itemDescricao");
 const itemValor = document.getElementById("itemValor");
 const itemQtd = document.getElementById("itemQtd");
+let servicoEmEdicaoId = "";
 const modoMecanica = (
     window.SensoProfile &&
     typeof window.SensoProfile.getActiveProfile === "function" &&
@@ -465,6 +479,79 @@ function renderItens() {
     document.getElementById("itensResumo").classList.remove("hidden");
 }
 
+function getValorIntervaloSelect(servico) {
+    if (!servico) return "";
+    if (servico.intervaloTipo === "nenhum") return "nenhum";
+    if (servico.intervaloTipo === "semanas" && Number(servico.intervaloValor) === 1) return "semanal";
+    if (servico.intervaloTipo === "meses" && Number(servico.intervaloValor) === 1) return "mensal";
+    if (servico.intervaloTipo === "meses" && servico.intervaloValor) return String(servico.intervaloValor);
+    return "";
+}
+
+function limparFormularioServico() {
+    servicoEmEdicaoId = "";
+    itens.length = 0;
+    observacoesServico.value = "";
+    formaPagamento.value = "";
+    clienteBusca.value = "";
+    clienteSelect.value = "";
+    clienteResumo.classList.add("hidden");
+    document.getElementById("itensResumo").classList.add("hidden");
+    listaItens.innerHTML = "";
+    totalServicoEl.textContent = "0,00";
+    intervaloSelect.value = "";
+    btnSalvarServico.textContent = "Salvar Serviço";
+    renderClienteOptions("");
+    if (new URLSearchParams(location.search).has("editar")) {
+        history.replaceState(null, "", location.pathname);
+    }
+}
+
+function atualizarOrcamentoDoServico(data, servico) {
+    const orcamento = (data.orcamentos || []).find(
+        o => o.id === servico.orcamentoId || o.origemServicoId === servico.id
+    );
+    if (!orcamento || orcamento.status === "aprovado") return;
+
+    orcamento.cliente = servico.cliente;
+    orcamento.itens = servico.itens;
+    orcamento.total = servico.totalGeral;
+    orcamento.observacoes = servico.observacoes || "";
+    orcamento.formaPagamento = servico.formaPagamento || "";
+    servico.orcamentoId = orcamento.id;
+}
+
+function iniciarEdicaoServico(servicoId) {
+    const servico = (getData().servicos || []).find(s => s.id === servicoId);
+    if (!servico || servico.status !== "pendente") return;
+
+    const orcamento = (getData().orcamentos || []).find(
+        o => o.id === servico.orcamentoId || o.origemServicoId === servico.id
+    );
+    if (orcamento?.status === "aprovado") {
+        alert("Este orçamento já foi aprovado e não pode ser editado por aqui.");
+        return;
+    }
+
+    servicoEmEdicaoId = servico.id;
+    itens.length = 0;
+    (servico.itens || []).forEach(item => itens.push({ ...item }));
+
+    const clienteId = servico.cliente?.id || "";
+    const cliente = clientesAtivos.find(c => c.id === clienteId);
+    clienteBusca.value = cliente?.nome || servico.cliente?.nome || "";
+    renderClienteOptions(clienteBusca.value);
+    clienteSelect.value = clienteId;
+    renderResumoClienteSelecionado();
+
+    observacoesServico.value = servico.observacoes || "";
+    formaPagamento.value = servico.formaPagamento || "";
+    intervaloSelect.value = getValorIntervaloSelect(servico);
+    btnSalvarServico.textContent = "Salvar alterações";
+    renderItens();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 /* SALVAR SERVIÇO */
 btnSalvarServico.onclick = () => {
     if (!clienteSelect.value || itens.length === 0) return;
@@ -499,25 +586,59 @@ if (intervaloSelect.value === "nenhum") {
     }
 
     const c = clientesAtivos.find(x => x.id === clienteSelect.value);
+    const totalGeral = itens.reduce((s, i) => {
+        const subtotal = Number(i?.total);
+        return s + (Number.isFinite(subtotal) ? subtotal : 0);
+    }, 0);
+    const clienteServico = {
+        id: c.id,
+        nome: c.nome,
+        telefone: c.telefone || "",
+        telefone2: c.telefone2 || "",
+        endereco: c.endereco || "",
+        documento: c.documento || "",
+        modeloCarro: modoMecanica ? (c.modeloCarro || "") : "",
+        placaCarro: modoMecanica ? (c.placaCarro || "") : "",
+        corCarro: modoMecanica ? (c.corCarro || "") : ""
+    };
+
+    if (servicoEmEdicaoId) {
+        const data = getData();
+        const servico = (data.servicos || []).find(s => s.id === servicoEmEdicaoId);
+        if (!servico || servico.status !== "pendente") {
+            alert("Não foi possível editar este serviço.");
+            return;
+        }
+
+        const orcamento = (data.orcamentos || []).find(
+            o => o.id === servico.orcamentoId || o.origemServicoId === servico.id
+        );
+        if (orcamento?.status === "aprovado") {
+            alert("Este orçamento já foi aprovado e não pode ser editado por aqui.");
+            return;
+        }
+
+        servico.cliente = clienteServico;
+        servico.itens = itens.slice();
+        servico.totalGeral = totalGeral;
+        servico.observacoes = observacoesSeguras;
+        servico.formaPagamento = formaPagamento.value || "";
+        servico.intervaloTipo = intervaloTipo;
+        servico.intervaloValor = intervaloValor;
+        servico.atualizadoEm = new Date().toISOString();
+        atualizarOrcamentoDoServico(data, servico);
+        saveData(data);
+
+        limparFormularioServico();
+        renderServicos();
+        return;
+    }
 
     const servicoSalvo = salvarServico({
         id: gerarId(),
-        cliente: {
-            id: c.id,
-            nome: c.nome,
-            telefone: c.telefone || "",
-            telefone2: c.telefone2 || "",
-            endereco: c.endereco || "",
-            documento: c.documento || "",
-            modeloCarro: modoMecanica ? (c.modeloCarro || "") : "",
-            placaCarro: modoMecanica ? (c.placaCarro || "") : "",
-            corCarro: modoMecanica ? (c.corCarro || "") : ""
-        },
+        cliente: clienteServico,
         itens: itens.slice(),
-        totalGeral: itens.reduce((s, i) => {
-            const subtotal = Number(i?.total);
-            return s + (Number.isFinite(subtotal) ? subtotal : 0);
-        }, 0),
+        totalGeral,
         observacoes: observacoesSeguras,
         formaPagamento: formaPagamento.value || "",
         status: "pendente",
@@ -527,16 +648,7 @@ if (intervaloSelect.value === "nenhum") {
     });
     if (!servicoSalvo) return;
 
-    itens.length = 0;
-    observacoesServico.value = "";
-    formaPagamento.value = "";
-    clienteBusca.value = "";
-    clienteSelect.value = "";
-    clienteResumo.classList.add("hidden");
-    document.getElementById("itensResumo").classList.add("hidden");
-    intervaloSelect.value = "";
-    renderClienteOptions("");
-
+    limparFormularioServico();
     renderServicos();
 };
 
@@ -555,6 +667,7 @@ function renderServicos() {
         const orcamentoExistente = (getData().orcamentos || [])
             .find(o => o.origemServicoId === s.id);
         const orcamentoRecusado = orcamentoExistente?.status === "recusado";
+        const podeEditar = s.status === "pendente" && orcamentoExistente?.status !== "aprovado";
         const textoBotaoOrcamento = orcamentoExistente
             ? "📄 Abrir orçamento"
             : "📄 Gerar orçamento";
@@ -582,6 +695,14 @@ function renderServicos() {
                     data-orcamento-id="${orcamentoIdAttr}">
                     ${textoBotaoOrcamento}
                 </button>
+
+                ${
+                    podeEditar
+                    ? `<button class="btn-editar" data-servico-id="${servicoIdAttr}">
+                        ✏️ Editar serviço
+                       </button>`
+                    : ""
+                }
 
                 ${
                     s.status === "pendente" && !orcamentoRecusado
@@ -615,6 +736,10 @@ function renderServicos() {
         };
     });
 
+    listaServicos.querySelectorAll(".btn-editar").forEach(btn => {
+        btn.onclick = () => iniciarEdicaoServico(btn.dataset.servicoId);
+    });
+
     listaServicos.querySelectorAll(".btn-executar-servico").forEach(btn => btn.remove());
 
     listaServicos.querySelectorAll(".btn-corrigir").forEach(btn => {
@@ -631,6 +756,11 @@ window.addEventListener("senso-live-update", () => {
 });
 
 renderServicos();
+
+const servicoEditarParam = new URLSearchParams(location.search).get("editar");
+if (servicoEditarParam) {
+    iniciarEdicaoServico(servicoEditarParam);
+}
 </script>
 </body>
 </html>

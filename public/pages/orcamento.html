@@ -319,6 +319,7 @@ table tr {
 <div class="botoes">
     <button class="btn btn-pdf" onclick="gerarPDF()">📄 PDF</button>
     <button class="btn btn-pdf" onclick="enviarWhatsAppPDF()">📲 WhatsApp</button>
+    <button id="btnEditar" class="btn btn-pdf" onclick="editarOrcamento()">✏️ Editar</button>
     <button id="btnAprovar" class="btn btn-pdf" onclick="aprovar()">✅ Aprovar</button>
     <button id="btnRecusar" class="btn btn-voltar" onclick="recusar()">❌ Recusar</button>
     <button class="btn btn-voltar" onclick="history.back()">← Voltar</button>
@@ -466,12 +467,24 @@ obsBox.appendChild(document.createTextNode(textoObs));
 if (orc.status !== "enviado") {
     btnAprovar.disabled = true;
     btnRecusar.disabled = true;
+    btnEditar.disabled = true;
     btnAprovar.classList.add("btn-disabled");
     btnRecusar.classList.add("btn-disabled");
+    btnEditar.classList.add("btn-disabled");
+}
+
+if (!orc.origemServicoId) {
+    btnEditar.disabled = true;
+    btnEditar.classList.add("btn-disabled");
 }
 
 function gerarPDF() {
     gerarArquivoPdf();
+}
+
+function editarOrcamento() {
+    if (orc.status !== "enviado" || !orc.origemServicoId) return;
+    location.href = "servico.html?editar=" + encodeURIComponent(orc.origemServicoId);
 }
 
 
