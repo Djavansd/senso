@@ -10,13 +10,14 @@ service cloud.firestore {
     }
 
     function userCreateKeys() {
-      return ["uid", "email", "nome", "updatedAt", "autorizado"];
+      return ["uid", "email", "nome", "updatedAt", "autorizado", "plano", "status", "tipoPagamento", "validade"];
     }
 
     function userAccessAllowed(uid) {
       return isOwner(uid)
         && exists(/databases/$(database)/documents/users/$(uid))
-        && get(/databases/$(database)/documents/users/$(uid)).data.autorizado != false;
+        && get(/databases/$(database)/documents/users/$(uid)).data.autorizado != false
+        && paymentAccessAllowed(uid);
     }
 
     function normalizeUserPlan(uid) {
@@ -25,10 +26,36 @@ service cloud.firestore {
 
     function isBasicMonthly(uid) {
       let user = normalizeUserPlan(uid);
-      return user.plano != "pro"
+      return user.plano == "basico"
         && user.tipoPagamento != "avista"
         && user.tipoPagamento != "a vista"
         && user.tipoPagamento != "à vista";
+    }
+
+    function isFreePlan(uid) {
+      let user = normalizeUserPlan(uid);
+      return user.plano == "gratis" || !user.keys().hasAny(["plano"]);
+    }
+
+    function isMonthlyAppPlan(user) {
+      return (user.plano == "pro" || user.plano == "basico")
+        && user.tipoPagamento != "avista"
+        && user.tipoPagamento != "a vista"
+        && user.tipoPagamento != "à vista"
+        && user.tipoPagamento != "Ã  vista";
+    }
+
+    function paymentAccessAllowed(uid) {
+      let user = normalizeUserPlan(uid);
+      return user.status != "bloqueado"
+        && (
+          !isMonthlyAppPlan(user)
+          || (
+            user.keys().hasAny(["validade"])
+            && user.validade is timestamp
+            && request.time <= user.validade + duration.value(5, "d")
+          )
+        );
     }
 
     function hasAppDataPayload() {
@@ -50,15 +77,23 @@ service cloud.firestore {
     }
 
     function appDataWithinPlan(uid) {
-      return !isBasicMonthly(uid)
-        || (clientesCount() <= 50 && servicosCount() <= 150);
+      return isFreePlan(uid)
+        ? (clientesCount() <= 5 && servicosCount() <= 10)
+        : (
+            !isBasicMonthly(uid)
+            || (clientesCount() <= 50 && servicosCount() <= 150)
+          );
     }
 
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow create: if isOwner(uid)
         && request.resource.data.keys().hasOnly(userCreateKeys())
-        && request.resource.data.autorizado == false;
+        && request.resource.data.autorizado == false
+        && request.resource.data.plano == "gratis"
+        && request.resource.data.status == "ativo"
+        && request.resource.data.tipoPagamento == "mensal"
+        && request.resource.data.validade == null;
       allow update: if isOwner(uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(userIdentityKeys());
       allow delete: if false;
@@ -66,6 +101,10 @@ service cloud.firestore {
       match /appData/{profileId} {
         allow read: if userAccessAllowed(uid);
         allow write: if userAccessAllowed(uid) && appDataWithinPlan(uid);
+      }
+
+      match /appSettings/{profileId} {
+        allow read, write: if userAccessAllowed(uid);
       }
 
       match /{document=**} {
@@ -76,6 +115,11 @@ service cloud.firestore {
 
     match /billingAlerts/{uid} {
       allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
+    match /appConfig/{docId} {
+      allow read: if true;
       allow write: if false;
     }
 
