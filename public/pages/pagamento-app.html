@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
@@ -318,108 +318,109 @@ body {
         <div class="payment-hero">
             <div class="payment-icon" aria-hidden="true"></div>
             <h3>Planos e pagamento</h3>
-            <p>Escolha seu plano Senso. Ao clicar em escolher, o WhatsApp abre com o plano preenchido para confirmar a troca.</p>
+            <p>Escolha seu plano Senso. O plano Grátis libera poucos cadastros para experimentar; Básico e Pro ficam como opções mensais.</p>
         </div>
 
         <div class="current-plan" aria-live="polite">
-            <div class="current-plan-label">Seu plano atual</div>
+            <div class="current-plan-label">Minha assinatura</div>
             <div class="current-plan-title" id="currentPlanTitle">Carregando...</div>
             <div class="current-plan-meta">
                 <span class="current-plan-pill" id="currentPlanStatus">Status</span>
-                <span class="current-plan-pill" id="currentPlanPayment">Pagamento</span>
+                <span class="current-plan-pill" id="currentPlanPrice">Valor contratado</span>
                 <span class="current-plan-pill" id="currentPlanValidity">Validade</span>
+                <span class="current-plan-pill" id="currentPlanType">Tipo do plano</span>
             </div>
             <div class="current-plan-note" id="currentPlanNote">
-                Se o plano estiver incorreto, escolha uma opcao abaixo ou fale pelo WhatsApp.
+                Se o plano estiver incorreto, escolha uma opção abaixo ou fale pelo WhatsApp.
             </div>
             <div class="current-plan-usage" id="currentPlanUsage"></div>
         </div>
 
         <div class="plan-list">
             <div class="plan-option">
-                <div class="plan-badge">Essencial</div>
+                <div class="plan-badge">Para experimentar</div>
                 <div class="plan-title">
-                    <span>Plano Basico mensal</span>
-                    <span class="plan-price">R$ 50<small>por mes</small></span>
+                    <span>Plano Grátis</span>
+                    <span class="plan-price">R$ 0<small>teste inicial</small></span>
                 </div>
                 <div class="plan-desc">
-                    Para quem quer usar o Senso com as funcoes principais do dia a dia.
+                    Para conhecer o Senso com poucos créditos antes de escolher um plano pago.
                 </div>
                 <ul class="plan-features">
-                    <li class="plan-feature">Ate 50 clientes ativos</li>
-                    <li class="plan-feature">Ate 150 servicos cadastrados</li>
-                    <li class="plan-feature">Geracao e controle de orcamentos</li>
-                    <li class="plan-feature">Agenda de retornos e manutencoes</li>
-                    <li class="plan-feature">Financeiro basico para entradas e saidas</li>
-                    <li class="plan-feature">Resumo mensal do negocio</li>
+                    <li class="plan-feature">Até 5 clientes ativos</li>
+                    <li class="plan-feature">Até 10 serviços cadastrados</li>
+                    <li class="plan-feature">Orçamentos, agenda e financeiro para teste</li>
+                    <li class="plan-feature">Ideal para experimentar o fluxo do app</li>
                 </ul>
                 <a class="plan-cta"
-                   href="https://wa.me/5511992841312?text=Ola%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20Basico%20mensal%20do%20Senso%20de%20R%24%2050%2C00%20por%20mes.%20Apos%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
+                   href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20quero%20ativar%20ou%20manter%20o%20Plano%20Gr%C3%A1tis%20do%20Senso%20para%20experimentar%20o%20app%20com%20poucos%20cr%C3%A9ditos."
                    target="_blank"
-                   rel="noopener noreferrer">Escolher Basico</a>
+                   rel="noopener noreferrer">Escolher Grátis</a>
+            </div>
+
+            <div class="plan-option">
+                <div class="plan-badge">Essencial</div>
+                <div class="plan-title">
+                    <span>Plano Básico mensal</span>
+                    <span class="plan-price" id="basicPlanPrice">Carregando<small>por mês</small></span>
+                </div>
+                <div class="plan-desc">
+                    Para quem quer usar o Senso com as funções principais do dia a dia.
+                </div>
+                <ul class="plan-features">
+                    <li class="plan-feature">Até 50 clientes ativos</li>
+                    <li class="plan-feature">Até 150 serviços cadastrados</li>
+                    <li class="plan-feature">Geração e controle de orçamentos</li>
+                    <li class="plan-feature">Agenda de retornos e manutenções</li>
+                    <li class="plan-feature">Financeiro básico para entradas e saídas</li>
+                    <li class="plan-feature">Resumo mensal do negócio</li>
+                </ul>
+                <a class="plan-cta"
+                   id="basicPlanCta"
+                   href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20B%C3%A1sico%20mensal%20do%20Senso%20de%20R%24%2029%2C90%20por%20m%C3%AAs.%20Ap%C3%B3s%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
+                   target="_blank"
+                   rel="noopener noreferrer">Escolher Básico</a>
             </div>
 
             <div class="plan-option pro">
                 <div class="plan-badge">Mais indicado</div>
                 <div class="plan-title">
                     <span>Plano Pro mensal</span>
-                    <span class="plan-price">R$ 100<small>por mes</small></span>
+                    <span class="plan-price" id="proPlanPrice">Carregando<small>por mês</small></span>
                 </div>
                 <div class="plan-desc">
-                    Para quem quer o Senso completo, sem os limites do Basico mensal e com acesso as novidades premium.
+                    Para quem quer o Senso completo, sem os limites do Básico mensal e com acesso às novidades premium.
                 </div>
                 <ul class="plan-features">
-                    <li class="plan-feature">Clientes e servicos sem limite do Basico mensal</li>
-                    <li class="plan-feature">Cadastro, consulta e historico de clientes e veiculos</li>
-                    <li class="plan-feature">Servicos, orcamentos, agenda e financeiro ativos</li>
-                    <li class="plan-feature">Resumo mensal do negocio e acompanhamento de resultados</li>
-                    <li class="plan-feature">Acesso a futuras funcoes Pro e recursos avancados</li>
+                    <li class="plan-feature">Clientes e serviços sem limite do Básico mensal</li>
+                    <li class="plan-feature">Cadastro, consulta e histórico de clientes e veículos</li>
+                    <li class="plan-feature">Serviços, orçamentos, agenda e financeiro ativos</li>
+                    <li class="plan-feature">Resumo mensal do negócio e acompanhamento de resultados</li>
+                    <li class="plan-feature">Acesso a futuras funções Pro e recursos avançados</li>
                     <li class="plan-feature">Prioridade nas novidades e melhorias do app</li>
                     <li class="plan-feature">Plano indicado para quem quer evoluir com o Senso</li>
                 </ul>
                 <a class="plan-cta"
-                   href="https://wa.me/5511992841312?text=Ola%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20Pro%20mensal%20do%20Senso%20de%20R%24%20100%2C00%20por%20mes.%20Apos%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
+                   id="proPlanCta"
+                   href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20Pro%20mensal%20do%20Senso%20de%20R%24%2059%2C90%20por%20m%C3%AAs.%20Ap%C3%B3s%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
                    target="_blank"
                    rel="noopener noreferrer">Escolher Pro</a>
             </div>
 
-            <div class="plan-option">
-                <div class="plan-badge">Pagamento unico</div>
-                <div class="plan-title">
-                    <span>Basico a vista</span>
-                    <span class="plan-price">R$ 500<small>uma vez</small></span>
-                </div>
-                <div class="plan-desc">
-                    Pagamento unico para usar o Plano Basico sem mensalidade, ideal para quem prefere manter o essencial.
-                </div>
-                <ul class="plan-features">
-                    <li class="plan-feature">Inclui os recursos do Plano Basico</li>
-                    <li class="plan-feature">Nao tem cobranca mensal do Basico</li>
-                    <li class="plan-feature">Clientes, servicos, orcamentos, agenda e financeiro</li>
-                    <li class="plan-feature">Melhor para quem prefere pagar uma vez</li>
-                    <li class="plan-feature">Nao inclui atualizacoes e novidades exclusivas do Pro</li>
-                    <li class="plan-feature">Pode ter limites de uso definidos em futuras versoes</li>
-                    <li class="plan-feature">Upgrade para Pro pode ser contratado separadamente depois</li>
-                </ul>
-                <a class="plan-cta"
-                   href="https://wa.me/5511992841312?text=Ola%2C%20quero%20contratar%20o%20Plano%20Basico%20a%20vista%20do%20Senso%20por%20R%24%20500%2C00.%20Entendi%20que%20o%20pagamento%20a%20vista%20libera%20o%20Basico%20e%20que%20recursos%20Pro%20podem%20ser%20contratados%20separadamente.%20Apos%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
-                   target="_blank"
-                   rel="noopener noreferrer">Escolher a vista</a>
-            </div>
         </div>
 
         <div class="payment-card" id="pagamento">
             <div class="payment-line">
-                <span class="payment-label">Basico mensal</span>
-                <span class="payment-value">R$ 50,00 ao mes</span>
+                <span class="payment-label">Grátis</span>
+                <span class="payment-value">R$ 0,00 para experimentar</span>
+            </div>
+            <div class="payment-line">
+                <span class="payment-label">Básico mensal</span>
+                <span class="payment-value" id="basicPaymentValue">Carregando...</span>
             </div>
             <div class="payment-line">
                 <span class="payment-label">Pro mensal</span>
-                <span class="payment-value">R$ 100,00 ao mes</span>
-            </div>
-            <div class="payment-line">
-                <span class="payment-label">Basico a vista</span>
-                <span class="payment-value">R$ 500,00</span>
+                <span class="payment-value" id="proPaymentValue">Carregando...</span>
             </div>
             <div class="payment-line">
                 <span class="payment-label">Chave Pix</span>
@@ -433,7 +434,7 @@ body {
             <div class="payment-actions">
                 <button id="btnCopiarPix" class="btn-copy" type="button">Copiar chave Pix</button>
                 <a class="btn-whatsapp"
-                   href="https://wa.me/5511992841312?text=Ola%2C%20segue%20meu%20comprovante%20de%20pagamento%20do%20app%20Senso."
+                   href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20segue%20meu%20comprovante%20de%20pagamento%20do%20app%20Senso."
                    target="_blank"
                    rel="noopener noreferrer">
                     Enviar comprovante pelo WhatsApp
@@ -442,7 +443,7 @@ body {
             </div>
 
             <div class="note">
-                Apos escolher ou trocar o plano, envie o comprovante pelo WhatsApp. O aviso de pagamento no app e retirado apos a confirmacao.
+                Após escolher ou trocar o plano, envie o comprovante pelo WhatsApp. O aviso de pagamento no app é retirado após a confirmação.
             </div>
         </div>
     </div>
@@ -452,23 +453,46 @@ body {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
-<script src="../js/auth-guard.js"></script>
-<script src="../js/core/plans.js"></script>
+<script src="../js/auth-guard.js?v=20260607-gratis"></script>
+<script src="../js/core/plans.js?v=20260607-gratis"></script>
 <script>
 const btnCopiarPix = document.getElementById("btnCopiarPix");
 const pixMensal = document.getElementById("pixMensal");
 const currentPlanTitle = document.getElementById("currentPlanTitle");
 const currentPlanStatus = document.getElementById("currentPlanStatus");
-const currentPlanPayment = document.getElementById("currentPlanPayment");
+const currentPlanPrice = document.getElementById("currentPlanPrice");
 const currentPlanValidity = document.getElementById("currentPlanValidity");
+const currentPlanType = document.getElementById("currentPlanType");
 const currentPlanNote = document.getElementById("currentPlanNote");
 const currentPlanUsage = document.getElementById("currentPlanUsage");
+const basicPlanPrice = document.getElementById("basicPlanPrice");
+const proPlanPrice = document.getElementById("proPlanPrice");
+const basicPlanCta = document.getElementById("basicPlanCta");
+const proPlanCta = document.getElementById("proPlanCta");
+const basicPaymentValue = document.getElementById("basicPaymentValue");
+const proPaymentValue = document.getElementById("proPaymentValue");
+const WHATSAPP_PHONE = "5511992841312";
+const FOUNDING_CUSTOMER_LIMIT = 10;
+const PLAN_PRICES = Object.freeze({
+    fundador: Object.freeze({
+        basico: 29.90,
+        pro: 59.90
+    }),
+    normal: Object.freeze({
+        basico: 29.90,
+        pro: 59.90
+    })
+});
 const FALLBACK_PLAN = Object.freeze({
-    plano: "basico",
+    plano: "gratis",
     status: "ativo",
     tipoPagamento: "mensal",
-    validade: null
+    validade: null,
+    precoContratado: null,
+    dataContratacao: null,
+    tipoPlano: null
 });
+let currentPricingPhase = "fundador";
 
 function normalizeTipoPagamento(value) {
     const texto = String(value || "")
@@ -478,6 +502,115 @@ function normalizeTipoPagamento(value) {
         .toLowerCase();
 
     return texto === "avista" ? "avista" : "mensal";
+}
+
+function normalizePricingPhase(value) {
+    return String(value || "").toLowerCase() === "normal" ? "normal" : "fundador";
+}
+
+function formatCurrencyBR(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return "Nao informado";
+
+    return number.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+    });
+}
+
+function getOffer(planKey, phase = currentPricingPhase) {
+    const normalizedPhase = normalizePricingPhase(phase);
+    const prices = PLAN_PRICES[normalizedPhase] || PLAN_PRICES.fundador;
+
+    return {
+        planKey,
+        phase: normalizedPhase,
+        price: prices[planKey],
+        tipoPlano: normalizedPhase
+    };
+}
+
+function buildWhatsappPlanUrl(planKey, offer) {
+    const planName = planKey === "pro" ? "Plano Pro mensal" : "Plano Basico mensal";
+    const priceText = formatCurrencyBR(offer.price);
+    const typeText = offer.tipoPlano === "fundador" ? "promocional" : "normal";
+    const message = [
+        `Ola, quero contratar ou trocar para o ${planName} do Senso de ${priceText} por mes.`,
+        `Tipo do plano: ${typeText}.`,
+        `Apos a troca do plano, vou enviar o comprovante de pagamento.`
+    ].join(" ");
+
+    return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
+}
+
+function renderPricingCards(phase = currentPricingPhase) {
+    currentPricingPhase = normalizePricingPhase(phase);
+
+    const basicOffer = getOffer("basico", currentPricingPhase);
+    const proOffer = getOffer("pro", currentPricingPhase);
+    if (basicPlanPrice) {
+        basicPlanPrice.innerHTML = `${formatCurrencyBR(basicOffer.price)}<small>por mes</small>`;
+    }
+
+    if (proPlanPrice) {
+        proPlanPrice.innerHTML = `${formatCurrencyBR(proOffer.price)}<small>por mes</small>`;
+    }
+
+    if (basicPaymentValue) {
+        basicPaymentValue.textContent = `${formatCurrencyBR(basicOffer.price)} ao mes`;
+    }
+
+    if (proPaymentValue) {
+        proPaymentValue.textContent = `${formatCurrencyBR(proOffer.price)} ao mes`;
+    }
+
+    if (basicPlanCta) {
+        basicPlanCta.href = buildWhatsappPlanUrl("basico", basicOffer);
+    }
+
+    if (proPlanCta) {
+        proPlanCta.href = buildWhatsappPlanUrl("pro", proOffer);
+    }
+
+}
+
+function resolvePricingPhaseFromConfig(config) {
+    if (!config || typeof config !== "object") return "fundador";
+
+    if (config.fase === "normal" || config.tipoPlano === "normal") return "normal";
+    if (config.fase === "fundador" || config.tipoPlano === "fundador") return "fundador";
+
+    const count = Number(
+        config.clientesPagantes ??
+        config.payingCustomersCount ??
+        config.totalClientesPagantes
+    );
+
+    return Number.isFinite(count) && count > FOUNDING_CUSTOMER_LIMIT ? "normal" : "fundador";
+}
+
+async function refreshPricingPhase() {
+    renderPricingCards(currentPricingPhase);
+
+    if (!window.firebase?.firestore) return currentPricingPhase;
+
+    try {
+        const snapshot = await window.firebase
+            .firestore()
+            .collection("appConfig")
+            .doc("pricing")
+            .get();
+        const nextPhase = snapshot.exists
+            ? resolvePricingPhaseFromConfig(snapshot.data())
+            : "fundador";
+
+        renderPricingCards(nextPhase);
+        return nextPhase;
+    } catch (err) {
+        console.warn("Nao foi possivel carregar a fase de preco.", err);
+        renderPricingCards(currentPricingPhase);
+        return currentPricingPhase;
+    }
 }
 
 function getActiveProfileId() {
@@ -504,7 +637,7 @@ function getLocalAppData() {
             const data = JSON.parse(localStorage.getItem(key) || "null");
             if (data && typeof data === "object") return data;
         } catch (_err) {
-            // Continua tentando a proxima chave.
+            // Continua tentando a próxima chave.
         }
     }
 
@@ -522,46 +655,71 @@ function getUsageSummary() {
 }
 
 function isBasicMonthlyPlan(plan) {
-    return (plan?.plano !== "pro") && normalizeTipoPagamento(plan?.tipoPagamento) === "mensal";
+    return plan?.plano === "basico" && normalizeTipoPagamento(plan?.tipoPagamento) === "mensal";
+}
+
+function isFreePlan(plan) {
+    return plan?.plano === "gratis";
 }
 
 function renderUsageNotice(plan) {
     if (!currentPlanUsage) return;
 
-    if (!isBasicMonthlyPlan(plan)) {
+    if (!isFreePlan(plan) && !isBasicMonthlyPlan(plan)) {
         currentPlanUsage.classList.remove("visible");
         currentPlanUsage.innerHTML = "";
         return;
     }
 
-    const limits = window.SensoPlans?.basicMonthlyLimits || { clientes: 50, servicos: 150 };
+    const limits = isFreePlan(plan)
+        ? (window.SensoPlans?.freeLimits || { clientes: 5, servicos: 10 })
+        : (window.SensoPlans?.basicMonthlyLimits || { clientes: 50, servicos: 150 });
     const usage = getUsageSummary();
+    const planLabel = isFreePlan(plan) ? "Plano Grátis" : "Plano Básico mensal";
 
     currentPlanUsage.innerHTML = `
-        <div>Seu Plano Basico mensal inclui:</div>
+        <div>Seu ${planLabel} inclui:</div>
         <div class="usage-row"><span>Clientes ativos</span><strong>${usage.clientesAtivos}/${limits.clientes}</strong></div>
-        <div class="usage-row"><span>Servicos cadastrados</span><strong>${usage.servicos}/${limits.servicos}</strong></div>
+        <div class="usage-row"><span>Serviços cadastrados</span><strong>${usage.servicos}/${limits.servicos}</strong></div>
     `;
     currentPlanUsage.classList.add("visible");
 }
 
 function formatPlanName(plan) {
-    const plano = plan?.plano === "pro" ? "Pro" : "Basico";
-    const pagamento = normalizeTipoPagamento(plan?.tipoPagamento) === "avista" ? "a vista" : "mensal";
+    if (plan?.plano === "gratis") return "Grátis";
+    const plano = plan?.plano === "pro" ? "Pro" : "Básico";
+    const pagamento = normalizeTipoPagamento(plan?.tipoPagamento) === "avista" ? "à vista" : "mensal";
     return `${plano} ${pagamento}`;
 }
 
 function formatStatus(plan) {
-    return plan?.status === "bloqueado" ? "Bloqueado" : "Ativo";
+    const paymentStatus = window.SensoPlans?.getPaymentStatus?.(plan);
+    return plan?.status === "bloqueado" || paymentStatus?.shouldBlock ? "Bloqueado" : "Ativo";
 }
 
-function formatPayment(plan) {
-    return normalizeTipoPagamento(plan?.tipoPagamento) === "avista" ? "Pagamento a vista" : "Pagamento mensal";
+function formatContractedPrice(plan) {
+    if (plan?.plano === "gratis") return "Valor: R$ 0,00";
+
+    const price = Number(plan?.precoContratado);
+    if (!Number.isFinite(price)) return "Valor: nao informado";
+
+    return `Valor: ${formatCurrencyBR(price)}`;
+}
+
+function formatPlanType(plan) {
+    if (plan?.plano === "gratis") return "Tipo: gratis";
+
+    const type = String(plan?.tipoPlano || "").toLowerCase();
+    if (type === "fundador" || type === "promocional") return "Tipo: promocional";
+    if (type === "normal") return "Tipo: normal";
+
+    return "Tipo: nao informado";
 }
 
 function formatValidity(plan) {
+    if (plan?.plano === "gratis") return "Teste grátis";
     if (normalizeTipoPagamento(plan?.tipoPagamento) === "avista") return "Sem mensalidade";
-    if (!plan?.validade) return "Validade nao informada";
+    if (!plan?.validade) return "Validade não informada";
 
     const date = new Date(`${plan.validade}T00:00:00`);
     if (Number.isNaN(date.getTime())) return `Validade: ${plan.validade}`;
@@ -571,8 +729,9 @@ function formatValidity(plan) {
 function renderLoadingPlan() {
     currentPlanTitle.textContent = "Carregando...";
     currentPlanStatus.textContent = "Status";
-    currentPlanPayment.textContent = "Pagamento";
+    currentPlanPrice.textContent = "Valor contratado";
     currentPlanValidity.textContent = "Validade";
+    currentPlanType.textContent = "Tipo do plano";
     currentPlanStatus.classList.remove("blocked");
     currentPlanNote.textContent = "Buscando seu plano contratado...";
     if (currentPlanUsage) {
@@ -597,22 +756,28 @@ function renderCurrentPlan(plan) {
 
     currentPlanTitle.textContent = formatPlanName(currentPlan);
     currentPlanStatus.textContent = formatStatus(currentPlan);
-    currentPlanPayment.textContent = formatPayment(currentPlan);
+    currentPlanPrice.textContent = formatContractedPrice(currentPlan);
     currentPlanValidity.textContent = formatValidity(currentPlan);
+    currentPlanType.textContent = formatPlanType(currentPlan);
     currentPlanStatus.classList.toggle("blocked", currentPlan.status === "bloqueado");
     renderUsageNotice(currentPlan);
 
     if (currentPlan.status === "bloqueado") {
-        currentPlanNote.textContent = "Seu acesso esta marcado como bloqueado. Envie o comprovante pelo WhatsApp para regularizar.";
+        currentPlanNote.textContent = "Seu acesso está marcado como bloqueado. Envie o comprovante pelo WhatsApp para regularizar.";
+        return;
+    }
+
+    if (currentPlan.plano === "gratis") {
+        currentPlanNote.textContent = "Seu plano Grátis está ativo com poucos créditos para experimentar o Senso.";
         return;
     }
 
     if (normalizeTipoPagamento(currentPlan.tipoPagamento) === "avista") {
-        currentPlanNote.textContent = "Seu plano Basico a vista esta ativo. Recursos Pro podem ser contratados separadamente.";
+        currentPlanNote.textContent = "Seu plano legado sem mensalidade está ativo. Recursos Pro podem ser contratados separadamente.";
         return;
     }
 
-    currentPlanNote.textContent = "Se quiser trocar de plano, escolha uma opcao abaixo e envie o comprovante pelo WhatsApp.";
+    currentPlanNote.textContent = "Se quiser trocar de plano, escolha uma opção abaixo e envie o comprovante pelo WhatsApp.";
 }
 
 function syncSensoPlansState(plan) {
@@ -620,11 +785,73 @@ function syncSensoPlansState(plan) {
     window.SensoPlans.state.ready = true;
     window.SensoPlans.state.loading = false;
     window.SensoPlans.state.data = {
-        plano: plan.plano === "pro" ? "pro" : "basico",
+        plano: plan.plano === "pro" ? "pro" : plan.plano === "basico" ? "basico" : "gratis",
         status: plan.status === "bloqueado" ? "bloqueado" : "ativo",
         tipoPagamento: normalizeTipoPagamento(plan.tipoPagamento),
-        validade: plan.validade ?? null
+        validade: plan.validade ?? null,
+        precoContratado: plan.precoContratado ?? null,
+        dataContratacao: plan.dataContratacao ?? null,
+        tipoPlano: plan.tipoPlano ?? null
     };
+}
+
+function renderCurrentPlan(plan) {
+    const hasExplicitPlan = !!plan;
+    const plansReady = !!window.SensoPlans?.state?.ready;
+    const currentPlan = hasExplicitPlan
+        ? plan
+        : plansReady
+            ? window.SensoPlans.getCurrentPlan()
+            : null;
+
+    if (!currentPlan) {
+        renderLoadingPlan();
+        return;
+    }
+
+    const paymentStatus = window.SensoPlans?.getPaymentStatus?.(currentPlan);
+
+    currentPlanTitle.textContent = formatPlanName(currentPlan);
+    currentPlanStatus.textContent = formatStatus(currentPlan);
+    currentPlanPrice.textContent = formatContractedPrice(currentPlan);
+    currentPlanValidity.textContent = formatValidity(currentPlan);
+    currentPlanType.textContent = formatPlanType(currentPlan);
+    currentPlanStatus.classList.toggle("blocked", currentPlan.status === "bloqueado" || !!paymentStatus?.shouldBlock);
+    renderUsageNotice(currentPlan);
+
+    if (paymentStatus?.isAutoBlocked) {
+        currentPlanNote.textContent = "Sua mensalidade passou do prazo de tolerancia de 5 dias. Envie o comprovante pelo WhatsApp para liberar o acesso.";
+        return;
+    }
+
+    if (currentPlan.status === "bloqueado") {
+        currentPlanNote.textContent = "Seu acesso esta marcado como bloqueado. Envie o comprovante pelo WhatsApp para regularizar.";
+        return;
+    }
+
+    if (currentPlan.plano === "gratis") {
+        currentPlanNote.textContent = "Seu plano Gratis esta ativo com poucos creditos para experimentar o Senso.";
+        return;
+    }
+
+    if (normalizeTipoPagamento(currentPlan.tipoPagamento) === "avista") {
+        currentPlanNote.textContent = "Seu plano legado sem mensalidade esta ativo. Recursos Pro podem ser contratados separadamente.";
+        return;
+    }
+
+    if (paymentStatus?.daysOverdue > 0) {
+        currentPlanNote.textContent = `Sua mensalidade esta vencida ha ${paymentStatus.daysOverdue} dia(s). Apos 5 dias de atraso, o acesso e bloqueado automaticamente.`;
+        return;
+    }
+
+    if (paymentStatus?.daysUntilDue >= 0 && paymentStatus.daysUntilDue <= 3) {
+        currentPlanNote.textContent = paymentStatus.daysUntilDue === 0
+            ? "Sua mensalidade vence hoje. Envie o comprovante pelo WhatsApp apos o pagamento."
+            : `Sua mensalidade vence em ${paymentStatus.daysUntilDue} dia(s). Envie o comprovante pelo WhatsApp apos o pagamento.`;
+        return;
+    }
+
+    currentPlanNote.textContent = "Se quiser trocar de plano, escolha uma opcao abaixo e envie o comprovante pelo WhatsApp.";
 }
 
 function waitForAuthUser() {
@@ -664,8 +891,12 @@ async function loadPlanDirectly(uid) {
     return snapshot.exists ? snapshot.data() : null;
 }
 
+let currentPlanRefreshPromise = null;
+
 function refreshCurrentPlan(uid) {
-    waitForAuthUser()
+    if (currentPlanRefreshPromise) return currentPlanRefreshPromise;
+
+    currentPlanRefreshPromise = waitForAuthUser()
         .then(authUid => {
             const resolvedUid = uid || authUid;
             return loadPlanDirectly(resolvedUid)
@@ -690,9 +921,14 @@ function refreshCurrentPlan(uid) {
                 });
         })
         .catch(err => {
-            console.warn("Nao foi possivel atualizar o plano atual.", err);
+            console.warn("Não foi possível atualizar o plano atual.", err);
             renderCurrentPlan(FALLBACK_PLAN);
+        })
+        .finally(() => {
+            currentPlanRefreshPromise = null;
         });
+
+    return currentPlanRefreshPromise;
 }
 
 btnCopiarPix.addEventListener("click", async () => {
@@ -705,8 +941,13 @@ btnCopiarPix.addEventListener("click", async () => {
     }
 });
 
-window.addEventListener("senso-plan-ready", () => {
-    refreshCurrentPlan();
+window.addEventListener("senso-plan-ready", event => {
+    if (event?.detail?.plan) {
+        renderCurrentPlan(event.detail.plan);
+        return;
+    }
+
+    renderCurrentPlan();
 });
 
 window.addEventListener("senso-auth-ready", event => {
@@ -714,6 +955,7 @@ window.addEventListener("senso-auth-ready", event => {
 });
 
 renderLoadingPlan();
+refreshPricingPhase();
 refreshCurrentPlan();
 </script>
 </body>
