@@ -156,7 +156,10 @@
 
     function getPaginaAtual() {
         const partes = window.location.pathname.toLowerCase().split("/").filter(Boolean);
-        return partes.at(-1) || "";
+        const pagina = partes.at(-1) || "";
+        // A produção usa cleanUrls (ex.: /pages/clientes), enquanto o desenvolvimento
+        // pode manter o nome completo (ex.: /pages/clientes.html).
+        return pagina && !pagina.includes(".") ? `${pagina}.html` : pagina;
     }
 
     function getLicaoAtual() {
