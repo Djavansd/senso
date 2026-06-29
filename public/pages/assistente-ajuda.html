@@ -22,7 +22,7 @@
             <div>
                 <span id="ajudaSelo" class="ajuda-selo">Ajuda ativada</span>
                 <h2 id="ajudaTitulo">Aprenda o Senso no seu ritmo</h2>
-                <p id="ajudaDescricao">O mascote explica cada área enquanto você usa o app. Quando terminar o aprendizado, ele se desativa automaticamente.</p>
+                <p id="ajudaDescricao">O mascote ensina cada área passo a passo enquanto você usa o app. Quando terminar o aprendizado, ele se desativa automaticamente.</p>
 
                 <div class="ajuda-switch-row">
                     <div>
@@ -40,7 +40,7 @@
         <div class="ajuda-grid">
             <section class="ajuda-card" aria-labelledby="progressoTitulo">
                 <h2 id="progressoTitulo">Seu aprendizado</h2>
-                <p>Abra as áreas abaixo. O mascote explicará o essencial de cada uma.</p>
+                <p>Abra as áreas abaixo. O mascote apresentará todos os passos e cuidados importantes.</p>
 
                 <div class="ajuda-progresso-topo">
                     <span id="ajudaProgressoTexto">0 de 7 áreas aprendidas</span>
@@ -63,8 +63,8 @@
                 <h2>Como funciona</h2>
                 <div class="ajuda-passos">
                     <div class="ajuda-passo"><span>1</span><div>Entre em uma área do aplicativo.</div></div>
-                    <div class="ajuda-passo"><span>2</span><div>Leia a orientação curta do mascote.</div></div>
-                    <div class="ajuda-passo"><span>3</span><div>Toque em <strong>Entendi esta parte</strong>.</div></div>
+                    <div class="ajuda-passo"><span>2</span><div>Avance pelos passos detalhados do mascote.</div></div>
+                    <div class="ajuda-passo"><span>3</span><div>No último passo, toque em <strong>Concluir esta área</strong>.</div></div>
                     <div class="ajuda-passo"><span>4</span><div>Ao concluir todas as áreas, a ajuda fica em silêncio.</div></div>
                 </div>
             </aside>
@@ -132,7 +132,7 @@
                     link.innerHTML = `
                         <span class="ajuda-licao-icone" aria-hidden="true">${concluida ? "✓" : indice + 1}</span>
                         <strong>${licao.nome}</strong>
-                        <small>${concluida ? "Aprendido" : "Ver ajuda"}</small>
+                        <small>${concluida ? "Aprendido" : `${licao.etapas?.length || 1} passos`}</small>
                     `;
                     lista.appendChild(link);
                 });

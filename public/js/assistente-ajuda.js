@@ -2,6 +2,7 @@
     "use strict";
 
     const STORAGE_PREFIX = "senso:ajuda-guiada:v1";
+    const ROTEIRO_VERSION = 2;
     const IMAGENS = Object.freeze({
         apontando: "/assets/assistente-senso/ajuda-apontando.png",
         concluida: "/assets/assistente-senso/ajuda-concluida.png",
@@ -16,9 +17,35 @@
             href: "/index.html",
             paginas: ["", "index.html"],
             imagem: IMAGENS.apontando,
-            mensagens: [
-                "Este é o painel principal do Senso.",
-                "Use os cartões para entrar rapidamente em Clientes, Serviços, Orçamentos, Agenda, Financeiro e Resumo."
+            etapas: [
+                {
+                    titulo: "Seu painel principal",
+                    mensagens: [
+                        "Esta é a tela inicial do Senso. Os cartões mostram um resumo rápido da sua operação.",
+                        "Toque em qualquer cartão para abrir a área correspondente. Você pode voltar ao Início sempre que quiser."
+                    ]
+                },
+                {
+                    titulo: "Clientes e Serviços",
+                    mensagens: [
+                        "Clientes guarda contatos, veículos, histórico e atalhos para WhatsApp.",
+                        "Serviços é onde você seleciona o cliente, registra o trabalho, informa os valores e prepara o orçamento."
+                    ]
+                },
+                {
+                    titulo: "Orçamentos e Agenda",
+                    mensagens: [
+                        "Orçamentos reúne propostas enviadas, aprovadas e recusadas. Também permite gerar PDF e enviar pelo WhatsApp.",
+                        "Agenda mostra retornos e manutenções cadastrados nos serviços para você não esquecer o cliente."
+                    ]
+                },
+                {
+                    titulo: "Financeiro, Resumo e menu",
+                    mensagens: [
+                        "Financeiro controla ganhos, gastos e saldo. Resumo mensal apresenta o resultado completo de cada mês.",
+                        "Use o menu no alto da tela para acessar Configurações, Assistente de ajuda, planos e outras opções."
+                    ]
+                }
             ]
         },
         {
@@ -27,9 +54,50 @@
             href: "/pages/clientes.html",
             paginas: ["clientes.html", "novo-cliente.html"],
             imagem: IMAGENS.instrucoes,
-            mensagens: [
-                "Aqui você organiza seus clientes.",
-                "Cadastre os dados principais e abra um cliente sempre que precisar consultar ou iniciar um atendimento."
+            etapas: [
+                {
+                    titulo: "Cadastrar um cliente",
+                    mensagens: [
+                        "Toque em “+ Novo Cliente” para abrir o cadastro.",
+                        "Informe pelo menos o nome. Telefone, endereço e documento ajudam no atendimento, no orçamento e no histórico."
+                    ]
+                },
+                {
+                    titulo: "Dados do cadastro",
+                    mensagens: [
+                        "Preencha os telefones com DDD para usar corretamente o atalho do WhatsApp.",
+                        "Revise os dados antes de tocar em “Salvar”. Depois, o cliente aparecerá nesta lista."
+                    ]
+                },
+                {
+                    titulo: "Dados do veículo",
+                    mensagens: [
+                        "No perfil de mecânica, você também pode registrar modelo, placa, cor e quilometragem do veículo.",
+                        "Essas informações acompanham o cliente nos serviços e podem ser atualizadas mais tarde."
+                    ]
+                },
+                {
+                    titulo: "WhatsApp e detalhes",
+                    imagem: IMAGENS.apontando,
+                    mensagens: [
+                        "O botão verde “WA” abre uma conversa com o telefone cadastrado.",
+                        "Toque em “Ver” para expandir todos os dados e acessar as demais ações daquele cliente."
+                    ]
+                },
+                {
+                    titulo: "Editar e consultar histórico",
+                    mensagens: [
+                        "Use “Editar” para corrigir os dados pessoais e “Editar veículo” para atualizar as informações do automóvel.",
+                        "Em “Ver histórico”, você consulta os serviços anteriores, datas, valores e observações do cliente."
+                    ]
+                },
+                {
+                    titulo: "Arquivar com segurança",
+                    mensagens: [
+                        "Use “Arquivar” quando não quiser mais exibir o cliente entre os ativos.",
+                        "Arquivar organiza a lista sem apagar o histórico dos atendimentos que já foram realizados."
+                    ]
+                }
             ]
         },
         {
@@ -38,9 +106,57 @@
             href: "/pages/servico.html",
             paginas: ["servico.html"],
             imagem: IMAGENS.instrucoes,
-            mensagens: [
-                "Nesta área você registra o serviço realizado.",
-                "Selecione o cliente, descreva o problema, informe itens e valores e salve para continuar o atendimento."
+            etapas: [
+                {
+                    titulo: "Selecionar o cliente",
+                    mensagens: [
+                        "Comece digitando nome, sobrenome ou telefone no campo de busca e selecione o cliente correto na lista.",
+                        "Confira o resumo exibido abaixo. Se o cliente não existir, cadastre-o primeiro na área Clientes."
+                    ]
+                },
+                {
+                    titulo: "Conferir o veículo",
+                    mensagens: [
+                        "No perfil de mecânica, revise modelo, placa, cor e quilometragem antes de continuar.",
+                        "As alterações feitas aqui também podem atualizar o cadastro do veículo do cliente."
+                    ]
+                },
+                {
+                    titulo: "Registrar o problema",
+                    mensagens: [
+                        "Em “Problema relatado pelo cliente”, escreva com clareza o que a pessoa informou antes do atendimento.",
+                        "Esse registro cria um pré-atendimento mesmo quando os itens e valores ainda não foram definidos."
+                    ]
+                },
+                {
+                    titulo: "Adicionar itens e valores",
+                    mensagens: [
+                        "Digite a descrição do serviço ou produto, o valor unitário e a quantidade. Depois toque em “Adicionar Item”.",
+                        "Repita o processo para cada item. Use “Editar” ou “Remover” se precisar corrigir a lista."
+                    ]
+                },
+                {
+                    titulo: "Pagamento e observações",
+                    mensagens: [
+                        "Use Observações para registrar detalhes importantes, condições ou recomendações do atendimento.",
+                        "Selecione a forma de pagamento combinada. Essas informações acompanharão o serviço e o orçamento."
+                    ]
+                },
+                {
+                    titulo: "Agendar retorno",
+                    mensagens: [
+                        "Se o cliente precisar retornar, informe a data em “Retorno / Manutenção”.",
+                        "Ao salvar o serviço, esse compromisso aparecerá automaticamente na Agenda. O campo é opcional."
+                    ]
+                },
+                {
+                    titulo: "Salvar e gerar orçamento",
+                    imagem: IMAGENS.apontando,
+                    mensagens: [
+                        "Toque em “Salvar Serviço” somente depois de revisar cliente, itens e valores.",
+                        "Na lista de serviços, use “Gerar orçamento” para criar a proposta. Enquanto não for aprovada, você ainda poderá editar o serviço."
+                    ]
+                }
             ]
         },
         {
@@ -49,9 +165,49 @@
             href: "/pages/orcamentos.html",
             paginas: ["orcamentos.html", "orcamento.html"],
             imagem: IMAGENS.apontando,
-            mensagens: [
-                "Os orçamentos ficam reunidos aqui.",
-                "Você pode revisar as informações, acompanhar a aprovação e abrir o documento para enviar ao cliente."
+            etapas: [
+                {
+                    titulo: "Encontrar um orçamento",
+                    mensagens: [
+                        "Esta lista reúne os orçamentos gerados a partir dos serviços.",
+                        "Use a busca para localizar pelo cliente e toque no cartão para abrir todos os detalhes."
+                    ]
+                },
+                {
+                    titulo: "Filtrar período e situação",
+                    mensagens: [
+                        "Use “Mês atual” para a rotina recente e “Meses fechados” para consultar períodos anteriores.",
+                        "Os filtros Todos, Enviados, Aprovados e Recusados ajudam a encontrar rapidamente cada situação."
+                    ]
+                },
+                {
+                    titulo: "Revisar antes de enviar",
+                    mensagens: [
+                        "Ao abrir o orçamento, confira empresa, cliente, veículo, itens, quantidades, valores e total.",
+                        "Se houver informação incorreta, toque em “Editar” antes de enviar ou aprovar."
+                    ]
+                },
+                {
+                    titulo: "PDF e WhatsApp",
+                    mensagens: [
+                        "O botão “PDF” gera o documento para salvar ou imprimir.",
+                        "O botão “WhatsApp” prepara o envio ao cliente. Confirme se o telefone cadastrado está correto."
+                    ]
+                },
+                {
+                    titulo: "Aprovar ou recusar",
+                    mensagens: [
+                        "Use “Aprovar” quando o cliente aceitar a proposta. O serviço e o financeiro serão atualizados conforme as regras do app.",
+                        "Use “Recusar” somente quando a proposta não for aceita. Revise antes, pois o status ficará registrado."
+                    ]
+                },
+                {
+                    titulo: "Gastos relacionados",
+                    mensagens: [
+                        "Depois da aprovação, o assistente pergunta se houve algum gasto relacionado ao serviço.",
+                        "Registre peças, materiais ou outras despesas no Financeiro para o lucro e o resumo mensal ficarem corretos."
+                    ]
+                }
             ]
         },
         {
@@ -60,9 +216,42 @@
             href: "/pages/agenda.html",
             paginas: ["agenda.html"],
             imagem: IMAGENS.apontando,
-            mensagens: [
-                "A Agenda cuida dos retornos e lembretes.",
-                "Confira as datas pendentes e marque cada retorno como visto quando concluir o contato."
+            etapas: [
+                {
+                    titulo: "Como os retornos chegam aqui",
+                    mensagens: [
+                        "A Agenda recebe as datas de Retorno / Manutenção informadas ao salvar um serviço.",
+                        "Cada cartão mostra o cliente, o telefone e a data prevista para o novo contato."
+                    ]
+                },
+                {
+                    titulo: "Filtrar por mês",
+                    mensagens: [
+                        "Use o seletor de mês para mostrar somente os retornos do período desejado.",
+                        "Escolha “Todos os meses” quando precisar localizar compromissos antigos ou futuros."
+                    ]
+                },
+                {
+                    titulo: "Entrar em contato",
+                    mensagens: [
+                        "Toque no botão do WhatsApp para falar com o cliente usando o telefone cadastrado.",
+                        "Use “Ver” para abrir os detalhes do retorno e conferir as informações antes do contato."
+                    ]
+                },
+                {
+                    titulo: "Remarcar uma data",
+                    mensagens: [
+                        "Toque em “Editar”, escolha a nova data e depois toque em “Salvar”.",
+                        "Use “Cancelar” se não quiser manter a alteração. A nova data substituirá a anterior."
+                    ]
+                },
+                {
+                    titulo: "Arquivar um retorno",
+                    mensagens: [
+                        "Depois de concluir o contato ou quando o lembrete não for mais necessário, use o botão de arquivar.",
+                        "Confirme a ação somente quando tiver certeza, para manter a Agenda limpa e atualizada."
+                    ]
+                }
             ]
         },
         {
@@ -71,9 +260,49 @@
             href: "/pages/financeiro.html",
             paginas: ["financeiro.html"],
             imagem: IMAGENS.instrucoes,
-            mensagens: [
-                "Aqui você acompanha entradas e saídas.",
-                "Registre movimentações extras e consulte o saldo para manter o caixa organizado."
+            etapas: [
+                {
+                    titulo: "Entender o saldo",
+                    mensagens: [
+                        "O cartão principal mostra o saldo do período selecionado: entradas menos saídas.",
+                        "Escolha o mês desejado e use Mês atual ou Meses fechados para navegar entre os períodos."
+                    ]
+                },
+                {
+                    titulo: "Recebimentos de serviços",
+                    mensagens: [
+                        "Quando um orçamento é aprovado, o valor do serviço pode entrar automaticamente no Financeiro.",
+                        "Evite lançar o mesmo recebimento novamente para não duplicar o saldo."
+                    ]
+                },
+                {
+                    titulo: "Adicionar um ganho manual",
+                    mensagens: [
+                        "Use o campo de ganho para registrar uma entrada que não veio de um orçamento aprovado.",
+                        "Informe uma descrição clara e o valor correto antes de tocar no botão de adicionar ganho."
+                    ]
+                },
+                {
+                    titulo: "Adicionar um gasto",
+                    mensagens: [
+                        "Em “Novo gasto”, descreva a despesa e informe o valor pago.",
+                        "Registre peças, materiais, taxas e outros custos para o saldo representar a realidade."
+                    ]
+                },
+                {
+                    titulo: "Consultar o extrato",
+                    mensagens: [
+                        "Toque em “Extrato” para ver todas as movimentações do mês, com entradas e saídas separadas.",
+                        "Confira a descrição e o valor de cada lançamento. Use a lixeira apenas para remover um registro incorreto."
+                    ]
+                },
+                {
+                    titulo: "Manter o caixa correto",
+                    mensagens: [
+                        "Sempre selecione o mês certo antes de analisar valores ou lançar movimentações.",
+                        "O Financeiro alimenta o Resumo mensal; por isso, lançamentos duplicados ou esquecidos alteram o resultado."
+                    ]
+                }
             ]
         },
         {
@@ -82,9 +311,42 @@
             href: "/pages/resumo.html",
             paginas: ["resumo.html"],
             imagem: IMAGENS.apontando,
-            mensagens: [
-                "O Resumo mostra o resultado do mês.",
-                "Use esta tela para conferir receitas, gastos, saldo e o desempenho do seu trabalho."
+            etapas: [
+                {
+                    titulo: "Selecionar o mês",
+                    mensagens: [
+                        "Comece escolhendo o mês que deseja analisar no seletor do topo.",
+                        "Todos os valores e listas da tela serão recalculados para o período selecionado."
+                    ]
+                },
+                {
+                    titulo: "Receitas, gastos e saldo",
+                    mensagens: [
+                        "Receitas representam as entradas do período e Gastos mostram as despesas registradas.",
+                        "O saldo é a diferença entre esses valores e ajuda a entender o resultado do mês."
+                    ]
+                },
+                {
+                    titulo: "Abrir os detalhes",
+                    mensagens: [
+                        "Toque nas seções expansíveis para ver serviços, gastos e correções que formaram os totais.",
+                        "Use os detalhes para localizar valores ausentes, duplicados ou lançados de maneira incorreta."
+                    ]
+                },
+                {
+                    titulo: "Comparar resultados",
+                    mensagens: [
+                        "A comparação mostra como o mês selecionado se comportou em relação ao período anterior.",
+                        "Analise junto com o número de serviços e as despesas; faturamento maior nem sempre significa lucro maior."
+                    ]
+                },
+                {
+                    titulo: "Cuidado ao apagar",
+                    mensagens: [
+                        "O botão “Apagar resumo” remove somente os dados de correções do resumo após sua confirmação.",
+                        "Use essa opção apenas quando souber exatamente o que precisa limpar. Para corrigir lançamentos, prefira o Financeiro."
+                    ]
+                }
             ]
         }
     ]);
@@ -104,6 +366,7 @@
         return {
             ativo: true,
             concluidas: [],
+            roteiroVersion: ROTEIRO_VERSION,
             atualizadoEm: new Date().toISOString()
         };
     }
@@ -112,11 +375,13 @@
         try {
             const salvo = JSON.parse(localStorage.getItem(getStorageKey()) || "null");
             if (!salvo || typeof salvo !== "object") return estadoPadrao();
+            const roteiroAtual = Number(salvo.roteiroVersion) === ROTEIRO_VERSION;
             return {
                 ativo: salvo.ativo !== false,
-                concluidas: Array.isArray(salvo.concluidas)
+                concluidas: roteiroAtual && Array.isArray(salvo.concluidas)
                     ? salvo.concluidas.filter(id => LICOES.some(licao => licao.id === id))
                     : [],
+                roteiroVersion: ROTEIRO_VERSION,
                 atualizadoEm: salvo.atualizadoEm || new Date().toISOString()
             };
         } catch (_err) {
@@ -128,6 +393,7 @@
         const normalizado = {
             ativo: estado.ativo !== false,
             concluidas: Array.from(new Set(estado.concluidas || [])),
+            roteiroVersion: ROTEIRO_VERSION,
             atualizadoEm: new Date().toISOString()
         };
         try {
@@ -187,34 +453,64 @@
         if (!licao || !window.AssistenteSenso) return;
         const estadoAntes = lerEstado();
         const jaConcluida = estadoAntes.concluidas.includes(licao.id);
-        const acoes = [];
+        const etapas = Array.isArray(licao.etapas) && licao.etapas.length
+            ? licao.etapas
+            : [{ titulo: licao.nome, mensagens: licao.mensagens || [], imagem: licao.imagem }];
 
-        if (!jaConcluida) {
-            acoes.push({
-                texto: "Entendi esta parte",
-                estilo: "primaria",
-                aoClicar: ({ fechar }) => {
-                    const novoEstado = concluirLicao(licao.id);
-                    fechar("licao-concluida");
-                    if (novoEstado.concluidas.length >= LICOES.length) {
-                        setTimeout(abrirConclusao, 260);
+        function abrirEtapa(indice) {
+            const etapa = etapas[indice];
+            const ultimaEtapa = indice === etapas.length - 1;
+            const acoes = [];
+
+            if (!ultimaEtapa) {
+                acoes.push({
+                    texto: "Avançar",
+                    estilo: "primaria",
+                    aoClicar: () => abrirEtapa(indice + 1)
+                });
+            } else if (!jaConcluida) {
+                acoes.push({
+                    texto: "Concluir esta área",
+                    estilo: "primaria",
+                    aoClicar: ({ fechar }) => {
+                        const novoEstado = concluirLicao(licao.id);
+                        fechar("licao-concluida");
+                        if (novoEstado.concluidas.length >= LICOES.length) {
+                            setTimeout(abrirConclusao, 260);
+                        }
                     }
-                }
+                });
+            } else {
+                acoes.push({
+                    texto: "Finalizar revisão",
+                    estilo: "primaria",
+                    aoClicar: ({ fechar }) => fechar("revisao-concluida")
+                });
+            }
+
+            if (indice > 0) {
+                acoes.push({
+                    texto: "Voltar",
+                    estilo: "sutil",
+                    aoClicar: () => abrirEtapa(indice - 1)
+                });
+            }
+
+            acoes.push({
+                texto: manual ? "Fechar ajuda" : "Continuar depois",
+                estilo: "sutil",
+                aoClicar: ({ fechar }) => fechar(manual ? "fechar" : "depois")
+            });
+
+            window.AssistenteSenso.abrir({
+                titulo: `Ajuda • ${licao.nome} • ${indice + 1}/${etapas.length}`,
+                imagem: etapa.imagem || licao.imagem,
+                mensagens: [etapa.titulo, ...(etapa.mensagens || [])],
+                acoes
             });
         }
 
-        acoes.push({
-            texto: manual ? "Fechar" : "Ver depois",
-            estilo: "sutil",
-            aoClicar: ({ fechar }) => fechar(manual ? "fechar" : "depois")
-        });
-
-        window.AssistenteSenso.abrir({
-            titulo: `Ajuda • ${licao.nome}`,
-            imagem: licao.imagem,
-            mensagens: licao.mensagens,
-            acoes
-        });
+        abrirEtapa(0);
     }
 
     function criarBotaoFlutuante(licao) {
@@ -244,7 +540,7 @@
         criarBotaoFlutuante(licao);
         if (estado.concluidas.includes(licao.id)) return;
 
-        const chaveSessao = `senso:ajuda-vista:v2:${getUid()}:${licao.id}`;
+        const chaveSessao = `senso:ajuda-vista:v3:${getUid()}:${licao.id}`;
         let tentativas = 0;
 
         function tentarAbrir() {
