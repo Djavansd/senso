@@ -30,6 +30,10 @@
                     mensagens: [
                         "Clientes guarda contatos, veículos, histórico e atalhos para WhatsApp.",
                         "Serviços é onde você seleciona o cliente, registra o trabalho, informa os valores e prepara o orçamento."
+                    ],
+                    mensagensPrestador: [
+                        "Clientes guarda contatos, endereços, histórico de atendimentos e atalhos para WhatsApp.",
+                        "Serviços é onde você seleciona o cliente, descreve o atendimento, informa materiais, quantidades e valores e prepara o orçamento."
                     ]
                 },
                 {
@@ -37,6 +41,10 @@
                     mensagens: [
                         "Orçamentos reúne propostas enviadas, aprovadas e recusadas. Também permite gerar PDF e enviar pelo WhatsApp.",
                         "Agenda mostra retornos e manutenções cadastrados nos serviços para você não esquecer o cliente."
+                    ],
+                    mensagensPrestador: [
+                        "Orçamentos reúne propostas enviadas, aprovadas e recusadas. Também permite gerar PDF e enviar pelo WhatsApp.",
+                        "Agenda mostra retornos e acompanhamentos cadastrados nos atendimentos para você não esquecer o cliente."
                     ]
                 },
                 {
@@ -71,9 +79,14 @@
                 },
                 {
                     titulo: "Dados do veículo",
+                    tituloPrestador: "Dados importantes do cliente",
                     mensagens: [
                         "No perfil de mecânica, você também pode registrar modelo, placa, cor e quilometragem do veículo.",
                         "Essas informações acompanham o cliente nos serviços e podem ser atualizadas mais tarde."
+                    ],
+                    mensagensPrestador: [
+                        "No perfil de prestador, confirme endereço, telefones e documento conforme as necessidades do seu atendimento.",
+                        "Esses dados acompanham o cliente nos serviços, orçamentos e contatos futuros e podem ser atualizados mais tarde."
                     ]
                 },
                 {
@@ -89,6 +102,10 @@
                     mensagens: [
                         "Use “Editar” para corrigir os dados pessoais e “Editar veículo” para atualizar as informações do automóvel.",
                         "Em “Ver histórico”, você consulta os serviços anteriores, datas, valores e observações do cliente."
+                    ],
+                    mensagensPrestador: [
+                        "Use “Editar” para corrigir nome, telefones, endereço ou documento do cliente.",
+                        "Em “Ver histórico”, você consulta os atendimentos anteriores, datas, valores e observações do cliente."
                     ]
                 },
                 {
@@ -116,9 +133,14 @@
                 },
                 {
                     titulo: "Conferir o veículo",
+                    tituloPrestador: "Conferir o atendimento",
                     mensagens: [
                         "No perfil de mecânica, revise modelo, placa, cor e quilometragem antes de continuar.",
                         "As alterações feitas aqui também podem atualizar o cadastro do veículo do cliente."
+                    ],
+                    mensagensPrestador: [
+                        "Revise o cliente selecionado e confirme telefone e endereço antes de continuar.",
+                        "Use o problema relatado para registrar local do serviço, urgência, medidas, acesso e outros detalhes necessários ao atendimento."
                     ]
                 },
                 {
@@ -126,6 +148,10 @@
                     mensagens: [
                         "Em “Problema relatado pelo cliente”, escreva com clareza o que a pessoa informou antes do atendimento.",
                         "Esse registro cria um pré-atendimento mesmo quando os itens e valores ainda não foram definidos."
+                    ],
+                    mensagensPrestador: [
+                        "Em “Problema relatado pelo cliente”, descreva o pedido, o local, a urgência e as condições informadas antes da visita.",
+                        "Esse registro cria um pré-atendimento mesmo quando mão de obra, materiais e valores ainda não foram definidos."
                     ]
                 },
                 {
@@ -133,6 +159,10 @@
                     mensagens: [
                         "Digite a descrição do serviço ou produto, o valor unitário e a quantidade. Depois toque em “Adicionar Item”.",
                         "Repita o processo para cada item. Use “Editar” ou “Remover” se precisar corrigir a lista."
+                    ],
+                    mensagensPrestador: [
+                        "Digite a descrição da mão de obra, diária, visita ou material, informe o valor unitário e a quantidade e toque em “Adicionar Item”.",
+                        "Repita para cada etapa ou material do atendimento. Use “Editar” ou “Remover” para corrigir a lista."
                     ]
                 },
                 {
@@ -147,6 +177,10 @@
                     mensagens: [
                         "Se o cliente precisar retornar, informe a data em “Retorno / Manutenção”.",
                         "Ao salvar o serviço, esse compromisso aparecerá automaticamente na Agenda. O campo é opcional."
+                    ],
+                    mensagensPrestador: [
+                        "Se precisar voltar ao local ou acompanhar o cliente, informe a data em “Retorno / Manutenção”.",
+                        "Ao salvar o serviço, esse compromisso aparecerá automaticamente na Agenda. O campo é opcional."
                     ]
                 },
                 {
@@ -155,6 +189,10 @@
                     mensagens: [
                         "Toque em “Salvar Serviço” somente depois de revisar cliente, itens e valores.",
                         "Na lista de serviços, use “Gerar orçamento” para criar a proposta. Enquanto não for aprovada, você ainda poderá editar o serviço."
+                    ],
+                    mensagensPrestador: [
+                        "Toque em “Salvar Serviço” somente depois de revisar cliente, descrição do atendimento, materiais e valores.",
+                        "Na lista de serviços, use “Gerar orçamento” para criar a proposta. Enquanto não for aprovada, você ainda poderá editar o atendimento."
                     ]
                 }
             ]
@@ -185,6 +223,10 @@
                     mensagens: [
                         "Ao abrir o orçamento, confira empresa, cliente, veículo, itens, quantidades, valores e total.",
                         "Se houver informação incorreta, toque em “Editar” antes de enviar ou aprovar."
+                    ],
+                    mensagensPrestador: [
+                        "Ao abrir o orçamento, confira empresa, cliente, serviços, materiais, quantidades, valores, observações e total.",
+                        "Se houver informação incorreta, toque em “Editar” antes de enviar ou aprovar."
                     ]
                 },
                 {
@@ -206,6 +248,10 @@
                     mensagens: [
                         "Depois da aprovação, o assistente pergunta se houve algum gasto relacionado ao serviço.",
                         "Registre peças, materiais ou outras despesas no Financeiro para o lucro e o resumo mensal ficarem corretos."
+                    ],
+                    mensagensPrestador: [
+                        "Depois da aprovação, o assistente pergunta se houve algum gasto relacionado ao atendimento.",
+                        "Registre materiais, deslocamento, alimentação, taxas ou outras despesas para o lucro e o resumo mensal ficarem corretos."
                     ]
                 }
             ]
@@ -222,6 +268,10 @@
                     mensagens: [
                         "A Agenda recebe as datas de Retorno / Manutenção informadas ao salvar um serviço.",
                         "Cada cartão mostra o cliente, o telefone e a data prevista para o novo contato."
+                    ],
+                    mensagensPrestador: [
+                        "A Agenda recebe as datas de retorno ou acompanhamento informadas ao salvar um atendimento.",
+                        "Cada cartão mostra o cliente, o telefone e a data prevista para o novo contato ou visita."
                     ]
                 },
                 {
@@ -287,6 +337,10 @@
                     mensagens: [
                         "Em “Novo gasto”, descreva a despesa e informe o valor pago.",
                         "Registre peças, materiais, taxas e outros custos para o saldo representar a realidade."
+                    ],
+                    mensagensPrestador: [
+                        "Em “Novo gasto”, descreva a despesa e informe o valor pago.",
+                        "Registre materiais, deslocamentos, alimentação, taxas, ajudantes e outros custos para o saldo representar a realidade."
                     ]
                 },
                 {
@@ -351,6 +405,11 @@
         }
     ]);
 
+    function getPerfilAtivoId() {
+        const perfilId = window.SensoProfile?.getActiveProfile?.()?.id;
+        return perfilId === "prestador" ? "prestador" : "mecanica";
+    }
+
     function getUid() {
         const firebaseUid = window.firebase?.apps?.length
             ? window.firebase.auth().currentUser?.uid
@@ -359,7 +418,7 @@
     }
 
     function getStorageKey() {
-        return `${STORAGE_PREFIX}:${getUid()}`;
+        return `${STORAGE_PREFIX}:${getUid()}:${getPerfilAtivoId()}`;
     }
 
     function estadoPadrao() {
@@ -373,12 +432,16 @@
 
     function lerEstado() {
         try {
-            const salvo = JSON.parse(localStorage.getItem(getStorageKey()) || "null");
+            const salvoAtual = JSON.parse(localStorage.getItem(getStorageKey()) || "null");
+            const salvoLegado = salvoAtual
+                ? null
+                : JSON.parse(localStorage.getItem(`${STORAGE_PREFIX}:${getUid()}`) || "null");
+            const salvo = salvoAtual || salvoLegado;
             if (!salvo || typeof salvo !== "object") return estadoPadrao();
             const roteiroAtual = Number(salvo.roteiroVersion) === ROTEIRO_VERSION;
             return {
                 ativo: salvo.ativo !== false,
-                concluidas: roteiroAtual && Array.isArray(salvo.concluidas)
+                concluidas: salvoAtual && roteiroAtual && Array.isArray(salvo.concluidas)
                     ? salvo.concluidas.filter(id => LICOES.some(licao => licao.id === id))
                     : [],
                 roteiroVersion: ROTEIRO_VERSION,
@@ -461,6 +524,13 @@
             const etapa = etapas[indice];
             const ultimaEtapa = indice === etapas.length - 1;
             const acoes = [];
+            const perfilId = getPerfilAtivoId();
+            const tituloEtapa = perfilId === "prestador"
+                ? (etapa.tituloPrestador || etapa.titulo)
+                : (etapa.tituloMecanica || etapa.titulo);
+            const mensagensEtapa = perfilId === "prestador"
+                ? (etapa.mensagensPrestador || etapa.mensagens || [])
+                : (etapa.mensagensMecanica || etapa.mensagens || []);
 
             if (!ultimaEtapa) {
                 acoes.push({
@@ -505,7 +575,7 @@
             window.AssistenteSenso.abrir({
                 titulo: `Ajuda • ${licao.nome} • ${indice + 1}/${etapas.length}`,
                 imagem: etapa.imagem || licao.imagem,
-                mensagens: [etapa.titulo, ...(etapa.mensagens || [])],
+                mensagens: [tituloEtapa, ...mensagensEtapa],
                 acoes
             });
         }
@@ -540,7 +610,7 @@
         criarBotaoFlutuante(licao);
         if (estado.concluidas.includes(licao.id)) return;
 
-        const chaveSessao = `senso:ajuda-vista:v3:${getUid()}:${licao.id}`;
+        const chaveSessao = `senso:ajuda-vista:v4:${getUid()}:${getPerfilAtivoId()}:${licao.id}`;
         let tentativas = 0;
 
         function tentarAbrir() {
