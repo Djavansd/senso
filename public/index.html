@@ -58,6 +58,18 @@
             text-decoration: none;
             border-radius: 8px;
         }
+        .menu-link.assistente-ajuda-link {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .menu-assistente-icone {
+            width: 25px;
+            height: 25px;
+            flex: 0 0 25px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 3px rgba(15, 118, 72, .2));
+        }
         .menu-link.destaque {
             background: #ffedd5;
             color: #b45309;
@@ -348,7 +360,10 @@
     <a class="menu-link" href="pages/financeiro.html">💰 Financeiro</a>
     <a class="menu-link" href="pages/resumo.html">📊 Resumo mensal</a>
     <a class="menu-link" href="pages/configuracoes.html">⚙️ Configurações</a>
-    <a class="menu-link" href="pages/assistente-ajuda.html">🟢 Assistente de ajuda</a>
+    <a class="menu-link assistente-ajuda-link" href="pages/assistente-ajuda.html">
+        <img class="menu-assistente-icone" src="assets/assistente-senso/ajuda-apontando.png" alt="" aria-hidden="true">
+        <span>Assistente de ajuda</span>
+    </a>
     <a class="menu-link" href="pages/privacidade.html">🔒 Política de privacidade</a>
     <a class="menu-link desktop-pro hidden" id="desktopProLink" href="desktop.html">💻 Modo PC Pro</a>
     <a class="menu-link pagamento" href="pages/pagamento-app.html">💳 Pagamento do app</a>

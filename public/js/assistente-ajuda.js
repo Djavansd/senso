@@ -3,6 +3,7 @@
 
     const STORAGE_PREFIX = "senso:ajuda-guiada:v1";
     const ROTEIRO_VERSION = 2;
+    const CONFETTI_URL = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js";
     const IMAGENS = Object.freeze({
         apontando: "/assets/assistente-senso/ajuda-apontando.png",
         concluida: "/assets/assistente-senso/ajuda-concluida.png",
@@ -405,6 +406,8 @@
         }
     ]);
 
+    let confettiCarregando = null;
+
     function getPerfilAtivoId() {
         const perfilId = window.SensoProfile?.getActiveProfile?.()?.id;
         return perfilId === "prestador" ? "prestador" : "mecanica";
@@ -496,7 +499,78 @@
         return LICOES.find(licao => licao.paginas.includes(pagina)) || null;
     }
 
+    function carregarConfetti() {
+        if (typeof window.confetti === "function") return Promise.resolve(window.confetti);
+        if (confettiCarregando) return confettiCarregando;
+
+        confettiCarregando = new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = CONFETTI_URL;
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.addEventListener("load", () => {
+                if (typeof window.confetti === "function") {
+                    resolve(window.confetti);
+                    return;
+                }
+                reject(new Error("canvas-confetti não ficou disponível."));
+            }, { once: true });
+            script.addEventListener("error", () => reject(new Error("Falha ao carregar canvas-confetti.")), { once: true });
+            document.head.appendChild(script);
+        }).catch(error => {
+            confettiCarregando = null;
+            throw error;
+        });
+
+        return confettiCarregando;
+    }
+
+    function celebrarConclusao() {
+        if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+
+        carregarConfetti().then(confetti => {
+            const cores = ["#0f9d58", "#55d67e", "#facc15", "#ffffff"];
+            const duracao = 2000;
+            const inicio = Date.now();
+
+            confetti({
+                particleCount: 90,
+                spread: 78,
+                startVelocity: 42,
+                origin: { x: .5, y: .68 },
+                colors: cores,
+                zIndex: 11000,
+                disableForReducedMotion: true
+            });
+
+            const chuva = window.setInterval(() => {
+                const tempoDecorrido = Date.now() - inicio;
+                if (tempoDecorrido >= duracao) {
+                    window.clearInterval(chuva);
+                    return;
+                }
+
+                confetti({
+                    particleCount: 7,
+                    angle: 270,
+                    spread: 45,
+                    startVelocity: 12,
+                    gravity: .75,
+                    scalar: .9,
+                    ticks: 180,
+                    origin: { x: .08 + Math.random() * .84, y: -.05 },
+                    colors: cores,
+                    zIndex: 11000,
+                    disableForReducedMotion: true
+                });
+            }, 120);
+        }).catch(() => {
+            // A comemoração visual nunca deve impedir a conclusão do aprendizado.
+        });
+    }
+
     function abrirConclusao() {
+        celebrarConclusao();
         window.AssistenteSenso?.abrir({
             titulo: "Você aprendeu o Senso!",
             imagem: IMAGENS.concluida,
@@ -648,7 +722,8 @@
         definirAtivo,
         concluirLicao,
         reiniciar,
-        abrirLicao
+        abrirLicao,
+        celebrarConclusao
     };
 
     window.addEventListener("DOMContentLoaded", iniciarAjudaContextual);
