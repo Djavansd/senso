@@ -459,7 +459,15 @@ body::before {
 
 @media (max-width: 520px) {
     body::before {
-        background-position: center top;
+        background:
+            linear-gradient(145deg, rgba(255, 255, 255, .28), rgba(239, 250, 244, .34)),
+            url("../assets/brasil-textura.jpg") center top / cover no-repeat;
+        filter: saturate(1.12) contrast(1.03);
+    }
+
+    .app {
+        background: rgba(246, 250, 248, .18) !important;
+        box-shadow: none;
     }
 }
 
