@@ -70,6 +70,7 @@ senso/
 - `pagamento-app.html`: tela relacionada ao pagamento/plano do app.
 - `login.html`: entrada e cadastro de usuarios.
 - `nossos-servicos.html`: pagina de servicos oferecidos.
+- `privacidade.html`: politica de privacidade e aviso sobre tratamento de dados.
 
 ## Dados e armazenamento
 
@@ -112,6 +113,24 @@ As regras do Firestore ficam em `firebase/firestore.rules`. Elas controlam:
 - bloqueio de acesso quando `autorizado == false`;
 - limites de plano para clientes e servicos;
 - bloqueio de escrita em colecoes sensiveis como `billingAlerts`.
+
+## Privacidade e LGPD
+
+O app possui uma pagina de politica de privacidade em `public/pages/privacidade.html`.
+Ela informa os tipos de dados tratados, finalidades, armazenamento local/nuvem,
+compartilhamento com Firebase/Google, direitos dos titulares e retencao.
+
+No dashboard, o usuario ve um aviso uma vez por versao da politica. O aceite fica
+registrado no navegador por `localStorage`.
+
+Em `configuracoes.html`, existem opcoes para:
+
+- exportar dados do perfil atual em JSON;
+- limpar dados operacionais do perfil atual, sincronizando a limpeza com o Firestore quando houver login ativo;
+- acessar a politica de privacidade.
+
+O canal de contato informado na politica de privacidade e:
+`djavansd85@gmail.com` / `11 99284-1312`.
 
 ## Planos e limites
 
@@ -183,4 +202,3 @@ Algumas evolucoes possiveis:
 - adicionar comandos por voz com IA para criar orcamentos;
 - criar testes automaticos para as funcoes mais importantes;
 - criar uma rotina de backup/exportacao dos dados do usuario.
-

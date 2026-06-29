@@ -27,9 +27,14 @@ const LAST_UID_KEY = "senso:lastAuthUid";
 
 let cloudHydrationStarted = false;
 let cloudSyncTimer = null;
+let settingsCloudHydrationStarted = {};
+let settingsCloudSyncTimers = {};
 let authStorageMigrated = false;
 let authStorageReloadDone = false;
 let liveUpdateTimer = null;
+let dataCacheKey = "";
+let dataCacheRaw = "";
+let dataCacheValue = null;
 
 function getAuthUid() {
     if (window.SensoAuth && window.SensoAuth.uid) {
@@ -261,6 +266,18 @@ function getFirestoreDocRef() {
         .doc(ACTIVE_PROFILE.id);
 }
 
+function getFirestoreSettingsDocRef(profileId) {
+    const uid = getAuthUid();
+    if (!uid || !window.firebase?.firestore) return null;
+
+    return window.firebase
+        .firestore()
+        .collection("users")
+        .doc(uid)
+        .collection("appSettings")
+        .doc(getProfileId(profileId));
+}
+
 function migrateLegacyStorageIfNeeded(targetKey, legacyKey) {
     const targetRaw = localStorage.getItem(targetKey);
     if (targetRaw !== null) return;
@@ -271,8 +288,35 @@ function migrateLegacyStorageIfNeeded(targetKey, legacyKey) {
     localStorage.setItem(targetKey, legacyRaw);
 }
 
+function parseSettingsSafe(raw) {
+    if (!raw) return null;
+    try {
+        const settings = JSON.parse(raw);
+        return settings && typeof settings === "object" ? settings : null;
+    } catch {
+        return null;
+    }
+}
+
+function hasCustomSettings(settings) {
+    if (!settings || typeof settings !== "object") return false;
+    return Object.keys(settings).some(key => key !== "updatedAt" && settings[key] !== "" && settings[key] != null);
+}
+
+function hasCompanyIdentitySettings(settings) {
+    if (!settings || typeof settings !== "object") return false;
+    return [
+        settings.logoDataUrl,
+        settings.companyName && settings.companyName !== "Senso",
+        settings.companyDocument,
+        settings.companyAddress,
+        settings.companyPhone,
+        settings.companyPhone2,
+        settings.headerServices
+    ].some(Boolean);
+}
+
 function migrateLegacySettingsIfNeeded(targetKey, profileId) {
-    if (getProfileId(profileId) !== "mecanica") return;
     migrateLegacyStorageIfNeeded(targetKey, LEGACY_SETTINGS_KEY);
 }
 
@@ -289,16 +333,27 @@ function getDomainLabel(name, fallback) {
 
 function getData() {
     const storageKey = getStorageKey();
-    migrateLegacyStorageIfNeeded(storageKey, LEGACY_STORAGE_KEY);
+    if (ACTIVE_PROFILE.id === "mecanica") {
+        migrateLegacyStorageIfNeeded(storageKey, LEGACY_STORAGE_KEY);
+    }
+
+    const raw = localStorage.getItem(storageKey);
+    if (dataCacheValue && dataCacheKey === storageKey && dataCacheRaw === raw) {
+        tryHydrateCloudData();
+        return dataCacheValue;
+    }
 
     let data;
     try {
-        data = JSON.parse(localStorage.getItem(storageKey));
+        data = JSON.parse(raw);
     } catch {
         data = null;
     }
 
     data = normalizeData(data);
+    dataCacheKey = storageKey;
+    dataCacheRaw = raw;
+    dataCacheValue = data;
     tryHydrateCloudData();
 
     return data;
@@ -325,7 +380,11 @@ function saveData(data) {
     const storageKey = getStorageKey();
     const normalized = normalizeData(data);
     normalized.updatedAt = Date.now();
-    localStorage.setItem(storageKey, JSON.stringify(normalized));
+    const raw = JSON.stringify(normalized);
+    localStorage.setItem(storageKey, raw);
+    dataCacheKey = storageKey;
+    dataCacheRaw = raw;
+    dataCacheValue = normalized;
     queueCloudDataSync(normalized);
     notifyLiveUpdate("save-data");
 }
@@ -374,10 +433,15 @@ function tryHydrateCloudData() {
         const localUpdatedAt = Number(localData.updatedAt || 0);
 
         if (cloudUpdatedAt > localUpdatedAt) {
-            localStorage.setItem(storageKey, JSON.stringify({
+            const mergedCloudData = {
                 ...cloudData,
                 updatedAt: cloudUpdatedAt
-            }));
+            };
+            const raw = JSON.stringify(mergedCloudData);
+            localStorage.setItem(storageKey, raw);
+            dataCacheKey = storageKey;
+            dataCacheRaw = raw;
+            dataCacheValue = mergedCloudData;
             notifyLiveUpdate("cloud-hydrate");
             return;
         }
@@ -413,11 +477,19 @@ function atualizarCliente(id, dadosCliente) {
 
     Object.assign(cliente, dadosCliente, { id: cliente.id });
 
+    const dadosCadastroCliente = {
+        ...dadosCliente
+    };
+    delete dadosCadastroCliente.modeloCarro;
+    delete dadosCadastroCliente.placaCarro;
+    delete dadosCadastroCliente.corCarro;
+    delete dadosCadastroCliente.kmCarro;
+
     const atualizarClienteVinculado = alvo => {
         if (!alvo?.cliente || alvo.cliente.id !== id) return;
         alvo.cliente = {
             ...alvo.cliente,
-            ...dadosCliente,
+            ...dadosCadastroCliente,
             id
         };
     };
@@ -469,9 +541,13 @@ function limiteFinito(valor) {
 }
 
 function mostrarAlertaLimite(recurso, limite) {
+    const planoAtual = window.SensoPlans?.getCurrentPlan?.();
+    const nomePlano = planoAtual?.plano === "gratis" ? "Plano Gratis" : "Plano Basico mensal";
+    const destino = planoAtual?.plano === "gratis" ? "Plano Basico ou Pro" : "Plano Pro";
+
     alert(
-        `Limite do Plano Basico mensal atingido: ${limite} ${recurso}. ` +
-        "Para continuar cadastrando, altere o cliente para o Plano Pro."
+        `Limite do ${nomePlano} atingido: ${limite} ${recurso}. ` +
+        `Para continuar cadastrando, altere o cliente para o ${destino}.`
     );
 }
 
@@ -620,6 +696,11 @@ function gerarOrcamentoDoServico(servicoId) {
     const data = getData();
     const servico = data.servicos.find(s => s.id === servicoId);
     if (!servico) return null;
+
+    if (!Array.isArray(servico.itens) || servico.itens.length === 0) {
+        alert("Complete os itens e valores do serviço antes de gerar o orçamento.");
+        return null;
+    }
 
     if (servico.orcamentoId) {
         const porId = data.orcamentos.find(o => o.id === servico.orcamentoId);
@@ -797,6 +878,7 @@ function getAppSettings(profileId) {
     migrateLegacySettingsIfNeeded(settingsKey, resolvedProfileId);
 
     const profileDefaults = getProfileDefaults(resolvedProfileId);
+    tryHydrateCloudSettings(resolvedProfileId);
     let settings;
     try {
         settings = JSON.parse(localStorage.getItem(settingsKey));
@@ -811,7 +893,7 @@ function getAppSettings(profileId) {
     const hasSettingDocument = Object.prototype.hasOwnProperty.call(settings, "companyDocument");
     const resolvedDocument = hasSettingDocument
         ? String(settings.companyDocument || "")
-        : (profileDefaults.companyDocument || "00.000.000/0001-00");
+        : (profileDefaults.companyDocument || "");
     const resolvedDocumentType = (
         settings.companyDocumentType === "none" ||
         settings.companyDocumentType === "cpf" ||
@@ -825,11 +907,11 @@ function getAppSettings(profileId) {
         buttonTextColor: settings.buttonTextColor || "#ffffff",
         buttonSecondaryTextColor: settings.buttonSecondaryTextColor || "#111827",
         logoDataUrl: settings.logoDataUrl || "",
-        companyName: settings.companyName || profileDefaults.companyName || "EMPRESA MODELO",
+        companyName: settings.companyName || profileDefaults.companyName || "Senso",
         companyDocument: resolvedDocument,
         companyDocumentType: resolvedDocumentType,
-        companyAddress: settings.companyAddress || profileDefaults.companyAddress || "Sao Paulo",
-        companyPhone: settings.companyPhone || profileDefaults.companyPhone || "(11) 90000-0000",
+        companyAddress: settings.companyAddress || profileDefaults.companyAddress || "",
+        companyPhone: settings.companyPhone || profileDefaults.companyPhone || "",
         companyPhone2: settings.companyPhone2 || profileDefaults.companyPhone2 || "",
         headerServices: String(settings.headerServices || "").slice(0, 120)
     };
@@ -858,14 +940,98 @@ function saveAppSettings(nextSettings, profileId) {
     const current = getAppSettings(resolvedProfileId);
     const merged = {
         ...current,
-        ...(nextSettings || {})
+        ...(nextSettings || {}),
+        updatedAt: Date.now()
     };
 
     localStorage.setItem(getSettingsKey(resolvedProfileId), JSON.stringify(merged));
+    queueCloudSettingsSync(merged, resolvedProfileId);
     if (resolvedProfileId === ACTIVE_PROFILE.id) {
         applyAppSettings();
     }
     notifyLiveUpdate("save-settings");
+}
+
+function queueCloudSettingsSync(settings, profileId) {
+    const resolvedProfileId = getProfileId(profileId);
+    const docRef = getFirestoreSettingsDocRef(resolvedProfileId);
+    if (!docRef) return;
+
+    if (settingsCloudSyncTimers[resolvedProfileId]) {
+        clearTimeout(settingsCloudSyncTimers[resolvedProfileId]);
+    }
+
+    settingsCloudSyncTimers[resolvedProfileId] = setTimeout(() => {
+        docRef.set({
+            settings: {
+                ...(settings || {}),
+                updatedAt: Number(settings?.updatedAt || Date.now())
+            },
+            updatedAt: Number(settings?.updatedAt || Date.now())
+        }).catch(err => {
+            console.warn("Falha ao sincronizar configuracoes no Firestore.", err);
+        });
+    }, 500);
+}
+
+function tryHydrateCloudSettings(profileId) {
+    const resolvedProfileId = getProfileId(profileId);
+    if (settingsCloudHydrationStarted[resolvedProfileId]) return;
+
+    const docRef = getFirestoreSettingsDocRef(resolvedProfileId);
+    if (!docRef) return;
+    settingsCloudHydrationStarted[resolvedProfileId] = true;
+
+    const settingsKey = getSettingsKey(resolvedProfileId);
+    const localSettings = parseSettingsSafe(localStorage.getItem(settingsKey)) || {};
+    const localUpdatedAt = Number(localSettings.updatedAt || 0);
+
+    docRef.get().then(snapshot => {
+        if (!snapshot.exists) {
+            if (hasCustomSettings(localSettings)) {
+                const settingsToSync = {
+                    ...localSettings,
+                    updatedAt: localUpdatedAt || Date.now()
+                };
+                localStorage.setItem(settingsKey, JSON.stringify(settingsToSync));
+                queueCloudSettingsSync(settingsToSync, resolvedProfileId);
+            }
+            return;
+        }
+
+        const cloudPayload = snapshot.data() || {};
+        const cloudSettings = (cloudPayload.settings && typeof cloudPayload.settings === "object")
+            ? cloudPayload.settings
+            : {};
+        const cloudUpdatedAt = Number(cloudPayload.updatedAt || cloudSettings.updatedAt || 0);
+
+        const localHasCustomSettings = hasCustomSettings(localSettings);
+        const cloudHasCustomSettings = hasCustomSettings(cloudSettings);
+        const localHasCompanyIdentity = hasCompanyIdentitySettings(localSettings);
+        const cloudHasCompanyIdentity = hasCompanyIdentitySettings(cloudSettings);
+
+        if (
+            cloudHasCustomSettings &&
+            (!localHasCustomSettings || cloudUpdatedAt >= localUpdatedAt || (cloudHasCompanyIdentity && !localHasCompanyIdentity))
+        ) {
+            const nextSettings = {
+                ...cloudSettings,
+                updatedAt: cloudUpdatedAt || Date.now()
+            };
+            localStorage.setItem(settingsKey, JSON.stringify(nextSettings));
+            if (resolvedProfileId === ACTIVE_PROFILE.id) {
+                applyAppSettings();
+            }
+            notifyLiveUpdate("cloud-settings-hydrate");
+            return;
+        }
+
+        if (localUpdatedAt > cloudUpdatedAt && hasCustomSettings(localSettings)) {
+            queueCloudSettingsSync(localSettings, resolvedProfileId);
+        }
+    }).catch(err => {
+        console.warn("Falha ao carregar configuracoes do Firestore.", err);
+    });
 }
 
 function applyAppSettings() {
@@ -897,14 +1063,14 @@ function applyBudgetCompanyInfo(settings) {
     const empresaEl = document.querySelector(".cabecalho .empresa");
     if (!empresaEl) return;
 
-    const companyName = settings.companyName || "PROICE CLIMATIZACAO";
+    const companyName = settings.companyName || "Senso";
     const companyDocument = settings.companyDocument || "";
     const companyDocumentType = ["cpf", "cnpj", "none"].includes(settings.companyDocumentType)
         ? settings.companyDocumentType
         : inferCompanyDocumentType(companyDocument);
     const companyDocumentLabel = companyDocumentType === "cpf" ? "CPF" : "CNPJ";
     const companyDocumentFormatted = formatarDocumentoPorTipo(companyDocument, companyDocumentType);
-    const companyAddress = settings.companyAddress || "Sao Paulo";
+    const companyAddress = settings.companyAddress || "—";
     const companyPhonesFormatted = listarTelefonesEmpresa(settings).join(" / ") || "—";
 
     empresaEl.innerHTML = "";
@@ -962,6 +1128,7 @@ window.addEventListener("senso-auth-ready", event => {
     const uid = event?.detail?.uid || getAuthUid();
     if (!uid) return;
     migrateAnonStorageToUser(uid);
+    applyAppSettings();
 });
 
 const initialAuthUid = getAuthUid();

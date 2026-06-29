@@ -6,6 +6,8 @@
 <title>Serviço</title>
 
 <link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="../css/assistente-senso.css" />
+<link rel="stylesheet" href="../css/assistente-ajuda.css" />
 
 <style>
 .hidden { display:none; }
@@ -19,6 +21,101 @@
     font-size:14px;
 }
 
+.servicos-mes {
+    margin-bottom: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,.04);
+    overflow: hidden;
+}
+
+.servicos-mes summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 12px;
+    cursor: pointer;
+    font-weight: 700;
+    color: #111827;
+    list-style: none;
+}
+
+.servicos-mes summary::-webkit-details-marker {
+    display: none;
+}
+
+.servicos-mes summary::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid #6b7280;
+    border-bottom: 2px solid #6b7280;
+    flex: 0 0 8px;
+    margin-right: 2px;
+    transform: rotate(45deg);
+    transition: transform .2s ease;
+}
+
+.servicos-mes:not([open]) summary::after {
+    transform: rotate(-45deg);
+}
+
+.servicos-mes-meta {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+    text-align: right;
+}
+
+.servicos-mes-lista {
+    padding: 0 10px 10px;
+}
+
+.servicos-mes-lista .resumo-card {
+    margin-bottom: 8px;
+    box-shadow: 0 3px 8px rgba(0,0,0,.05);
+}
+
+.resumo-card.servico-em-aberto {
+    position: relative;
+    border: 1px solid #f59e0b;
+    background: #fffbeb;
+    box-shadow: 0 8px 18px rgba(245, 158, 11, 0.16);
+}
+
+.resumo-card.servico-em-aberto::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    background: #f59e0b;
+    border-radius: 14px 0 0 14px;
+}
+
+.servico-alerta-aprovacao {
+    display: inline-block;
+    margin: 5px 0 4px;
+    padding: 4px 7px;
+    border-radius: 8px;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.servico-alerta-cadastro {
+    display: inline-block;
+    margin: 5px 0 4px;
+    padding: 4px 7px;
+    border-radius: 8px;
+    background: #dff7f3;
+    color: #0f766e;
+    font-size: 12px;
+    font-weight: 700;
+}
+
 .item-servico {
     background:#f5f5f5;
     border-radius:10px;
@@ -29,7 +126,81 @@
     font-size:13px;
 }
 
+.item-servico-info {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.item-servico-acoes {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
 .item-valor { font-weight:bold; color:#0f9d58; }
+
+.btn-item {
+    border: none;
+    border-radius: 7px;
+    padding: 5px 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.btn-item-editar {
+    background: #e3f2fd;
+    color: #0d47a1;
+}
+
+.btn-item-remover {
+    background: #fdecea;
+    color: #b42318;
+}
+
+.salvar-servico-alerta {
+    margin-top: 8px;
+    padding: 9px 10px;
+    border-radius: 9px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.problema-pro-box {
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #99f6e4;
+    border-radius: 12px;
+    background: #f0fdfa;
+}
+
+.problema-pro-box small {
+    display: block;
+    margin-top: 4px;
+    color: #0f766e;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.problema-relatado {
+    display: block;
+    margin: 6px 0 4px;
+    padding: 7px 8px;
+    border-radius: 8px;
+    background: #ecfdf5;
+    color: #134e4a;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.btn-salvar-pendente {
+    outline: 3px solid rgba(245, 158, 11, 0.35);
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.16), 0 10px 18px rgba(15, 23, 42, 0.14);
+    filter: saturate(1.15);
+}
 
 .status-pendente { color:#f57c00; font-weight:bold; }
 .status-executado { color:#0f9d58; font-weight:bold; }
@@ -115,6 +286,7 @@ textarea {
     min-height: 70px;
     resize: vertical;
 }
+
 </style>
 </head>
 
@@ -134,9 +306,30 @@ textarea {
 
 <div id="clienteResumo" class="resumo-card hidden"></div>
 
+<div id="veiculoServicoBox" class="resumo-card hidden">
+    <label>Modelo do carro</label>
+    <input id="servicoModeloCarro" list="sugestoesModeloCarroServico" placeholder="Opcional" autocomplete="on" maxlength="80" />
+    <datalist id="sugestoesModeloCarroServico"></datalist>
+
+    <label>Placa</label>
+    <input id="servicoPlacaCarro" placeholder="Opcional" maxlength="8" />
+
+    <label>Cor</label>
+    <input id="servicoCorCarro" placeholder="Opcional" maxlength="40" />
+
+    <label>KM</label>
+    <input id="servicoKmCarro" type="text" inputmode="numeric" placeholder="Opcional" />
+</div>
+
 <hr />
 
 <h3>Serviço • Passo 2</h3>
+
+<div id="problemaRelatadoBox" class="problema-pro-box hidden">
+    <label>Problema relatado pelo cliente</label>
+    <textarea id="problemaRelatadoServico"
+        placeholder="Ex: descreva o que o cliente informou antes do atendimento..."></textarea>
+</div>
 
 <form id="formItem" class="servico-card" autocomplete="on">
     <label>Descrição do serviço</label>
@@ -202,7 +395,8 @@ textarea {
 
 </div>
 
-<button type="button" id="btnSalvarServico">Salvar Serviço</button>
+<button type="button" id="btnSalvarServico" style="margin-top:12px; margin-bottom:8px;">Salvar Serviço</button>
+<div id="salvarServicoAlerta" class="salvar-servico-alerta hidden"></div>
 
 <hr />
 
@@ -216,11 +410,13 @@ textarea {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
-<script src="../js/auth-guard.js"></script>
-<script src="../js/core/plans.js"></script>
+<script src="../js/auth-guard.js?v=20260607-gratis"></script>
+<script src="../js/core/plans.js?v=20260607-gratis"></script>
 <script src="../js/core/profile.js"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
+<script src="../js/assistente-senso.js"></script>
+<script src="../js/assistente-ajuda.js"></script>
 
 <script>
 const clienteBusca = document.getElementById("clienteBusca");
@@ -231,17 +427,53 @@ const totalServicoEl = document.getElementById("totalServico");
 const listaServicos = document.getElementById("listaServicos");
 const intervaloSelect = document.getElementById("intervaloSelect");
 const observacoesServico = document.getElementById("observacoesServico");
+const problemaRelatadoBox = document.getElementById("problemaRelatadoBox");
+const problemaRelatadoServico = document.getElementById("problemaRelatadoServico");
 const formaPagamento = document.getElementById("formaPagamento");
 const sugestoesServico = document.getElementById("sugestoesServico");
+const veiculoServicoBox = document.getElementById("veiculoServicoBox");
+const servicoModeloCarro = document.getElementById("servicoModeloCarro");
+const sugestoesModeloCarroServico = document.getElementById("sugestoesModeloCarroServico");
+const servicoPlacaCarro = document.getElementById("servicoPlacaCarro");
+const servicoCorCarro = document.getElementById("servicoCorCarro");
+const servicoKmCarro = document.getElementById("servicoKmCarro");
+const formItem = document.getElementById("formItem");
+const btnSalvarServico = document.getElementById("btnSalvarServico");
+const salvarServicoAlerta = document.getElementById("salvarServicoAlerta");
 const itemDescricao = document.getElementById("itemDescricao");
 const itemValor = document.getElementById("itemValor");
 const itemQtd = document.getElementById("itemQtd");
+const btnAdicionarItem = formItem.querySelector("button[type='submit']");
 let servicoEmEdicaoId = "";
+let itemEmEdicaoIndex = -1;
 const modoMecanica = (
     window.SensoProfile &&
     typeof window.SensoProfile.getActiveProfile === "function" &&
     window.SensoProfile.getActiveProfile()?.id === "mecanica"
 );
+
+function aplicarTextoProblemaRelatado() {
+    if (!problemaRelatadoServico) return;
+    problemaRelatadoServico.placeholder = modoMecanica
+        ? "Ex: ar não gela, carro falhando, barulho ao frear, vazamento, luz acesa no painel..."
+        : "Ex: cliente informou o problema, local do serviço, urgência, medidas, acesso ou detalhes do atendimento...";
+}
+
+function usuarioPodeUsarProblemaRelatado() {
+    return !!(
+        window.SensoPlans?.state?.ready &&
+        window.SensoPlans?.isPro?.() &&
+        window.SensoPlans?.isActive?.()
+    );
+}
+
+function renderProblemaRelatadoPro() {
+    const podeUsar = usuarioPodeUsarProblemaRelatado();
+    problemaRelatadoBox?.classList.toggle("hidden", !podeUsar);
+    if (!podeUsar && !servicoEmEdicaoId) {
+        problemaRelatadoServico.value = "";
+    }
+}
 
 function limparQtdInput(valor) {
     const normalizado = String(valor || "").normalize("NFKC");
@@ -353,6 +585,66 @@ function carregarSugestoesDescricao() {
 
 carregarSugestoesDescricao();
 
+function normalizarPlaca(value) {
+    const raw = String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!raw) return "";
+
+    if (/^[A-Z]{3}[0-9]{4}$/.test(raw)) {
+        return `${raw.slice(0, 3)}-${raw.slice(3)}`;
+    }
+
+    if (/^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(raw)) {
+        return raw;
+    }
+
+    return raw;
+}
+
+function placaValida(value) {
+    if (!value) return true;
+    return /^[A-Z]{3}-[0-9]{4}$/.test(value) || /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(value);
+}
+
+function normalizarKm(value) {
+    const digitos = String(value || "").replace(/\D/g, "");
+    if (!digitos) return "";
+    return String(Number(digitos));
+}
+
+function formatarKm(value) {
+    const km = normalizarKm(value);
+    return km ? Number(km).toLocaleString("pt-BR") : "";
+}
+
+function carregarSugestoesModeloCarroServico() {
+    const modelosUnicos = new Map();
+
+    listarClientesAtivos().forEach(cliente => {
+        const modelo = String(cliente.modeloCarro || "").trim();
+        if (!modelo) return;
+
+        const chave = modelo.toLocaleLowerCase("pt-BR");
+        if (!modelosUnicos.has(chave)) {
+            modelosUnicos.set(chave, modelo);
+        }
+    });
+
+    sugestoesModeloCarroServico.innerHTML = Array.from(modelosUnicos.values())
+        .sort((a, b) => a.localeCompare(b, "pt-BR"))
+        .map(modelo => `<option value="${escapeHtml(modelo)}"></option>`)
+        .join("");
+}
+
+if (modoMecanica) {
+    carregarSugestoesModeloCarroServico();
+    servicoPlacaCarro.addEventListener("input", () => {
+        servicoPlacaCarro.value = normalizarPlaca(servicoPlacaCarro.value);
+    });
+    servicoKmCarro.addEventListener("input", () => {
+        servicoKmCarro.value = formatarKm(servicoKmCarro.value);
+    });
+}
+
 /* CLIENTES */
 function renderClienteOptions(filtroTexto) {
     const filtro = String(filtroTexto || "").trim().toLocaleLowerCase("pt-BR");
@@ -384,6 +676,7 @@ function renderResumoClienteSelecionado() {
     const c = clientesAtivos.find(x => x.id === clienteSelect.value);
     if (!c) {
         clienteResumo.classList.add("hidden");
+        veiculoServicoBox.classList.add("hidden");
         return;
     }
 
@@ -391,7 +684,8 @@ function renderResumoClienteSelecionado() {
         ? `
             🚗 ${escapeHtml(c.modeloCarro || "—")}<br>
             🔖 ${escapeHtml(c.placaCarro || "—")}<br>
-            🎨 ${escapeHtml(c.corCarro || "—")}
+            🎨 ${escapeHtml(c.corCarro || "—")}<br>
+            KM ${escapeHtml(formatarKm(c.kmCarro) || "—")}
         `
         : "";
 
@@ -405,6 +699,20 @@ function renderResumoClienteSelecionado() {
         </div>
     `;
     clienteResumo.classList.remove("hidden");
+
+    if (modoMecanica) {
+        servicoModeloCarro.value = c.modeloCarro || "";
+        servicoPlacaCarro.value = c.placaCarro || "";
+        servicoCorCarro.value = c.corCarro || "";
+        servicoKmCarro.value = formatarKm(c.kmCarro);
+        veiculoServicoBox.classList.remove("hidden");
+    } else {
+        servicoModeloCarro.value = "";
+        servicoPlacaCarro.value = "";
+        servicoCorCarro.value = "";
+        servicoKmCarro.value = "";
+        veiculoServicoBox.classList.add("hidden");
+    }
 }
 
 renderClienteOptions("");
@@ -421,6 +729,7 @@ clienteSelect.onchange = () => {
 /* ITENS */
 formItem.onsubmit = e => {
     e.preventDefault();
+    const estavaEditandoItem = itemEmEdicaoIndex >= 0;
 
     let desc;
     try {
@@ -440,25 +749,94 @@ formItem.onsubmit = e => {
     }
 
     const subtotal = Number.isFinite(valor * qtd) ? (valor * qtd) : 0;
-    itens.push({
+    const itemAtualizado = {
         descricao: desc,
         quantidade: qtd,
         valorUnitario: valor,
         total: subtotal
-    });
+    };
+
+    if (itemEmEdicaoIndex >= 0 && itens[itemEmEdicaoIndex]) {
+        itens[itemEmEdicaoIndex] = itemAtualizado;
+    } else {
+        itens.push(itemAtualizado);
+    }
+
     registrarSugestaoDescricao(desc);
     renderSugestoesDescricao();
 
     formItem.reset();
     itemQtd.value = 1;
+    itemEmEdicaoIndex = -1;
+    btnAdicionarItem.textContent = "Adicionar Item";
     renderItens();
+
+    if (estavaEditandoItem) {
+        sinalizarSalvarServico();
+    }
 };
+
+function sinalizarSalvarServico() {
+    const acao = btnSalvarServico.textContent.trim() || "Salvar Serviço";
+    salvarServicoAlerta.textContent = `Alteração feita. Clique em "${acao}" para atualizar o orçamento.`;
+    salvarServicoAlerta.classList.remove("hidden");
+    btnSalvarServico.classList.add("btn-salvar-pendente");
+}
+
+function limparSinalizacaoSalvarServico() {
+    salvarServicoAlerta.textContent = "";
+    salvarServicoAlerta.classList.add("hidden");
+    btnSalvarServico.classList.remove("btn-salvar-pendente");
+}
+
+function editarItemServico(index) {
+    const item = itens[index];
+    if (!item) return;
+
+    const quantidade = Number(item?.quantidade);
+    const valorUnitario = Number(item?.valorUnitario);
+    const subtotal = Number(item?.total);
+    const qtd = Number.isFinite(quantidade) && quantidade > 0 ? quantidade : 1;
+    const unit = Number.isFinite(valorUnitario) && valorUnitario >= 0
+        ? valorUnitario
+        : (qtd > 0 && Number.isFinite(subtotal) ? (subtotal / qtd) : 0);
+
+    itemEmEdicaoIndex = index;
+    itemDescricao.value = item.descricao || "";
+    itemValor.value = formatarMoedaBR(unit);
+    itemQtd.value = String(qtd);
+    btnAdicionarItem.textContent = "Salvar Item";
+    itemDescricao.focus();
+}
+
+function removerItemServico(index) {
+    if (!itens[index]) return;
+    if (!confirm("Remover este item do serviço?")) return;
+
+    itens.splice(index, 1);
+    if (itemEmEdicaoIndex === index) {
+        formItem.reset();
+        itemQtd.value = 1;
+        itemEmEdicaoIndex = -1;
+        btnAdicionarItem.textContent = "Adicionar Item";
+    } else if (itemEmEdicaoIndex > index) {
+        itemEmEdicaoIndex -= 1;
+    }
+    renderItens();
+    sinalizarSalvarServico();
+}
 
 function renderItens() {
     let total = 0;
     listaItens.innerHTML = "";
 
-    itens.forEach(i => {
+    if (!itens.length) {
+        document.getElementById("itensResumo").classList.add("hidden");
+        totalServicoEl.textContent = "0,00";
+        return;
+    }
+
+    itens.forEach((i, index) => {
         const subtotal = Number(i?.total);
         const quantidade = Number(i?.quantidade);
         const valorUnitario = Number(i?.valorUnitario);
@@ -469,14 +847,26 @@ function renderItens() {
         total += Number.isFinite(subtotal) ? subtotal : 0;
         listaItens.innerHTML += `
             <div class="item-servico">
-                <span>${escapeHtml(i.descricao)} (${qtd} x R$ ${formatarMoedaBR(unit)})</span>
-                <span class="item-valor">R$ ${formatarMoedaBR(Number.isFinite(subtotal) ? subtotal : 0)}</span>
+                <span class="item-servico-info">${escapeHtml(i.descricao)} (${qtd} x R$ ${formatarMoedaBR(unit)})</span>
+                <span class="item-servico-acoes">
+                    <span class="item-valor">R$ ${formatarMoedaBR(Number.isFinite(subtotal) ? subtotal : 0)}</span>
+                    <button class="btn-item btn-item-editar" type="button" data-item-index="${index}">Editar</button>
+                    <button class="btn-item btn-item-remover" type="button" data-item-index="${index}">Remover</button>
+                </span>
             </div>
         `;
     });
 
     totalServicoEl.textContent = formatarMoedaBR(total);
     document.getElementById("itensResumo").classList.remove("hidden");
+
+    listaItens.querySelectorAll(".btn-item-editar").forEach(btn => {
+        btn.onclick = () => editarItemServico(Number(btn.dataset.itemIndex));
+    });
+
+    listaItens.querySelectorAll(".btn-item-remover").forEach(btn => {
+        btn.onclick = () => removerItemServico(Number(btn.dataset.itemIndex));
+    });
 }
 
 function getValorIntervaloSelect(servico) {
@@ -490,18 +880,28 @@ function getValorIntervaloSelect(servico) {
 
 function limparFormularioServico() {
     servicoEmEdicaoId = "";
+    itemEmEdicaoIndex = -1;
     itens.length = 0;
+    problemaRelatadoServico.value = "";
     observacoesServico.value = "";
     formaPagamento.value = "";
     clienteBusca.value = "";
     clienteSelect.value = "";
     clienteResumo.classList.add("hidden");
+    veiculoServicoBox.classList.add("hidden");
+    servicoModeloCarro.value = "";
+    servicoPlacaCarro.value = "";
+    servicoCorCarro.value = "";
+    servicoKmCarro.value = "";
     document.getElementById("itensResumo").classList.add("hidden");
     listaItens.innerHTML = "";
     totalServicoEl.textContent = "0,00";
     intervaloSelect.value = "";
     btnSalvarServico.textContent = "Salvar Serviço";
+    btnAdicionarItem.textContent = "Adicionar Item";
+    limparSinalizacaoSalvarServico();
     renderClienteOptions("");
+    renderProblemaRelatadoPro();
     if (new URLSearchParams(location.search).has("editar")) {
         history.replaceState(null, "", location.pathname);
     }
@@ -543,23 +943,36 @@ function iniciarEdicaoServico(servicoId) {
     renderClienteOptions(clienteBusca.value);
     clienteSelect.value = clienteId;
     renderResumoClienteSelecionado();
+    if (modoMecanica) {
+        servicoModeloCarro.value = servico.cliente?.modeloCarro || "";
+        servicoPlacaCarro.value = servico.cliente?.placaCarro || "";
+        servicoCorCarro.value = servico.cliente?.corCarro || "";
+        servicoKmCarro.value = formatarKm(servico.cliente?.kmCarro);
+        veiculoServicoBox.classList.remove("hidden");
+    }
 
     observacoesServico.value = servico.observacoes || "";
+    problemaRelatadoServico.value = servico.problemaRelatado || "";
     formaPagamento.value = servico.formaPagamento || "";
     intervaloSelect.value = getValorIntervaloSelect(servico);
     btnSalvarServico.textContent = "Salvar alterações";
     renderItens();
+    renderProblemaRelatadoPro();
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 /* SALVAR SERVIÇO */
 btnSalvarServico.onclick = () => {
-    if (!clienteSelect.value || itens.length === 0) return;
+    if (!clienteSelect.value) {
+        alert("Selecione um cliente antes de salvar o serviço.");
+        clienteSelect.focus();
+        return;
+    }
 
     let intervaloTipo = "meses";
 let intervaloValor = 6;
 
-// 👇 exceção explícita
+// 🔒 exceção explícita
 if (intervaloSelect.value === "nenhum") {
     intervaloTipo = "nenhum";
     intervaloValor = 0;
@@ -578,14 +991,77 @@ if (intervaloSelect.value === "nenhum") {
 }
 
     let observacoesSeguras;
+    let problemaRelatadoSeguro = "";
     try {
         observacoesSeguras = validarTextoUsuario(observacoesServico.value, "Observacoes", 500);
+        if (usuarioPodeUsarProblemaRelatado()) {
+            problemaRelatadoSeguro = validarTextoUsuario(
+                problemaRelatadoServico.value,
+                "Problema relatado",
+                500
+            );
+        }
     } catch (err) {
         alert(err.message || "Texto bloqueado por seguranca.");
         return;
     }
 
+    const podeSalvarPreAtendimento = usuarioPodeUsarProblemaRelatado() && !!problemaRelatadoSeguro;
+
+    if (itens.length === 0 && !podeSalvarPreAtendimento) {
+        alert("Adicione pelo menos um item ao serviço ou informe o problema relatado pelo cliente.");
+        if (usuarioPodeUsarProblemaRelatado()) {
+            problemaRelatadoServico.focus();
+        } else {
+            itemDescricao.focus();
+        }
+        return;
+    }
+
     const c = clientesAtivos.find(x => x.id === clienteSelect.value);
+    if (!c) return;
+
+    let modeloCarroServico = "";
+    let placaCarroServico = "";
+    let corCarroServico = "";
+    let kmCarroServico = "";
+
+    let dadosVeiculoAtualizados = null;
+
+    if (modoMecanica) {
+        try {
+            modeloCarroServico = validarTextoUsuario(servicoModeloCarro.value, "Modelo do carro", 80);
+            corCarroServico = validarTextoUsuario(servicoCorCarro.value, "Cor", 40);
+        } catch (err) {
+            alert(err.message || "Texto bloqueado por seguranca.");
+            return;
+        }
+
+        placaCarroServico = normalizarPlaca(servicoPlacaCarro.value);
+        if (!placaValida(placaCarroServico)) {
+            alert("Placa invalida. Use ABC-1234 ou ABC1D23 (Mercosul).");
+            servicoPlacaCarro.focus();
+            return;
+        }
+
+        c.modeloCarro = modeloCarroServico || "";
+        c.placaCarro = placaCarroServico || "";
+        c.corCarro = corCarroServico || "";
+        kmCarroServico = normalizarKm(servicoKmCarro.value);
+        c.kmCarro = kmCarroServico || "";
+        dadosVeiculoAtualizados = {
+            nome: c.nome,
+            telefone: c.telefone || "",
+            telefone2: c.telefone2 || "",
+            endereco: c.endereco || "",
+            documento: c.documento || "",
+            modeloCarro: c.modeloCarro,
+            placaCarro: c.placaCarro,
+            corCarro: c.corCarro,
+            kmCarro: c.kmCarro
+        };
+    }
+
     const totalGeral = itens.reduce((s, i) => {
         const subtotal = Number(i?.total);
         return s + (Number.isFinite(subtotal) ? subtotal : 0);
@@ -597,13 +1073,19 @@ if (intervaloSelect.value === "nenhum") {
         telefone2: c.telefone2 || "",
         endereco: c.endereco || "",
         documento: c.documento || "",
-        modeloCarro: modoMecanica ? (c.modeloCarro || "") : "",
-        placaCarro: modoMecanica ? (c.placaCarro || "") : "",
-        corCarro: modoMecanica ? (c.corCarro || "") : ""
+        modeloCarro: modoMecanica ? modeloCarroServico : "",
+        placaCarro: modoMecanica ? placaCarroServico : "",
+        corCarro: modoMecanica ? corCarroServico : "",
+        kmCarro: modoMecanica ? kmCarroServico : ""
     };
 
     if (servicoEmEdicaoId) {
         const data = getData();
+        const clienteCadastro = (data.clientes || []).find(cliente => cliente.id === c.id && !cliente.arquivado);
+        if (dadosVeiculoAtualizados && clienteCadastro) {
+            Object.assign(clienteCadastro, dadosVeiculoAtualizados, { id: clienteCadastro.id });
+        }
+
         const servico = (data.servicos || []).find(s => s.id === servicoEmEdicaoId);
         if (!servico || servico.status !== "pendente") {
             alert("Não foi possível editar este serviço.");
@@ -621,6 +1103,9 @@ if (intervaloSelect.value === "nenhum") {
         servico.cliente = clienteServico;
         servico.itens = itens.slice();
         servico.totalGeral = totalGeral;
+        if (usuarioPodeUsarProblemaRelatado()) {
+            servico.problemaRelatado = problemaRelatadoSeguro;
+        }
         servico.observacoes = observacoesSeguras;
         servico.formaPagamento = formaPagamento.value || "";
         servico.intervaloTipo = intervaloTipo;
@@ -634,11 +1119,20 @@ if (intervaloSelect.value === "nenhum") {
         return;
     }
 
-    const servicoSalvo = salvarServico({
+    const data = getData();
+    if (!podeAdicionarServico(data)) return;
+
+    const clienteCadastro = (data.clientes || []).find(cliente => cliente.id === c.id && !cliente.arquivado);
+    if (dadosVeiculoAtualizados && clienteCadastro) {
+        Object.assign(clienteCadastro, dadosVeiculoAtualizados, { id: clienteCadastro.id });
+    }
+
+    data.servicos.push({
         id: gerarId(),
         cliente: clienteServico,
         itens: itens.slice(),
         totalGeral,
+        problemaRelatado: usuarioPodeUsarProblemaRelatado() ? problemaRelatadoSeguro : "",
         observacoes: observacoesSeguras,
         formaPagamento: formaPagamento.value || "",
         status: "pendente",
@@ -646,7 +1140,7 @@ if (intervaloSelect.value === "nenhum") {
         intervaloValor,
         criadoEm: new Date().toISOString()
     });
-    if (!servicoSalvo) return;
+    saveData(data);
 
     limparFormularioServico();
     renderServicos();
@@ -655,33 +1149,115 @@ if (intervaloSelect.value === "nenhum") {
 /* LISTA */
 function renderServicos() {
     listaServicos.innerHTML = "";
-    const servicos = getData().servicos;
+    const data = getData();
+    const servicos = data.servicos || [];
+    const orcamentos = data.orcamentos || [];
 
     if (!servicos.length) {
         listaServicos.innerHTML = "<p>Nenhum serviço cadastrado</p>";
         return;
     }
 
-    servicos.forEach(s => {
-        const data = new Date(s.criadoEm).toLocaleDateString("pt-BR");
-        const orcamentoExistente = (getData().orcamentos || [])
-            .find(o => o.origemServicoId === s.id);
+    function getDataServicoValor(servico) {
+        const dataBase = new Date(servico.criadoEm || servico.atualizadoEm || Date.now());
+        return Number.isNaN(dataBase.getTime()) ? new Date() : dataBase;
+    }
+
+    function getChaveMes(dataServico) {
+        return `${dataServico.getFullYear()}-${String(dataServico.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function getTituloMes(dataServico) {
+        const titulo = dataServico.toLocaleDateString("pt-BR", {
+            month: "long",
+            year: "numeric"
+        });
+        return titulo.charAt(0).toLocaleUpperCase("pt-BR") + titulo.slice(1);
+    }
+
+    function getOrcamentoDoServico(servico) {
+        return orcamentos.find(o => o.origemServicoId === servico.id);
+    }
+
+    function servicoPrecisaAtencao(servico) {
+        const orcamento = getOrcamentoDoServico(servico);
+        return servico.status === "pendente" && orcamento?.status !== "aprovado";
+    }
+
+    const servicosOrdenados = servicos
+        .slice()
+        .sort((a, b) => getDataServicoValor(b) - getDataServicoValor(a));
+
+    const gruposPorMes = new Map();
+
+    servicosOrdenados.forEach(s => {
+        const dataServicoValor = getDataServicoValor(s);
+        const chaveMes = getChaveMes(dataServicoValor);
+        if (!gruposPorMes.has(chaveMes)) {
+            gruposPorMes.set(chaveMes, {
+                titulo: getTituloMes(dataServicoValor),
+                servicos: [],
+                total: 0,
+                emAberto: 0,
+                maisRecente: dataServicoValor
+            });
+        }
+
+        const grupo = gruposPorMes.get(chaveMes);
+        grupo.servicos.push(s);
+        grupo.total += Number(s.totalGeral) || 0;
+        if (servicoPrecisaAtencao(s)) grupo.emAberto += 1;
+        if (dataServicoValor > grupo.maisRecente) grupo.maisRecente = dataServicoValor;
+    });
+
+    Array.from(gruposPorMes.values())
+        .sort((a, b) => b.maisRecente - a.maisRecente)
+        .forEach(grupo => {
+            const deveAbrir = grupo.emAberto > 0;
+            const totalServicos = grupo.servicos.length;
+            const textoServicos = `${totalServicos} ${totalServicos === 1 ? "serviço" : "serviços"}`;
+            const textoAbertos = grupo.emAberto
+                ? ` • ${grupo.emAberto} ${grupo.emAberto === 1 ? "em aberto" : "em aberto"}`
+                : "";
+
+            listaServicos.innerHTML += `
+                <details class="servicos-mes" ${deveAbrir ? "open" : ""}>
+                    <summary>
+                        <span>${escapeHtml(grupo.titulo)}</span>
+                        <span class="servicos-mes-meta">
+                            ${textoServicos}${textoAbertos}<br>
+                            R$ ${formatarMoedaBR(grupo.total)}
+                        </span>
+                    </summary>
+                    <div class="servicos-mes-lista">
+                        ${grupo.servicos.map(s => {
+        const dataServico = getDataServicoValor(s).toLocaleDateString("pt-BR");
+        const orcamentoExistente = getOrcamentoDoServico(s);
         const orcamentoRecusado = orcamentoExistente?.status === "recusado";
         const podeEditar = s.status === "pendente" && orcamentoExistente?.status !== "aprovado";
+        const aguardandoAprovacao = servicoPrecisaAtencao(s);
+        const temItensServico = Array.isArray(s.itens) && s.itens.length > 0;
         const textoBotaoOrcamento = orcamentoExistente
             ? "📄 Abrir orçamento"
             : "📄 Gerar orçamento";
         const servicoIdAttr = escapeHtml(s.id);
         const orcamentoIdAttr = escapeHtml(orcamentoExistente?.id || "");
 
-        listaServicos.innerHTML += `
-            <div class="resumo-card">
+        return `
+            <div class="resumo-card ${aguardandoAprovacao ? "servico-em-aberto" : ""}">
                 <strong>${escapeHtml(s.cliente.nome)}</strong><br>
-                <small>${data}</small><br>
+                <small>${dataServico}</small><br>
                 Total: <strong>R$ ${formatarMoedaBR(s.totalGeral)}</strong><br>
 
+                ${
+                    usuarioPodeUsarProblemaRelatado() && s.problemaRelatado
+                    ? `<span class="problema-relatado"><strong>Problema:</strong> ${escapeHtml(s.problemaRelatado)}</span>`
+                    : ""
+                }
                 ${s.observacoes ? `<em>📝 ${escapeHtml(s.observacoes)}</em><br>` : ""}
                 ${s.formaPagamento ? `<em>💳 ${escapeHtml(s.formaPagamento)}</em><br>` : ""}
+                ${!temItensServico ? `<span class="servico-alerta-cadastro">Cadastro inicial: complete os itens e valores antes do orçamento</span><br>` : ""}
+                ${aguardandoAprovacao ? `<span class="servico-alerta-aprovacao">Aguardando aprovação do cliente</span><br>` : ""}
 
                 <span class="status-${s.status}">
                     ${orcamentoRecusado ? "❌ Recusado" :
@@ -690,11 +1266,15 @@ function renderServicos() {
                       "🔁 Corrigido"}
                 </span><br>
 
-                <button class="btn-orcamento btn-gerar-orcamento"
-                    data-servico-id="${servicoIdAttr}"
-                    data-orcamento-id="${orcamentoIdAttr}">
-                    ${textoBotaoOrcamento}
-                </button>
+                ${
+                    temItensServico
+                    ? `<button class="btn-orcamento btn-gerar-orcamento"
+                        data-servico-id="${servicoIdAttr}"
+                        data-orcamento-id="${orcamentoIdAttr}">
+                        ${textoBotaoOrcamento}
+                    </button>`
+                    : ""
+                }
 
                 ${
                     podeEditar
@@ -718,7 +1298,11 @@ function renderServicos() {
                 }
             </div>
         `;
-    });
+                        }).join("")}
+                    </div>
+                </details>
+            `;
+        });
 
     listaServicos.querySelectorAll(".btn-gerar-orcamento").forEach(btn => {
         btn.onclick = () => {
@@ -753,8 +1337,16 @@ function renderServicos() {
 window.addEventListener("senso-live-update", () => {
     renderClienteOptions(clienteBusca.value || "");
     renderServicos();
+    renderProblemaRelatadoPro();
 });
 
+window.addEventListener("senso-plan-ready", () => {
+    renderProblemaRelatadoPro();
+    renderServicos();
+});
+
+renderProblemaRelatadoPro();
+aplicarTextoProblemaRelatado();
 renderServicos();
 
 const servicoEditarParam = new URLSearchParams(location.search).get("editar");

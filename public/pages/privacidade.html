@@ -1,0 +1,168 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Política de Privacidade - Senso</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        :root {
+            --app-primary: #0f766e;
+            --app-button-text: #ffffff;
+        }
+        body { background: #f4f6f8; }
+        .privacy-page { max-width: 760px; }
+        .privacy-card {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 4px 10px rgba(0,0,0,.06);
+        }
+        .privacy-card h1 { font-size: 22px; margin-bottom: 8px; }
+        .privacy-card h2 { font-size: 16px; margin: 18px 0 8px; color: #111827; }
+        .privacy-card p,
+        .privacy-card li {
+            color: #374151;
+            font-size: 14px;
+            line-height: 1.55;
+        }
+        .privacy-card ul { padding-left: 18px; }
+        .privacy-meta {
+            color: #6b7280;
+            font-size: 13px;
+            margin-bottom: 14px;
+        }
+        .privacy-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+        .privacy-actions a,
+        .privacy-actions button {
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .privacy-primary {
+            background: var(--app-primary);
+            color: var(--app-button-text);
+            border: 0;
+        }
+        .privacy-secondary {
+            background: #e5e7eb;
+            color: #111827;
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="app privacy-page">
+        <div class="header">Privacidade</div>
+        <div class="content">
+            <article class="privacy-card">
+                <h1>Política de Privacidade do Senso</h1>
+                <p class="privacy-meta">Versão 1.0 - atualizada em 15/01/2025</p>
+
+                <p>
+                    Esta política explica como o Senso trata dados pessoais usados no app de gestão
+                    de clientes, serviços, orçamentos, agenda e financeiro. Ela deve ser adaptada com
+                    os dados reais do responsável pelo app antes do uso público.
+                </p>
+
+                <h2>1. Quem controla os dados</h2>
+                <p>
+                    O responsável pelo negócio que usa o Senso decide quais dados de clientes serão
+                    cadastrados e para quais finalidades. Esse responsável atua como controlador dos
+                    dados pessoais cadastrados no app.
+                </p>
+
+                <h2>2. Dados que podem ser tratados</h2>
+                <ul>
+                    <li>Dados de conta: e-mail, identificador do usuário e informações de plano.</li>
+                    <li>Dados de clientes: nome, telefone, endereço, CPF ou CNPJ, veículo, placa e cor.</li>
+                    <li>Dados operacionais: serviços, orçamentos, agenda, histórico e financeiro.</li>
+                    <li>Dados da empresa: nome, telefone, endereço, documento e logo para orçamentos.</li>
+                </ul>
+
+                <h2>3. Finalidades</h2>
+                <ul>
+                    <li>Permitir o cadastro e a organização de clientes e atendimentos.</li>
+                    <li>Gerar orçamentos, históricos, agenda de retorno e controle financeiro.</li>
+                    <li>Sincronizar os dados entre dispositivos quando o usuário está autenticado.</li>
+                    <li>Controlar acesso, plano contratado e segurança da conta.</li>
+                </ul>
+
+                <h2>4. Onde os dados ficam</h2>
+                <p>
+                    Os dados podem ficar salvos no navegador do usuário, por meio de localStorage, e
+                    também podem ser sincronizados no Firebase/Firestore quando existe login ativo.
+                    O Firebase é uma infraestrutura da Google usada como prestadora de armazenamento,
+                    autenticação e banco de dados.
+                </p>
+
+                <h2>5. Compartilhamento</h2>
+                <p>
+                    O Senso não vende dados pessoais. Dados podem ser compartilhados apenas com
+                    prestadores necessários para o funcionamento do app, como Firebase/Google, ou por
+                    obrigação legal. Quando o usuário abre WhatsApp para falar com um cliente, os dados
+                    enviados passam a seguir também as regras do WhatsApp.
+                </p>
+
+                <h2>6. Direitos dos titulares</h2>
+                <p>
+                    O titular pode solicitar acesso, correção, exclusão, portabilidade, informações
+                    sobre uso dos dados e revogação de consentimento quando aplicável. O responsável
+                    pelo negócio deve manter um canal de atendimento para esses pedidos.
+                </p>
+
+                <h2>7. Retenção e exclusão</h2>
+                <p>
+                    Os dados devem ser mantidos somente pelo tempo necessário para prestação do serviço,
+                    cumprimento de obrigações legais, defesa de direitos ou outra base legal aplicável.
+                    A exclusão ou correção dos dados pode ser solicitada pelo canal de contato informado
+                    nesta política. Após a solicitação, o responsável pelo app avaliará o pedido e poderá
+                    excluir ou corrigir os dados, conforme aplicável.
+                </p>
+
+                <h2>8. Segurança</h2>
+                <p>
+                    O app usa autenticação, regras de acesso por usuário no Firestore e validações de
+                    entrada. Ainda assim, o usuário deve proteger sua senha, manter os dispositivos
+                    seguros e evitar compartilhar acesso com terceiros.
+                </p>
+
+                <h2>9. Canal de contato</h2>
+                <p>
+                    Para pedidos de privacidade, acesso, correção ou exclusão de dados, entre em
+                    contato pelo e-mail <strong>djavansd85@gmail.com</strong> ou pelo telefone
+                    <strong>11 99284-1312</strong>.
+                </p>
+
+                <div class="privacy-actions">
+                    <button class="privacy-primary" type="button" id="btnAceitarPolitica">Li e entendi</button>
+                    <a class="privacy-secondary" href="../index.html">Voltar ao app</a>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <script>
+        const PRIVACY_VERSION = "2026-05-26-v1";
+        document.getElementById("btnAceitarPolitica").addEventListener("click", () => {
+            try {
+                localStorage.setItem("senso:privacyAcceptedVersion", PRIVACY_VERSION);
+            } catch (_err) {
+                // Se o navegador bloquear storage, apenas volta ao app.
+            }
+            window.location.href = "../index.html";
+        });
+    </script>
+</body>
+</html>

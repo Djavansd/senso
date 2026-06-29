@@ -92,6 +92,25 @@ body {
   border: 1px solid #d1d5db;
   font-size: 15px;
 }
+
+.privacy-note {
+  margin: 4px 0 14px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.privacy-note a {
+  color: var(--app-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.privacy-note a:hover,
+.privacy-note a:focus-visible {
+  text-decoration: underline;
+}
+
 .btn-archive {
   margin-top: 10px;
   background: #e5e7eb;

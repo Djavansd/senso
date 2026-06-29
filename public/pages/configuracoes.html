@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Configuracoes</title>
+<title>Configurações</title>
 <link rel="stylesheet" href="../css/style.css">
 <style>
 body { background:#f4f6f8; }
@@ -73,46 +73,55 @@ textarea {
     background:#d1d5db !important;
     color:#111827;
 }
+.privacy-tools {
+    border-top:1px solid #e5e7eb;
+    margin-top:16px;
+    padding-top:14px;
+}
+.danger {
+    background:#fee2e2 !important;
+    color:#991b1b !important;
+}
 </style>
 </head>
 <body>
 
 <div class="app">
-    <div class="header">Configuracoes</div>
+    <div class="header">Configurações</div>
     <div class="content">
         <div class="card">
             <div class="group">
-                <label for="businessType">Tipo de negocio</label>
+                <label for="businessType">Tipo de negócio</label>
                 <select id="businessType">
-                    <option value="mecanica">Mecanico</option>
-                    <option value="prestador">Prestador de servico</option>
+                    <option value="mecanica">Mecânico</option>
+                    <option value="prestador">Prestador de serviço</option>
                 </select>
-                <div class="muted">Define campos de cliente e orcamento do app.</div>
+                <div class="muted">Define campos de cliente e orçamento do app.</div>
             </div>
 
             <div class="group">
                 <label for="primaryColor">Cor principal do app</label>
                 <input id="primaryColor" type="color" value="#0a7cff">
-                <div class="muted">Essa cor sera aplicada nos cabecalhos e botoes.</div>
+                <div class="muted">Essa cor será aplicada nos cabeçalhos e botões.</div>
             </div>
 
             <div class="group">
-                <label for="buttonTextColor">Cor do texto dos botoes principais</label>
+                <label for="buttonTextColor">Cor do texto dos botões principais</label>
                 <input id="buttonTextColor" type="color" value="#ffffff">
-                <div class="muted">Ex.: botoes azuis, verdes e vermelhos.</div>
+                <div class="muted">Ex.: botões azuis, verdes e vermelhos.</div>
             </div>
 
             <div class="group">
-                <label for="buttonSecondaryTextColor">Cor do texto dos botoes secundarios</label>
+                <label for="buttonSecondaryTextColor">Cor do texto dos botões secundários</label>
                 <input id="buttonSecondaryTextColor" type="color" value="#111827">
-                <div class="muted">Ex.: botoes cinza como Voltar/Recusar.</div>
+                <div class="muted">Ex.: botões cinza como Voltar/Recusar.</div>
             </div>
 
             <div class="group">
-                <label for="logoInput">Logo do orcamento</label>
+                <label for="logoInput">Logo do orçamento</label>
                 <input id="logoInput" type="file" accept="image/*">
                 <div class="logo-preview" id="logoPreview">Nenhuma logo selecionada</div>
-                <div class="muted">A logo aparece no topo do cabecalho do orcamento.</div>
+                <div class="muted">A logo aparece no topo do cabeçalho do orçamento.</div>
             </div>
 
             <div class="group">
@@ -135,8 +144,8 @@ textarea {
             </div>
 
             <div class="group">
-                <label for="companyAddress">Endereco</label>
-                <input id="companyAddress" type="text" placeholder="Cidade/Endereco">
+                <label for="companyAddress">Endereço</label>
+                <input id="companyAddress" type="text" placeholder="Cidade/Endereço">
             </div>
 
             <div class="group">
@@ -150,9 +159,9 @@ textarea {
             </div>
 
             <div class="group">
-                <label for="headerServices">Servicos no cabecalho do orcamento</label>
-                <textarea id="headerServices" maxlength="120" placeholder="Ex: Motor, cambio, freios, suspensao, troca de oleo"></textarea>
-                <div class="muted"><span id="headerServicesCount">0</span>/120 caracteres. Use uma lista curta para nao quebrar o PDF.</div>
+                <label for="headerServices">Serviços no cabeçalho do orçamento</label>
+                <textarea id="headerServices" maxlength="120" placeholder="Ex: Motor, câmbio, freios, suspensão, troca de óleo"></textarea>
+                <div class="muted"><span id="headerServicesCount">0</span>/120 caracteres. Use uma lista curta para não quebrar o PDF.</div>
             </div>
 
             <div class="actions">
@@ -160,6 +169,14 @@ textarea {
                 <button id="btnRemoverLogo" class="btn-sec" type="button">Remover logo</button>
                 <button class="btn-sec" type="button" onclick="history.back()">Voltar</button>
                 <button id="btnSair" class="btn-sec" type="button">Sair</button>
+            </div>
+
+            <div class="privacy-tools">
+                <div class="group">
+                    <label>Privacidade e dados</label>
+                    <div class="muted">Consulte como os dados do app são tratados.</div>
+                </div>
+                <a class="btn-primary" href="privacidade.html">Ver política de privacidade</a>
             </div>
         </div>
     </div>
@@ -169,8 +186,8 @@ textarea {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
-<script src="../js/auth-guard.js"></script>
-<script src="../js/core/plans.js"></script>
+<script src="../js/auth-guard.js?v=20260607-gratis"></script>
+<script src="../js/core/plans.js?v=20260607-gratis"></script>
 <script src="../js/core/profile.js"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
@@ -326,6 +343,11 @@ businessTypeInput.addEventListener("change", () => {
     carregarConfiguracoesDoPerfil(getPerfilSelecionado());
 });
 
+window.addEventListener("senso-live-update", event => {
+    if (event?.detail?.source !== "cloud-settings-hydrate" && event?.detail?.source !== "auth-migrate") return;
+    carregarConfiguracoesDoPerfil(getPerfilSelecionado());
+});
+
 logoInput.addEventListener("change", () => {
     const file = logoInput.files && logoInput.files[0];
     if (!file) return;
@@ -374,16 +396,16 @@ btnSalvar.addEventListener("click", () => {
     }
 
     if (profileChanged) {
-        alert("Configuracoes salvas. O app sera recarregado para aplicar o tipo de negocio.");
+        alert("Configurações salvas. O app será recarregado para aplicar o tipo de negócio.");
         window.location.replace("../index.html");
         return;
     }
 
-    alert("Configuracoes salvas.");
+    alert("Configurações salvas.");
 });
 
 btnSair.addEventListener("click", async () => {
-    const confirmar = confirm("Deseja realmente sair da sua conta? Voce sera redirecionado para a tela de login.");
+    const confirmar = confirm("Deseja realmente sair da sua conta? Você será redirecionado para a tela de login.");
     if (!confirmar) return;
 
     try {

@@ -1,0 +1,182 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Senso Pro Desktop</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/desktop.css" />
+    <link rel="icon" type="image/png" href="assets/icons/icon-192.png?v=20260609">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png?v=20260609">
+    <meta name="theme-color" content="#0f766e">
+</head>
+<body class="desktop-body">
+    <div class="desktop-shell">
+        <aside class="desktop-sidebar">
+            <div class="desktop-brand">
+                <img class="desktop-brand-logo" src="assets/logo-senso-sidebar.png" alt="Senso">
+                <span>Painel para PC</span>
+            </div>
+
+            <nav class="desktop-nav" aria-label="Navegação principal">
+                <a class="active" href="desktop.html">Painel</a>
+                <a href="pages/clientes.html">Clientes</a>
+                <a href="pages/servico.html">Serviços</a>
+                <a href="pages/orcamentos.html">Orçamentos</a>
+                <a href="pages/agenda.html">Agenda</a>
+                <a href="pages/financeiro.html">Financeiro</a>
+                <a href="pages/resumo.html">Resumo mensal</a>
+                <a href="pages/assistente-ajuda.html">Assistente de ajuda</a>
+                <a href="pages/configuracoes.html">Configurações</a>
+            </nav>
+
+            <div class="desktop-sidebar-footer">
+                <a href="index.html">Abrir modo mobile</a>
+                <button id="desktopSignOut" type="button">Sair</button>
+            </div>
+        </aside>
+
+        <main class="desktop-main">
+            <header class="desktop-topbar">
+                <div>
+                    <span class="desktop-eyebrow">Área Pro</span>
+                    <h1>Operação do dia</h1>
+                </div>
+                <div class="desktop-user">
+                    <span id="desktopPlanBadge">Carregando plano...</span>
+                    <strong id="desktopUserName">Usuário</strong>
+                </div>
+            </header>
+
+            <section id="desktopAccessGate" class="desktop-access hidden" aria-live="polite">
+                <h2>Modo PC disponível no Plano Pro</h2>
+                <p>Entre com uma conta Pro ativa para usar o painel de escritório no computador.</p>
+                <div class="desktop-access-actions">
+                    <a href="pages/pagamento-app.html">Ver planos</a>
+                    <a class="secondary" href="index.html">Voltar ao app</a>
+                </div>
+            </section>
+
+            <section id="desktopDashboard" class="desktop-dashboard hidden" aria-live="polite">
+                <div class="desktop-kpis">
+                    <article>
+                        <span>Clientes ativos</span>
+                        <strong id="kpiClientes">0</strong>
+                    </article>
+                    <article>
+                        <span>Serviços pendentes</span>
+                        <strong id="kpiServicosPendentes">0</strong>
+                    </article>
+                    <article>
+                        <span>Orçamentos enviados</span>
+                        <strong id="kpiOrcamentosEnviados">0</strong>
+                    </article>
+                    <article>
+                        <span>Saldo do mês</span>
+                        <strong id="kpiSaldoMes">R$ 0,00</strong>
+                    </article>
+                </div>
+
+                <section id="servicosPendentesAlert" class="desktop-panel desktop-service-alert hidden">
+                    <div class="desktop-panel-header">
+                        <div>
+                            <h2>Serviços pendentes para finalizar</h2>
+                            <p>Serviços abertos que ainda precisam virar orçamento, aprovação ou execução.</p>
+                        </div>
+                        <span id="servicosPendentesAlertCount" class="desktop-count">0</span>
+                    </div>
+                    <div id="servicosPendentesAlertList" class="desktop-list"></div>
+                </section>
+
+                <div class="desktop-grid">
+                    <section class="desktop-panel desktop-attention-panel">
+                        <div class="desktop-panel-header">
+                            <div>
+                                <h2>Pré-atendimentos para completar</h2>
+                                <p>Serviços com problema relatado, ainda sem itens e valores.</p>
+                            </div>
+                            <span id="preAtendimentosCount" class="desktop-count">0</span>
+                        </div>
+                        <div id="preAtendimentosList" class="desktop-list"></div>
+                    </section>
+
+                    <section class="desktop-panel desktop-panel-wide">
+                        <div class="desktop-panel-header">
+                            <div>
+                                <h2>Agenda</h2>
+                                <p>Retornos atrasados e de hoje. Próximos aparecem resumidos.</p>
+                            </div>
+                            <a href="pages/agenda.html">Abrir agenda</a>
+                        </div>
+                        <div class="desktop-agenda-summary">
+                            <div><strong id="agendaAtrasadas">0</strong><span>Atrasadas</span></div>
+                            <div><strong id="agendaHoje">0</strong><span>Hoje</span></div>
+                            <div><strong id="agendaProximas">0</strong><span>Próximos 7 dias</span></div>
+                        </div>
+                        <div id="agendaList" class="desktop-list"></div>
+                    </section>
+
+                    <section class="desktop-panel">
+                        <div class="desktop-panel-header">
+                            <div>
+                                <h2>Ações rápidas</h2>
+                                <p>Atalhos para a rotina do escritório.</p>
+                            </div>
+                        </div>
+                        <div class="desktop-actions">
+                            <a href="pages/novo-cliente.html">Novo cliente</a>
+                            <a href="pages/servico.html">Novo serviço</a>
+                            <a href="pages/orcamentos.html">Ver orçamentos</a>
+                            <a href="pages/financeiro.html">Lançar financeiro</a>
+                        </div>
+                    </section>
+
+                    <section class="desktop-panel">
+                        <div class="desktop-panel-header">
+                            <div>
+                                <h2>Clientes recentes</h2>
+                                <p>Últimos cadastros ativos.</p>
+                            </div>
+                            <a href="pages/clientes.html">Ver todos</a>
+                        </div>
+                        <div id="clientesRecentes" class="desktop-list"></div>
+                    </section>
+
+                    <section class="desktop-panel">
+                        <div class="desktop-panel-header">
+                            <div>
+                                <h2 id="servicosPanelTitle">Serviços em atendimento</h2>
+                                <p id="servicosPanelSubtitle">Ficam aqui até o serviço ser finalizado.</p>
+                            </div>
+                            <a href="pages/servico.html">Ver serviços</a>
+                        </div>
+                        <div id="servicosRecentes" class="desktop-list"></div>
+                    </section>
+
+                    <section class="desktop-panel">
+                        <div class="desktop-panel-header">
+                            <div>
+                                <h2>Orçamentos do mês</h2>
+                                <p>Somente movimentações atuais.</p>
+                            </div>
+                            <a href="pages/orcamentos.html">Ver todos</a>
+                        </div>
+                        <div id="orcamentosRecentes" class="desktop-list"></div>
+                    </section>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth-guard.js?v=20260607-gratis"></script>
+    <script src="js/core/plans.js?v=20260607-gratis"></script>
+    <script src="js/core/profile.js"></script>
+    <script src="js/domains/mecanica/domain.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/desktop.js"></script>
+</body>
+</html>

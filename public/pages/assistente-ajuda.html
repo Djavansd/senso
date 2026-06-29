@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente de ajuda | Senso</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/assistente-senso.css">
+    <link rel="stylesheet" href="../css/assistente-ajuda.css">
+    <link rel="icon" type="image/png" href="../assets/icons/icon-192.png?v=20260609">
+    <meta name="theme-color" content="#0f9d58">
+</head>
+<body class="ajuda-body">
+    <main class="ajuda-page">
+        <header class="ajuda-topbar">
+            <h1>Assistente de ajuda</h1>
+            <a class="ajuda-voltar" href="../index.html">← Voltar ao início</a>
+        </header>
+
+        <section class="ajuda-hero" aria-labelledby="ajudaTitulo">
+            <img id="ajudaMascoteStatus" src="../assets/assistente-senso/ajuda-instrucoes.png" alt="Mascote do Senso segurando instruções">
+            <div>
+                <span id="ajudaSelo" class="ajuda-selo">Ajuda ativada</span>
+                <h2 id="ajudaTitulo">Aprenda o Senso no seu ritmo</h2>
+                <p id="ajudaDescricao">O mascote explica cada área enquanto você usa o app. Quando terminar o aprendizado, ele se desativa automaticamente.</p>
+
+                <div class="ajuda-switch-row">
+                    <div>
+                        <strong id="ajudaSwitchTitulo">Assistente ativo</strong>
+                        <small id="ajudaSwitchDescricao">As orientações aparecerão durante o uso.</small>
+                    </div>
+                    <label class="ajuda-switch">
+                        <input id="ajudaAtiva" type="checkbox" aria-label="Ativar ou desativar o assistente de ajuda">
+                        <span aria-hidden="true"></span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <div class="ajuda-grid">
+            <section class="ajuda-card" aria-labelledby="progressoTitulo">
+                <h2 id="progressoTitulo">Seu aprendizado</h2>
+                <p>Abra as áreas abaixo. O mascote explicará o essencial de cada uma.</p>
+
+                <div class="ajuda-progresso-topo">
+                    <span id="ajudaProgressoTexto">0 de 7 áreas aprendidas</span>
+                    <span id="ajudaProgressoPercentual">0%</span>
+                </div>
+                <div class="ajuda-progresso-trilho" role="progressbar" aria-label="Progresso do aprendizado" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="ajudaProgressoBarra" class="ajuda-progresso-barra"></div>
+                </div>
+
+                <div id="ajudaLicoes" class="ajuda-licoes"></div>
+
+                <div class="ajuda-acoes">
+                    <a id="ajudaComecar" class="ajuda-botao" href="../index.html">Começar orientação</a>
+                    <button id="ajudaReiniciar" class="ajuda-botao secundario" type="button">Reiniciar aprendizado</button>
+                </div>
+            </section>
+
+            <aside class="ajuda-card ajuda-como-funciona">
+                <img src="../assets/assistente-senso/ajuda-apontando.png" alt="Mascote do Senso apontando">
+                <h2>Como funciona</h2>
+                <div class="ajuda-passos">
+                    <div class="ajuda-passo"><span>1</span><div>Entre em uma área do aplicativo.</div></div>
+                    <div class="ajuda-passo"><span>2</span><div>Leia a orientação curta do mascote.</div></div>
+                    <div class="ajuda-passo"><span>3</span><div>Toque em <strong>Entendi esta parte</strong>.</div></div>
+                    <div class="ajuda-passo"><span>4</span><div>Ao concluir todas as áreas, a ajuda fica em silêncio.</div></div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/auth-guard.js?v=20260607-gratis"></script>
+    <script src="../js/assistente-senso.js"></script>
+    <script src="../js/assistente-ajuda.js"></script>
+    <script>
+        (function () {
+            "use strict";
+
+            const inputAtivo = document.getElementById("ajudaAtiva");
+            const selo = document.getElementById("ajudaSelo");
+            const mascote = document.getElementById("ajudaMascoteStatus");
+            const switchTitulo = document.getElementById("ajudaSwitchTitulo");
+            const switchDescricao = document.getElementById("ajudaSwitchDescricao");
+            const progressoTexto = document.getElementById("ajudaProgressoTexto");
+            const progressoPercentual = document.getElementById("ajudaProgressoPercentual");
+            const progressoTrilho = document.querySelector(".ajuda-progresso-trilho");
+            const progressoBarra = document.getElementById("ajudaProgressoBarra");
+            const lista = document.getElementById("ajudaLicoes");
+            const botaoComecar = document.getElementById("ajudaComecar");
+            const botaoReiniciar = document.getElementById("ajudaReiniciar");
+
+            function caminhoRelativo(href) {
+                return href === "/index.html" ? "../index.html" : `..${href}`;
+            }
+
+            function renderizar() {
+                const estado = window.SensoAjuda.lerEstado();
+                const total = window.SensoAjuda.licoes.length;
+                const concluidas = estado.concluidas.length;
+                const percentual = Math.round((concluidas / total) * 100);
+
+                inputAtivo.checked = estado.ativo;
+                selo.textContent = estado.ativo ? "Ajuda ativada" : "Ajuda desativada";
+                switchTitulo.textContent = estado.ativo ? "Assistente ativo" : "Assistente em silêncio";
+                switchDescricao.textContent = estado.ativo
+                    ? "As orientações aparecerão durante o uso."
+                    : "Você pode reativar quando quiser.";
+                mascote.src = estado.ativo
+                    ? window.SensoAjuda.imagens.instrucoes
+                    : window.SensoAjuda.imagens.desativada;
+                mascote.alt = estado.ativo
+                    ? "Mascote do Senso segurando instruções"
+                    : "Mascote do Senso informando que a ajuda está desativada";
+
+                progressoTexto.textContent = `${concluidas} de ${total} áreas aprendidas`;
+                progressoPercentual.textContent = `${percentual}%`;
+                progressoBarra.style.width = `${percentual}%`;
+                progressoTrilho.setAttribute("aria-valuenow", String(percentual));
+
+                lista.innerHTML = "";
+                window.SensoAjuda.licoes.forEach((licao, indice) => {
+                    const concluida = estado.concluidas.includes(licao.id);
+                    const link = document.createElement("a");
+                    link.className = `ajuda-licao${concluida ? " concluida" : ""}`;
+                    link.href = caminhoRelativo(licao.href);
+                    link.innerHTML = `
+                        <span class="ajuda-licao-icone" aria-hidden="true">${concluida ? "✓" : indice + 1}</span>
+                        <strong>${licao.nome}</strong>
+                        <small>${concluida ? "Aprendido" : "Ver ajuda"}</small>
+                    `;
+                    lista.appendChild(link);
+                });
+
+                const primeiraPendente = window.SensoAjuda.licoes.find(licao => !estado.concluidas.includes(licao.id));
+                botaoComecar.href = caminhoRelativo(primeiraPendente?.href || "/index.html");
+                botaoComecar.textContent = concluidas ? "Continuar orientação" : "Começar orientação";
+            }
+
+            inputAtivo.addEventListener("change", () => {
+                window.SensoAjuda.definirAtivo(inputAtivo.checked);
+                renderizar();
+            });
+
+            botaoReiniciar.addEventListener("click", () => {
+                window.SensoAjuda.reiniciar();
+                renderizar();
+            });
+
+            window.addEventListener("senso-ajuda-alterada", renderizar);
+            window.addEventListener("senso-auth-ready", renderizar);
+            renderizar();
+        })();
+    </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -6,6 +6,8 @@
   <title>Clientes</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/assistente-senso.css" />
+  <link rel="stylesheet" href="../css/assistente-ajuda.css" />
 
   <style>
     body {
@@ -303,6 +305,38 @@
       transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
     }
 
+    .veiculo-edicao {
+      display: grid;
+      gap: 8px;
+      margin: 10px 0 8px;
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid rgba(255, 255, 255, 0.68);
+    }
+
+    .veiculo-edicao.hidden {
+      display: none;
+    }
+
+    .veiculo-edicao label {
+      font-size: 12px;
+      color: #334155;
+      font-weight: 700;
+    }
+
+    .veiculo-edicao input {
+      width: 100%;
+      box-sizing: border-box;
+      margin: 0;
+    }
+
+    .veiculo-edicao-acoes {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .btn-primary:hover,
     .btn-primary:focus-visible,
     .btn-whatsapp:hover,
@@ -362,11 +396,13 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="../js/firebase-config.js"></script>
-  <script src="../js/auth-guard.js"></script>
-  <script src="../js/core/plans.js"></script>
+  <script src="../js/auth-guard.js?v=20260607-gratis"></script>
+  <script src="../js/core/plans.js?v=20260607-gratis"></script>
   <script src="../js/core/profile.js"></script>
   <script src="../js/domains/mecanica/domain.js"></script>
   <script src="../js/app.js"></script>
+  <script src="../js/assistente-senso.js"></script>
+  <script src="../js/assistente-ajuda.js"></script>
 
   <script>
     const lista = document.getElementById("lista");
@@ -407,6 +443,37 @@
       return String(placa || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
     }
 
+    function normalizarPlaca(value) {
+      const raw = String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (!raw) return "";
+
+      if (/^[A-Z]{3}[0-9]{4}$/.test(raw)) {
+        return `${raw.slice(0, 3)}-${raw.slice(3)}`;
+      }
+
+      if (/^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(raw)) {
+        return raw;
+      }
+
+      return raw;
+    }
+
+    function placaValida(value) {
+      if (!value) return true;
+      return /^[A-Z]{3}-[0-9]{4}$/.test(value) || /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(value);
+    }
+
+    function normalizarKm(value) {
+      const digitos = String(value || "").replace(/\D/g, "");
+      if (!digitos) return "";
+      return String(Number(digitos));
+    }
+
+    function formatarKm(value) {
+      const km = normalizarKm(value);
+      return km ? Number(km).toLocaleString("pt-BR") : "";
+    }
+
     function dataServicoTimestamp(servico) {
       const data = new Date(servico?.executadoEm || servico?.criadoEm || 0);
       const tempo = data.getTime();
@@ -427,29 +494,53 @@
         : [];
     }
 
-    function buscarHistoricoCliente(cliente) {
+    function chaveHistoricoCliente(cliente) {
       const clienteId = String(cliente?.id || "");
-      const clienteNome = String(cliente?.nome || "").trim().toLocaleLowerCase("pt-BR");
-      const placaCliente = normalizarPlacaHistorico(cliente?.placaCarro);
+      if (modoMecanica) {
+        const placa = normalizarPlacaHistorico(cliente?.placaCarro);
+        return clienteId && placa ? `${clienteId}|${placa}` : "";
+      }
 
-      return (getData().servicos || [])
-        .filter(servico => {
-          if (servico?.status !== "executado") return false;
+      return clienteId || `nome:${String(cliente?.nome || "").trim().toLocaleLowerCase("pt-BR")}`;
+    }
 
-          const idServico = String(servico?.cliente?.id || servico?.clienteId || "");
-          if (clienteId && idServico === clienteId) return true;
+    function chaveHistoricoServico(servico) {
+      const clienteId = String(servico?.cliente?.id || servico?.clienteId || "");
+      if (modoMecanica) {
+        const placa = normalizarPlacaHistorico(servico?.placaCarro || servico?.cliente?.placaCarro);
+        return clienteId && placa ? `${clienteId}|${placa}` : "";
+      }
 
-          if (modoMecanica && placaCliente) {
-            const placaServico = normalizarPlacaHistorico(
-              servico?.placaCarro || servico?.cliente?.placaCarro
-            );
-            if (placaServico === placaCliente) return true;
-          }
+      return clienteId || `nome:${String(servico?.cliente?.nome || "").trim().toLocaleLowerCase("pt-BR")}`;
+    }
 
-          const nomeServico = String(servico?.cliente?.nome || "").trim().toLocaleLowerCase("pt-BR");
-          return !!clienteNome && nomeServico === clienteNome;
-        })
-        .sort((a, b) => dataServicoTimestamp(b) - dataServicoTimestamp(a));
+    function criarIndiceHistorico(dataRef) {
+      const data = dataRef || getData();
+      const indice = new Map();
+
+      (data.servicos || []).forEach(servico => {
+        if (servico?.status !== "executado") return;
+
+        const chave = chaveHistoricoServico(servico);
+        if (!chave) return;
+
+        if (!indice.has(chave)) indice.set(chave, []);
+        indice.get(chave).push(servico);
+      });
+
+      indice.forEach(historico => {
+        historico.sort((a, b) => dataServicoTimestamp(b) - dataServicoTimestamp(a));
+      });
+
+      return indice;
+    }
+
+    function buscarHistoricoCliente(cliente, dataRef, indiceHistorico) {
+      const chave = chaveHistoricoCliente(cliente);
+      if (!chave) return [];
+
+      const indice = indiceHistorico || criarIndiceHistorico(dataRef);
+      return indice.get(chave) || [];
     }
 
     function obterUltimoServico(historico) {
@@ -482,8 +573,8 @@
       return `${cliente?.nome || "Cliente"} - ${contador}`;
     }
 
-    function renderizarCardUltimoServico(cliente) {
-      const historico = buscarHistoricoCliente(cliente);
+    function renderizarCardUltimoServico(cliente, dataRef, indiceHistorico) {
+      const historico = buscarHistoricoCliente(cliente, dataRef, indiceHistorico);
       const ultimoServico = obterUltimoServico(historico);
       const contador = montarTextoContadorHistorico(historico.length);
       const tituloCard = obterTituloUltimoServico();
@@ -525,8 +616,8 @@
       `;
     }
 
-    function renderizarHistoricoCliente(cliente) {
-      const historico = buscarHistoricoCliente(cliente);
+    function renderizarHistoricoCliente(cliente, dataRef) {
+      const historico = buscarHistoricoCliente(cliente, dataRef, criarIndiceHistorico(dataRef));
       const modalExistente = document.getElementById("historicoClienteModal");
       if (modalExistente) modalExistente.remove();
 
@@ -570,7 +661,11 @@
     }
 
     function renderClientes() {
-      const clientes = listarClientesAtivos();
+      const data = getData();
+      const clientes = (data.clientes || []).filter(c => !c.arquivado);
+      const indiceHistorico = criarIndiceHistorico(data);
+      const settings = getAppSettings();
+      const companyName = String(settings?.companyName || "").trim();
       lista.innerHTML = "";
 
       if (clientes.length === 0) {
@@ -582,8 +677,7 @@
         const card = document.createElement("div");
         card.className = "cliente-card";
         const telefonesCliente = listarTelefonesCliente(c);
-        const telefoneWhats = normalizarTelefoneWhats(c.telefone);
-        const companyName = String(getAppSettings()?.companyName || "").trim();
+        const telefoneWhats = normalizarTelefoneWhats(c.telefone) || normalizarTelefoneWhats(c.telefone2);
         const remetente = companyName || (modoMecanica ? "oficina" : "empresa");
         const mensagemWhats = modoMecanica
           ? `Ola ${c.nome || ""}, aqui e da ${remetente}. Podemos falar sobre seu veiculo?`
@@ -593,9 +687,10 @@
             Modelo: ${escapeHtml(c.modeloCarro || "Modelo nao informado")}<br>
             Placa: ${escapeHtml(c.placaCarro || "Placa nao informada")}<br>
             Cor: ${escapeHtml(c.corCarro || "Cor nao informada")}<br>
+            KM: ${escapeHtml(formatarKm(c.kmCarro) || "KM nao informado")}<br>
           `
           : "";
-        const ultimoServicoHtml = renderizarCardUltimoServico(c);
+        const ultimoServicoHtml = renderizarCardUltimoServico(c, data, indiceHistorico);
 
         card.innerHTML = `
           <div class="cliente-resumo">
@@ -613,18 +708,47 @@
             Endereco: ${escapeHtml(c.endereco || "Endereco nao informado")}<br>
             Documento: ${escapeHtml(formatarDocumentoBR(c.documento))}<br>
             ${detalhesVeiculo}
+            ${
+              modoMecanica
+                ? `
+                  <div class="veiculo-edicao hidden">
+                    <label>Modelo do carro</label>
+                    <input class="edit-modelo-carro" value="${escapeHtml(c.modeloCarro || "")}" placeholder="Opcional" maxlength="80" />
+                    <label>Placa</label>
+                    <input class="edit-placa-carro" value="${escapeHtml(c.placaCarro || "")}" placeholder="Opcional" maxlength="8" />
+                    <label>Cor</label>
+                    <input class="edit-cor-carro" value="${escapeHtml(c.corCarro || "")}" placeholder="Opcional" maxlength="40" />
+                    <label>KM</label>
+                    <input class="edit-km-carro" type="text" inputmode="numeric" value="${escapeHtml(formatarKm(c.kmCarro))}" placeholder="Opcional" />
+                    <div class="veiculo-edicao-acoes">
+                      <button class="btn-editar btn-salvar-veiculo" type="button">Salvar veículo</button>
+                      <button class="btn-arquivar btn-cancelar-veiculo" type="button">Cancelar</button>
+                    </div>
+                  </div>
+                `
+                : ""
+            }
             ${ultimoServicoHtml}
-            <button class="btn-editar">Editar</button>
-            <button class="btn-arquivar">Arquivar</button>
+            <button class="btn-editar btn-editar-cliente">Editar</button>
+            ${modoMecanica ? `<button class="btn-editar btn-editar-veiculo" type="button">Editar veículo</button>` : ""}
+            <button class="btn-arquivar btn-arquivar-cliente">Arquivar</button>
           </div>
         `;
 
         const btnDetalhes = card.querySelector(".btn-detalhes");
         const btnWhats = card.querySelector(".btn-whatsapp");
         const detalhes = card.querySelector(".cliente-detalhes");
-        const btnEditar = card.querySelector(".btn-editar");
-        const btnArquivar = card.querySelector(".btn-arquivar");
+        const btnEditar = card.querySelector(".btn-editar-cliente");
+        const btnArquivar = card.querySelector(".btn-arquivar-cliente");
         const btnHistorico = card.querySelector(".btn-historico");
+        const formVeiculo = card.querySelector(".veiculo-edicao");
+        const btnEditarVeiculo = card.querySelector(".btn-editar-veiculo");
+        const btnSalvarVeiculo = card.querySelector(".btn-salvar-veiculo");
+        const btnCancelarVeiculo = card.querySelector(".btn-cancelar-veiculo");
+        const inputModeloCarro = card.querySelector(".edit-modelo-carro");
+        const inputPlacaCarro = card.querySelector(".edit-placa-carro");
+        const inputCorCarro = card.querySelector(".edit-cor-carro");
+        const inputKmCarro = card.querySelector(".edit-km-carro");
 
         btnDetalhes.onclick = () => {
           detalhes.classList.toggle("hidden");
@@ -642,18 +766,85 @@
           location.href = "novo-cliente.html?editar=" + encodeURIComponent(c.id);
         };
 
+        if (btnEditarVeiculo && formVeiculo) {
+          btnEditarVeiculo.onclick = () => {
+            formVeiculo.classList.remove("hidden");
+            btnEditarVeiculo.classList.add("hidden");
+            inputModeloCarro.focus();
+          };
+        }
+
+        if (inputPlacaCarro) {
+          inputPlacaCarro.addEventListener("input", () => {
+            inputPlacaCarro.value = normalizarPlaca(inputPlacaCarro.value);
+          });
+        }
+
+        if (inputKmCarro) {
+          inputKmCarro.addEventListener("input", () => {
+            inputKmCarro.value = formatarKm(inputKmCarro.value);
+          });
+        }
+
+        if (btnCancelarVeiculo && formVeiculo && btnEditarVeiculo) {
+          btnCancelarVeiculo.onclick = () => {
+            inputModeloCarro.value = c.modeloCarro || "";
+            inputPlacaCarro.value = c.placaCarro || "";
+            inputCorCarro.value = c.corCarro || "";
+            inputKmCarro.value = formatarKm(c.kmCarro);
+            formVeiculo.classList.add("hidden");
+            btnEditarVeiculo.classList.remove("hidden");
+          };
+        }
+
+        if (btnSalvarVeiculo) {
+          btnSalvarVeiculo.onclick = () => {
+            let modeloSeguro;
+            let corSegura;
+            try {
+              modeloSeguro = validarTextoUsuario(inputModeloCarro.value, "Modelo do carro", 80);
+              corSegura = validarTextoUsuario(inputCorCarro.value, "Cor", 40);
+            } catch (err) {
+              alert(err.message || "Texto bloqueado por seguranca.");
+              return;
+            }
+
+            const placaNormalizada = normalizarPlaca(inputPlacaCarro.value);
+            if (!placaValida(placaNormalizada)) {
+              alert("Placa invalida. Use ABC-1234 ou ABC1D23 (Mercosul).");
+              inputPlacaCarro.focus();
+              return;
+            }
+
+            const salvo = atualizarCliente(c.id, {
+              nome: c.nome || "",
+              telefone: c.telefone || "",
+              telefone2: c.telefone2 || "",
+              endereco: c.endereco || "",
+              documento: c.documento || "",
+              modeloCarro: modeloSeguro || "",
+              placaCarro: placaNormalizada || "",
+              corCarro: corSegura || "",
+              kmCarro: normalizarKm(inputKmCarro.value)
+            });
+
+            if (!salvo) return;
+            renderClientes();
+          };
+        }
+
         btnWhats.onclick = () => {
           if (!telefoneWhats) {
             alert("Cliente sem telefone valido para WhatsApp.");
             return;
           }
-          const url = `https://wa.me/${telefoneWhats}?text=${encodeURIComponent(mensagemWhats)}`;
-          window.open(url, "_blank");
+          const url = `https://api.whatsapp.com/send?phone=${telefoneWhats}&text=${encodeURIComponent(mensagemWhats)}`;
+          location.href = url;
         };
 
         if (btnHistorico) {
           btnHistorico.onclick = () => {
-            renderizarHistoricoCliente(c);
+            renderizarHistoricoCliente(c, getData());
           };
         }
 

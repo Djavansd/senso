@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -6,6 +6,8 @@
 <title>Orçamento</title>
 
 <link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/assistente-senso.css">
+<link rel="stylesheet" href="../css/assistente-ajuda.css">
 
 <style>
 body { background:#eee; }
@@ -335,11 +337,13 @@ table tr {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
-<script src="../js/auth-guard.js"></script>
-<script src="../js/core/plans.js"></script>
+<script src="../js/auth-guard.js?v=20260607-gratis"></script>
+<script src="../js/core/plans.js?v=20260607-gratis"></script>
 <script src="../js/core/profile.js"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
+<script src="../js/assistente-senso.js"></script>
+<script src="../js/assistente-ajuda.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
@@ -352,6 +356,11 @@ const clienteDados = {
     ...(orc?.cliente || {}),
     ...(clienteCadastro || {})
 };
+["modeloCarro", "placaCarro", "corCarro"].forEach(campo => {
+    if (orc?.cliente && Object.prototype.hasOwnProperty.call(orc.cliente, campo)) {
+        clienteDados[campo] = orc.cliente[campo] || "";
+    }
+});
 const modoMecanica = (
     window.SensoProfile &&
     typeof window.SensoProfile.getActiveProfile === "function" &&
@@ -359,6 +368,13 @@ const modoMecanica = (
 );
 const settingsOrcamento = getAppSettings();
 const servicosCabecalhoOrcamento = String(settingsOrcamento.headerServices || "").trim().slice(0, 120);
+
+window.addEventListener("senso-live-update", event => {
+    if (event?.detail?.source !== "cloud-settings-hydrate" && event?.detail?.source !== "save-settings") return;
+    const settingsAtualizados = getAppSettings();
+    applyBudgetCompanyInfo(settingsAtualizados);
+    applyBudgetLogo(settingsAtualizados.logoDataUrl);
+});
 
 function resolverValoresItem(item) {
     const toNumberFlexible = (value) => {
@@ -496,6 +512,23 @@ function normalizarTelefoneWhats(telefone) {
     return digitos;
 }
 
+function obterTelefoneWhatsCliente(cliente) {
+    return [
+        cliente?.telefone,
+        cliente?.telefone2
+    ]
+        .map(normalizarTelefoneWhats)
+        .find(Boolean) || "";
+}
+
+function baixarBlob(blob, fileName) {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
 async function gerarBlobPdfOrcamento() {
     const originalStatus = statusPdf.innerHTML;
     statusPdf.innerHTML = '<span class="loader"></span> Gerando PDF para WhatsApp...';
@@ -539,6 +572,7 @@ async function gerarBlobPdfOrcamento() {
         }
 
         const { jsPDF } = window.jspdf;
+
         const pdf = new jsPDF({
             unit: "mm",
             format: "a4",
@@ -547,13 +581,14 @@ async function gerarBlobPdfOrcamento() {
 
         const pageW = pdf.internal.pageSize.getWidth();
         const pageH = pdf.internal.pageSize.getHeight();
-        const m = 9;
+        const compactPdf = (orc.itens || []).length > 12;
+        const m = compactPdf ? 7 : 9;
         const contentW = pageW - (m * 2);
-        const rightColW = 72;
+        const rightColW = compactPdf ? 68 : 72;
         const leftColW = contentW - rightColW - 6;
-        const rowH = 10.5;
-        const lineGap = 5;
-        const lineGapObs = 5.2;
+        const rowH = compactPdf ? 6.6 : 10.5;
+        const lineGap = compactPdf ? 3.4 : 5;
+        const lineGapObs = compactPdf ? 3.6 : 5.2;
         const settings = getAppSettings();
         const colorAccent = hexToRgb(settings.primaryColor, [13, 59, 102]);
         const colorHead = lightenRgb(colorAccent, 0.84);
@@ -604,11 +639,11 @@ async function gerarBlobPdfOrcamento() {
         drawPageFrame();
 
         // Cabecalho empresa
-        y += 3;
+        y += compactPdf ? 1 : 3;
 
         const headerBaseY = y;
-        const logoBoxW = 46;
-        const logoBoxH = 34;
+        const logoBoxW = compactPdf ? 34 : 46;
+        const logoBoxH = compactPdf ? 24 : 34;
         const logoBoxY = headerBaseY + 2;
         let textX = m;
         if (settings.logoDataUrl) {
@@ -619,10 +654,10 @@ async function gerarBlobPdfOrcamento() {
         }
 
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(13.5);
-        pdf.text((settings.companyName || "PROICE CLIMATIZACAO"), m, headerBaseY + logoBoxH + 10);
+        pdf.setFontSize(compactPdf ? 9.6 : 13.5);
+        pdf.text((settings.companyName || "Senso"), m, headerBaseY + logoBoxH + 10);
         pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(8.8);
+        pdf.setFontSize(compactPdf ? 6.8 : 8.8);
         const companyDocType = ["cpf", "cnpj", "none"].includes(settings.companyDocumentType)
             ? settings.companyDocumentType
             : inferCompanyDocumentType(settings.companyDocument || "");
@@ -635,18 +670,18 @@ async function gerarBlobPdfOrcamento() {
         companyLines.push(`Endereco: ${settings.companyAddress || "—"}`);
         companyLines.push(`Telefone: ${listarTelefonesEmpresa(settings).join(" / ") || "—"}`);
         companyLines.forEach((line, idx) => {
-            pdf.text(line, m, headerBaseY + logoBoxH + 15.2 + (idx * 4.5));
+            pdf.text(line, m, headerBaseY + logoBoxH + (compactPdf ? 13.6 : 15.2) + (idx * (compactPdf ? 3.4 : 4.5)));
         });
 
-        drawRect(pageW - m - rightColW, headerBaseY + 2, rightColW, 23);
+        drawRect(pageW - m - rightColW, headerBaseY + 2, rightColW, compactPdf ? 15 : 23);
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(7.2);
+        pdf.setFontSize(compactPdf ? 5.8 : 7.2);
         const dataBoxCenterX = pageW - m - rightColW + (rightColW / 2);
-        pdf.text("DATA DE EMISSAO", dataBoxCenterX, headerBaseY + 10, { align: "center" });
-        pdf.setFontSize(11.8);
-        pdf.text(new Date(orc.criadoEm).toLocaleDateString("pt-BR"), dataBoxCenterX, headerBaseY + 18, { align: "center" });
+        pdf.text("DATA DE EMISSAO", dataBoxCenterX, headerBaseY + (compactPdf ? 7 : 10), { align: "center" });
+        pdf.setFontSize(compactPdf ? 8.4 : 11.8);
+        pdf.text(new Date(orc.criadoEm).toLocaleDateString("pt-BR"), dataBoxCenterX, headerBaseY + (compactPdf ? 12.5 : 18), { align: "center" });
 
-        y = headerBaseY + logoBoxH + 27;
+        y = headerBaseY + logoBoxH + (compactPdf ? 21 : 27);
         pdf.setDrawColor(100, 100, 100);
         pdf.line(m, y, pageW - m, y);
 
@@ -658,7 +693,7 @@ async function gerarBlobPdfOrcamento() {
                 servicosCabecalhoPdf,
                 contentW - servicosLabelW - 9
             ).slice(0, 2);
-            const servicosBoxH = servicosLines.length > 1 ? 12.5 : 8.5;
+            const servicosBoxH = compactPdf ? (servicosLines.length > 1 ? 9 : 6.5) : (servicosLines.length > 1 ? 12.5 : 8.5);
 
             pdf.setFillColor(255, 255, 255);
             pdf.roundedRect(m, y, contentW, servicosBoxH, 1.5, 1.5, "F");
@@ -677,65 +712,67 @@ async function gerarBlobPdfOrcamento() {
             pdf.setTextColor(0, 0, 0);
             pdf.setFontSize(7.8);
             pdf.text(servicosLines, m + servicosLabelW + 2, y + 5.6);
-            y += servicosBoxH + 5;
+            y += servicosBoxH + (compactPdf ? 3 : 5);
         } else {
-            y += 7;
+            y += compactPdf ? 4 : 7;
         }
 
         // Dados cliente
         const clienteGap = 6;
         const clienteTelefonesParaAltura = listarTelefonesCliente(clienteDados);
-        const clienteBoxH = modoMecanica
+        const clienteBoxH = compactPdf
+            ? (modoMecanica ? 28 : (clienteTelefonesParaAltura.length > 1 ? 23 : 19))
+            : (modoMecanica
             ? 40
-            : (clienteTelefonesParaAltura.length > 1 ? 32 : 26);
+            : (clienteTelefonesParaAltura.length > 1 ? 32 : 26));
         drawRect(m, y, leftColW, clienteBoxH);
         drawRect(m + leftColW + clienteGap, y, rightColW, clienteBoxH);
 
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(10.5);
-        pdf.text(`CLIENTE: ${clienteDados?.nome || "—"}`, m + 4, y + 8);
+        pdf.setFontSize(compactPdf ? 7.4 : 10.5);
+        pdf.text(`CLIENTE: ${clienteDados?.nome || "—"}`, m + 4, y + (compactPdf ? 5.2 : 8));
         pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(9.6);
-        pdf.text(`CPF/CNPJ: ${formatarDocumentoBR(String(clienteDados?.documento || "").trim()) || "—"}`, m + 4, y + 13.8);
+        pdf.setFontSize(compactPdf ? 7 : 9.6);
+        pdf.text(`CPF/CNPJ: ${formatarDocumentoBR(String(clienteDados?.documento || "").trim()) || "—"}`, m + 4, y + (compactPdf ? 9.4 : 13.8));
         const endCli = String(clienteDados?.endereco || "—");
         const endCliText = pdf.splitTextToSize(`ENDERECO: ${endCli}`, leftColW - 8);
-        pdf.text(endCliText, m + 4, y + 19.5);
+        pdf.text(endCliText, m + 4, y + (compactPdf ? 13.6 : 19.5));
 
         if (modoMecanica) {
-            pdf.text(`MODELO: ${String(clienteDados?.modeloCarro || "—")}`, m + 4, y + 27.2);
-            pdf.text(`PLACA: ${String(clienteDados?.placaCarro || "—")}`, m + 4, y + 32.8);
-            pdf.text(`COR: ${String(clienteDados?.corCarro || "—")}`, m + 4, y + 38.4);
+            pdf.text(`MODELO: ${String(clienteDados?.modeloCarro || "—")}`, m + 4, y + (compactPdf ? 19.2 : 27.2));
+            pdf.text(`PLACA: ${String(clienteDados?.placaCarro || "—")}`, m + 4, y + (compactPdf ? 23.2 : 32.8));
+            pdf.text(`COR: ${String(clienteDados?.corCarro || "—")}`, m + 4, y + (compactPdf ? 27.2 : 38.4));
         }
 
         const telefonesCli = clienteTelefonesParaAltura.length ? clienteTelefonesParaAltura : ["—"];
         const fp = String(orc?.formaPagamento || "").trim() || "—";
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(10.5);
-        pdf.text("TELEFONE:", m + leftColW + clienteGap + 4, y + 8);
+        pdf.setFontSize(compactPdf ? 7.4 : 10.5);
+        pdf.text("TELEFONE:", m + leftColW + clienteGap + 4, y + (compactPdf ? 5.2 : 8));
         pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(9.8);
+        pdf.setFontSize(compactPdf ? 7 : 9.8);
         telefonesCli.forEach((tel, idx) => {
-            pdf.text(String(tel), m + leftColW + clienteGap + 4, y + 14 + (idx * 5));
+            pdf.text(String(tel), m + leftColW + clienteGap + 4, y + (compactPdf ? 9.4 : 14) + (idx * (compactPdf ? 3.8 : 5)));
         });
-        const formaPagamentoY = y + 14 + (telefonesCli.length * 5) + 1;
+        const formaPagamentoY = y + (compactPdf ? 9.4 : 14) + (telefonesCli.length * (compactPdf ? 3.8 : 5)) + (compactPdf ? 0.8 : 1);
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(10.5);
+        pdf.setFontSize(compactPdf ? 7.4 : 10.5);
         pdf.text("FORMA PGTO:", m + leftColW + clienteGap + 4, formaPagamentoY);
         pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(9.8);
-        pdf.text(String(fp), m + leftColW + clienteGap + 34, formaPagamentoY);
+        pdf.setFontSize(compactPdf ? 7 : 9.8);
+        pdf.text(String(fp), m + leftColW + clienteGap + (compactPdf ? 24 : 34), formaPagamentoY);
 
-        y += clienteBoxH + 8;
+        y += clienteBoxH + (compactPdf ? 5 : 8);
 
         // Titulo
         pdf.setFillColor(...colorAccent);
-        pdf.rect(m, y, contentW, 9, "F");
+        pdf.rect(m, y, contentW, compactPdf ? 6 : 9, "F");
         pdf.setTextColor(255, 255, 255);
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("ORCAMENTO", pageW / 2, y + 6.2, { align: "center" });
+        pdf.setFontSize(compactPdf ? 8 : 12);
+        pdf.text("ORCAMENTO", pageW / 2, y + (compactPdf ? 4.2 : 6.2), { align: "center" });
         pdf.setTextColor(0, 0, 0);
-        y += 12;
+        y += compactPdf ? 7.5 : 12;
 
         // Tabela
         const colQtd = 18;
@@ -744,7 +781,7 @@ async function gerarBlobPdfOrcamento() {
         const colDesc = contentW - colQtd - colValor - colSub;
 
         function drawTableHeader() {
-            ensureSpace(14);
+            ensureSpace(compactPdf ? 8 : 14);
             drawRect(m, y, contentW, rowH);
             drawRect(m, y, colDesc, rowH);
             drawRect(m + colDesc, y, colQtd, rowH);
@@ -757,26 +794,27 @@ async function gerarBlobPdfOrcamento() {
             drawRect(m + colDesc + colQtd, y, colValor, rowH);
             drawRect(m + colDesc + colQtd + colValor, y, colSub, rowH);
             pdf.setFont("helvetica", "bold");
-            pdf.setFontSize(11);
-            pdf.text("DESCRICAO", m + 4, y + 6.8);
-            pdf.text("QTD", m + colDesc + colQtd / 2, y + 6.8, { align: "center" });
-            pdf.text("VALOR", m + colDesc + colQtd + colValor / 2, y + 6.8, { align: "center" });
-            pdf.text("SUBTOTAL", m + colDesc + colQtd + colValor + colSub / 2, y + 6.8, { align: "center" });
+            pdf.setFontSize(compactPdf ? 7.2 : 11);
+            const headerTextY = y + (compactPdf ? 4.4 : 6.8);
+            pdf.text("DESCRICAO", m + 3, headerTextY);
+            pdf.text("QTD", m + colDesc + colQtd / 2, headerTextY, { align: "center" });
+            pdf.text("VALOR", m + colDesc + colQtd + colValor / 2, headerTextY, { align: "center" });
+            pdf.text("SUBTOTAL", m + colDesc + colQtd + colValor + colSub / 2, headerTextY, { align: "center" });
             y += rowH;
         }
 
         drawTableHeader();
         pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10.8);
+        pdf.setFontSize(compactPdf ? 7.2 : 10.8);
 
         (orc.itens || []).forEach(item => {
             const descricao = String(item?.descricao || "—");
             const { quantidade, valorUnitario, subtotal } = resolverValoresItem(item);
             const lines = pdf.splitTextToSize(descricao, colDesc - 5);
-            const cellH = Math.max(10.5, lines.length * lineGap + 4);
+            const cellH = Math.max(rowH, lines.length * lineGap + (compactPdf ? 2.4 : 4));
 
-            ensureSpace(cellH + 2);
-            if (y > pageH - m - 30) {
+            ensureSpace(cellH + (compactPdf ? 1 : 2));
+            if (y > pageH - m - (compactPdf ? 18 : 30)) {
                 pdf.addPage();
                 y = m;
                 drawTableHeader();
@@ -787,24 +825,24 @@ async function gerarBlobPdfOrcamento() {
             drawRect(m + colDesc + colQtd, y, colValor, cellH);
             drawRect(m + colDesc + colQtd + colValor, y, colSub, cellH);
 
-            const baselineY = y + Math.min(cellH - 3.5, 7.5);
-            pdf.text(lines, m + 4, y + 6.2);
+            const baselineY = y + Math.min(cellH - (compactPdf ? 1.8 : 3.5), compactPdf ? 4.4 : 7.5);
+            pdf.text(lines, m + 3, y + (compactPdf ? 4.2 : 6.2));
             pdf.text(formatarQuantidade(quantidade), m + colDesc + (colQtd / 2), baselineY, { align: "center" });
-            pdf.text(money(valorUnitario), m + colDesc + colQtd + 3, baselineY);
-            pdf.text(money(subtotal), m + colDesc + colQtd + colValor + 3, baselineY);
+            pdf.text(money(valorUnitario), m + colDesc + colQtd + 2, baselineY);
+            pdf.text(money(subtotal), m + colDesc + colQtd + colValor + 2, baselineY);
             y += cellH;
         });
 
         // Total
-        ensureSpace(14);
+        ensureSpace(compactPdf ? 9 : 14);
         pdf.setFillColor(...colorAccent);
-        pdf.rect(m, y, contentW, 10, "F");
+        pdf.rect(m, y, contentW, compactPdf ? 7 : 10, "F");
         pdf.setFont("helvetica", "bold");
         pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(12);
-        pdf.text(`VALOR TOTAL ${money(orc.total)}`, pageW - m - 3, y + 6.8, { align: "right" });
+        pdf.setFontSize(compactPdf ? 8 : 12);
+        pdf.text(`VALOR TOTAL ${money(orc.total)}`, pageW - m - 3, y + (compactPdf ? 4.9 : 6.8), { align: "right" });
         pdf.setTextColor(0, 0, 0);
-        y += 14;
+        y += compactPdf ? 9 : 14;
 
         // Observacoes
         const obsTitulo = "OBSERVACOES:";
@@ -812,13 +850,13 @@ async function gerarBlobPdfOrcamento() {
         const obsLinhas = pdf.splitTextToSize(obsTexto, contentW - 4);
 
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        ensureSpace(12);
-        pdf.text(obsTitulo, m + 4, y + 6);
-        y += 9;
+        pdf.setFontSize(compactPdf ? 8 : 12);
+        ensureSpace(compactPdf ? 8 : 12);
+        pdf.text(obsTitulo, m + 4, y + (compactPdf ? 4.8 : 6));
+        y += compactPdf ? 6 : 9;
 
         pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10.8);
+        pdf.setFontSize(compactPdf ? 7.2 : 10.8);
 
         let idx = 0;
         while (idx < obsLinhas.length) {
@@ -826,13 +864,13 @@ async function gerarBlobPdfOrcamento() {
             const linhasRestantes = Math.floor((pageH - m - y - 8) / lineGapObs);
             const qtd = Math.max(1, linhasRestantes);
             const bloco = obsLinhas.slice(idx, idx + qtd);
-            const boxH = Math.max(24, (bloco.length * lineGapObs) + 12);
+            const boxH = Math.max(compactPdf ? 12 : 24, (bloco.length * lineGapObs) + (compactPdf ? 7 : 12));
 
-            drawRect(m, y - 7, contentW, boxH + 4);
-            pdf.text(bloco, m + 4, y + 3);
+            drawRect(m, y - (compactPdf ? 5 : 7), contentW, boxH + (compactPdf ? 2 : 4));
+            pdf.text(bloco, m + 4, y + (compactPdf ? 2.2 : 3));
 
             idx += bloco.length;
-            y += boxH + 2;
+            y += boxH + (compactPdf ? 1 : 2);
             if (idx < obsLinhas.length) {
                 pdf.addPage();
                 drawPageFrame();
@@ -857,11 +895,7 @@ async function gerarArquivoPdf() {
     try {
         const blob = await gerarBlobPdfOrcamento();
         const fileName = `orcamento-${orc.numero || orc.id}.pdf`;
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = fileName;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        baixarBlob(blob, fileName);
     } catch (err) {
         statusPdf.style.display = "none";
         console.error(err);
@@ -869,51 +903,97 @@ async function gerarArquivoPdf() {
     }
 }
 
+function montarMensagemOrcamentoWhatsApp() {
+    const nomeCliente = String(clienteDados?.nome || "cliente").trim();
+    const nomeEmpresa = String(getAppSettings()?.companyName || "").trim();
+    const numeroOrcamento = String(orc?.numero || "").trim();
+
+    return [
+        `Ola ${nomeCliente}, tudo bem?`,
+        `Estou enviando o PDF do orcamento${numeroOrcamento ? ` ${numeroOrcamento}` : ""}${nomeEmpresa ? ` da ${nomeEmpresa}` : ""} para sua analise e aprovacao.`,
+        "Qualquer duvida, fico a disposicao."
+    ].join("\n");
+}
+
 async function enviarWhatsAppPDF() {
     try {
-        const blob = await gerarBlobPdfOrcamento();
-        const fileName = `orcamento-${orc.numero || orc.id}.pdf`;
-        const file = typeof File === "function"
-            ? new File([blob], fileName, { type: "application/pdf" })
-            : null;
-        const telefone = normalizarTelefoneWhats(clienteDados?.telefone) || normalizarTelefoneWhats(clienteDados?.telefone2);
-        const msg = `Ola ${clienteDados?.nome || ""}, segue seu orcamento ${orc?.numero || ""}.`;
-        const waUrl = telefone
-            ? `https://wa.me/${telefone}?text=${encodeURIComponent(msg)}`
-            : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-
-        if (
-            file &&
-            navigator.canShare &&
-            navigator.canShare({ files: [file] })
-        ) {
-            await navigator.share({
-                files: [file],
-                title: `Orcamento ${orc?.numero || ""}`,
-                text: msg
-            });
+        const telefone = obterTelefoneWhatsCliente(clienteDados);
+        if (!telefone) {
+            alert("Cliente sem telefone valido para WhatsApp. Atualize o cadastro do cliente e tente novamente.");
             return;
         }
 
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = fileName;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        const msg = montarMensagemOrcamentoWhatsApp();
+        const waUrl = `https://api.whatsapp.com/send?phone=${telefone}&text=${encodeURIComponent(msg)}`;
 
-        window.open(waUrl, "_blank");
-        alert("PDF baixado. O WhatsApp foi aberto para voce anexar o arquivo.");
+        location.href = waUrl;
     } catch (err) {
         statusPdf.style.display = "none";
         console.error(err);
-        alert("Nao foi possivel gerar o PDF para WhatsApp.");
+        alert("Nao foi possivel abrir o WhatsApp.");
     }
 }
 function aprovar() {
     const aprovado = marcarOrcamentoComoAprovado(orc.id);
     if (!aprovado) return;
-    alert("Orçamento aprovado");
-    location.href = "orcamentos.html";
+
+    const servicoId = orc.origemServicoId;
+    AssistenteSenso.criarPendencia(servicoId);
+
+    let destinoDefinido = false;
+    const irParaOrcamentos = () => {
+        if (destinoDefinido) return;
+        destinoDefinido = true;
+        location.href = "orcamentos.html";
+    };
+
+    AssistenteSenso.abrir({
+        imagem: "/assets/assistente-senso/gasto-do-servico.png",
+        mensagens: [
+            "Parabéns!",
+            "Seu serviço foi aprovado e o valor foi registrado automaticamente no Financeiro.",
+            "Você teve algum gasto relacionado a este serviço?",
+            "Registrar ajuda a calcular seu lucro real."
+        ],
+        acoes: [
+            {
+                texto: "Registrar gasto",
+                estilo: "primaria",
+                aoClicar: () => {
+                    destinoDefinido = true;
+                    location.href = `financeiro.html?assistente=gasto&servico=${encodeURIComponent(servicoId)}#novo-gasto`;
+                }
+            },
+            {
+                texto: "Não tive gastos",
+                aoClicar: ({ fechar }) => {
+                    AssistenteSenso.informarSemGastos(servicoId);
+                    fechar("sem-gastos");
+                    AssistenteSenso.abrir({
+                        imagem: "/assets/assistente-senso/gasto-do-servico.png",
+                        mensagens: [
+                            "Perfeito! Este serviço continuará apenas com o valor recebido.",
+                            "Bom trabalho!"
+                        ],
+                        aoFechar: irParaOrcamentos
+                    });
+                }
+            },
+            {
+                texto: "Lembrar depois",
+                estilo: "sutil",
+                aoClicar: ({ fechar }) => {
+                    AssistenteSenso.lembrarDepois(servicoId);
+                    fechar("lembrar-depois");
+                }
+            }
+        ],
+        aoFechar: motivo => {
+            if (motivo === "sem-gastos" || motivo === "substituido") return;
+            AssistenteSenso.lembrarDepois(servicoId);
+            irParaOrcamentos();
+        }
+    });
 }
 
 function recusar() {

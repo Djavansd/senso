@@ -1,7 +1,6 @@
 (function () {
     "use strict";
 
-    const LOGIN_PATH = "/pages/login.html";
     const LOGIN_REGEX = /\/pages\/login\.html$/i;
     const LAST_UID_KEY = "senso:lastAuthUid";
 
@@ -13,10 +12,16 @@
         return window.location.pathname + window.location.search + window.location.hash;
     }
 
+    function getLoginPath() {
+        const path = window.location.pathname.replace(/\\/g, "/");
+        if (path.includes("/pages/")) return "login.html";
+        return "pages/login.html";
+    }
+
     function redirectToLogin() {
         if (isLoginPage()) return;
         const next = encodeURIComponent(buildNextPath());
-        window.location.replace(`${LOGIN_PATH}?next=${next}`);
+        window.location.replace(`${getLoginPath()}?next=${next}`);
     }
 
     function hasFirebaseConfig() {
@@ -65,9 +70,20 @@
                     return userRef
                         .set({
                             ...payload,
-                            autorizado: false
+                            autorizado: false,
+                            plano: "gratis",
+                            status: "ativo",
+                            tipoPagamento: "mensal",
+                            validade: null
                         })
-                        .then(() => ({ ...payload, autorizado: false }));
+                        .then(() => ({
+                            ...payload,
+                            autorizado: false,
+                            plano: "gratis",
+                            status: "ativo",
+                            tipoPagamento: "mensal",
+                            validade: null
+                        }));
                 }
 
                 return userRef
@@ -85,7 +101,7 @@
 
     function redirectToPendingAccess() {
         if (isLoginPage()) return;
-        window.location.replace(`${LOGIN_PATH}?access=pending`);
+        window.location.replace(`${getLoginPath()}?access=pending`);
     }
 
     window.SensoAuth = window.SensoAuth || {

@@ -10,10 +10,10 @@
             domainId: "mecanica",
             defaults: {
                 primaryColor: "#0f766e",
-                companyName: "OFICINA MODELO",
-                companyDocument: "00.000.000/0001-00",
-                companyAddress: "Sao Paulo",
-                companyPhone: "(11) 90000-0000"
+                companyName: "Senso",
+                companyDocument: "",
+                companyAddress: "",
+                companyPhone: ""
             }
         },
         prestador: {
@@ -22,10 +22,10 @@
             domainId: "base",
             defaults: {
                 primaryColor: "#0a7cff",
-                companyName: "EMPRESA MODELO",
-                companyDocument: "00.000.000/0001-00",
-                companyAddress: "Sao Paulo",
-                companyPhone: "(11) 90000-0000"
+                companyName: "Senso",
+                companyDocument: "",
+                companyAddress: "",
+                companyPhone: ""
             }
         },
         base: {
@@ -34,10 +34,10 @@
             domainId: "base",
             defaults: {
                 primaryColor: "#0a7cff",
-                companyName: "EMPRESA MODELO",
-                companyDocument: "00.000.000/0001-00",
-                companyAddress: "Sao Paulo",
-                companyPhone: "(11) 90000-0000"
+                companyName: "Senso",
+                companyDocument: "",
+                companyAddress: "",
+                companyPhone: ""
             }
         }
     };

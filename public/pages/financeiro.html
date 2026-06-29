@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -6,6 +6,8 @@
 <title>Financeiro</title>
 
 <link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/assistente-senso.css">
+<link rel="stylesheet" href="../css/assistente-ajuda.css">
 
 <style>
 .hidden{display:none}
@@ -189,7 +191,7 @@
 </div>
 
 <!-- NOVO GASTO -->
-<div class="form-card">
+<div class="form-card" id="novo-gasto">
   <h3>Novo gasto</h3>
   <input id="gastoDescricao" placeholder="Descrição">
   <input id="gastoValor" placeholder="Valor">
@@ -213,11 +215,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
-<script src="../js/auth-guard.js"></script>
-<script src="../js/core/plans.js"></script>
+<script src="../js/auth-guard.js?v=20260607-gratis"></script>
+<script src="../js/core/plans.js?v=20260607-gratis"></script>
 <script src="../js/core/profile.js"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
+<script src="../js/assistente-senso.js"></script>
+<script src="../js/assistente-ajuda.js"></script>
 
 <script>
 const saldoEl = document.getElementById("saldo");
@@ -229,6 +233,16 @@ const abasPeriodo = document.getElementById("abasPeriodo");
 
 let mesAtual;
 let abaAtiva = "atual";
+let assistenteServicoAtivo = new URLSearchParams(location.search).get("servico") || "";
+let assistenteDirecionamentoAplicado = false;
+
+function focarNovoGasto() {
+  const card = document.getElementById("novo-gasto");
+  if (!card) return;
+  card.scrollIntoView({behavior:"smooth", block:"center"});
+  card.classList.add("senso-assistente-destaque");
+  setTimeout(() => gastoDescricao.focus(), 350);
+}
 
 function mesmoMesFinanceiro(f, ano, mes){
   if(!f?.data)return false;
@@ -334,9 +348,9 @@ btnManual.onclick=()=>{
 btnGanho.onclick=()=>{
   let d;
   try {
-    d=validarTextoUsuario(ganhoDescricao.value, "Descricao do ganho", 120);
+    d=validarTextoUsuario(ganhoDescricao.value, "Descrição do ganho", 120);
   } catch (err) {
-    alert(err.message || "Texto bloqueado por seguranca.");
+    alert(err.message || "Texto bloqueado por segurança.");
     return;
   }
   const v=Number(ganhoValor.value.replace(",",".")); 
@@ -361,9 +375,9 @@ btnGanho.onclick=()=>{
 btnGasto.onclick=()=>{
   let d;
   try {
-    d=validarTextoUsuario(gastoDescricao.value, "Descricao do gasto", 120);
+    d=validarTextoUsuario(gastoDescricao.value, "Descrição do gasto", 120);
   } catch (err) {
-    alert(err.message || "Texto bloqueado por seguranca.");
+    alert(err.message || "Texto bloqueado por segurança.");
     return;
   }
   const v=Number(gastoValor.value.replace(",",".")); 
@@ -375,14 +389,73 @@ btnGasto.onclick=()=>{
     tipo:"saida",
     descricao:d,
     valor:v,
-    data:new Date().toISOString()
+    data:new Date().toISOString(),
+    ...(assistenteServicoAtivo ? {
+      origem:"assistente-servico",
+      origemServicoId:assistenteServicoAtivo
+    } : {})
   });
   saveData(data);
+
+  if(assistenteServicoAtivo){
+    const servicoConcluido = assistenteServicoAtivo;
+    assistenteServicoAtivo = "";
+    AssistenteSenso.concluirGasto(servicoConcluido);
+    AssistenteSenso.abrir({
+      imagem:"/assets/assistente-senso/gasto-do-servico.png",
+      mensagens:[
+        "Perfeito! O gasto foi registrado.",
+        "Seu lucro foi atualizado automaticamente."
+      ]
+    });
+  }
 
   gastoDescricao.value="";
   gastoValor.value="";
   renderTudo();
 };
+
+function iniciarAssistenteGastos(){
+  const params = new URLSearchParams(location.search);
+  if(params.get("assistente") === "gasto"){
+    if(!assistenteDirecionamentoAplicado){
+      assistenteDirecionamentoAplicado = true;
+      focarNovoGasto();
+    }
+    return;
+  }
+
+  const pendencia = AssistenteSenso.listarPendencias()[0];
+  if(!pendencia) return;
+
+  const chaveSessao = `senso-assistente-gasto-${pendencia.servicoId}`;
+  if(sessionStorage.getItem(chaveSessao)) return;
+  sessionStorage.setItem(chaveSessao, "1");
+
+  AssistenteSenso.abrir({
+    imagem:"/assets/assistente-senso/gasto-do-servico.png",
+    mensagens:[
+      "Lembrete rápido.",
+      "Você deixou um gasto pendente deste serviço. Deseja registrá-lo agora?"
+    ],
+    acoes:[
+      {
+        texto:"Sim",
+        estilo:"primaria",
+        aoClicar:({fechar})=>{
+          assistenteServicoAtivo = pendencia.servicoId;
+          fechar("registrar");
+          focarNovoGasto();
+        }
+      },
+      {
+        texto:"Depois",
+        estilo:"sutil",
+        aoClicar:({fechar})=>fechar("depois")
+      }
+    ]
+  });
+}
 
 /* EXTRATO */
 btnExtrato.onclick=()=>{
@@ -408,7 +481,7 @@ function apagarLancamento(id){
 function descricaoExtrato(f) {
   if (f?.origem !== "servico" || !f?.origemServicoId) {
     return {
-      titulo: f?.descricao || "Sem descricao",
+      titulo: f?.descricao || "Sem descrição",
       sub: ""
     };
   }
@@ -416,7 +489,7 @@ function descricaoExtrato(f) {
   const servico = (getData().servicos || []).find(s => s.id === f.origemServicoId);
   if (!servico || !Array.isArray(servico.itens) || !servico.itens.length) {
     return {
-      titulo: f?.descricao || "Servico",
+      titulo: f?.descricao || "Serviço",
       sub: servico?.cliente?.nome || ""
     };
   }
@@ -427,7 +500,7 @@ function descricaoExtrato(f) {
 
   if (!descricoes.length) {
     return {
-      titulo: f?.descricao || "Servico",
+      titulo: f?.descricao || "Serviço",
       sub: servico?.cliente?.nome || ""
     };
   }
@@ -496,11 +569,13 @@ abasPeriodo.onclick=(event)=>{
 }
 window.addEventListener("senso-live-update", () => {
   renderTudo();
+  iniciarAssistenteGastos();
   if(!modoExtrato.classList.contains("hidden")){
     renderExtrato();
   }
 });
 renderTudo();
+iniciarAssistenteGastos();
 </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -6,6 +6,8 @@
 <title>Resumo mensal</title>
 
 <link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/assistente-senso.css">
+<link rel="stylesheet" href="../css/assistente-ajuda.css">
 
 <style>
 .resumo-card {
@@ -150,7 +152,7 @@
 
 <body>
 <div class="app">
-<div class="header">Resumo do mes</div>
+<div class="header">Resumo do mês</div>
 
 <div class="content">
 
@@ -162,7 +164,7 @@
         <strong id="resumoEntradas">R$ 0,00</strong>
     </div>
     <div class="resumo-linha">
-        <span>Saidas</span>
+        <span>Saídas</span>
         <strong id="resumoSaidas">R$ 0,00</strong>
     </div>
     <div class="resumo-total">
@@ -172,25 +174,25 @@
 </div>
 
 <div class="bloco">
-    <h3>Composicao do resultado</h3>
+    <h3>Composição do resultado</h3>
 
     <div class="resumo-linha">
-        <span>Servicos executados</span>
+        <span>Serviços executados</span>
         <strong id="resumoServicos">0</strong>
     </div>
 
     <div class="resumo-linha">
-        <span>Faturamento em servicos</span>
+        <span>Faturamento em serviços</span>
         <strong id="resumoFaturamento">R$ 0,00</strong>
     </div>
 
     <div class="resumo-linha">
-        <span>Correcoes de servico</span>
+        <span>Correções de serviço</span>
         <strong id="resumoCorrecoes">0</strong>
     </div>
 
     <div class="resumo-linha">
-        <span>Impacto das correcoes no saldo</span>
+        <span>Impacto das correções no saldo</span>
         <strong id="resumoCorrecoesValor">R$ 0,00</strong>
     </div>
 
@@ -206,28 +208,28 @@
 </div>
 
 <details class="bloco accordion">
-    <summary>Servicos do mes</summary>
+    <summary>Serviços do mês</summary>
     <div class="accordion-conteudo">
         <div id="listaServicosMes" class="detalhe-lista"></div>
     </div>
 </details>
 
 <details class="bloco accordion">
-    <summary>Gastos do mes</summary>
+    <summary>Gastos do mês</summary>
     <div class="accordion-conteudo">
         <div id="listaGastosMes" class="detalhe-lista"></div>
     </div>
 </details>
 
 <details class="bloco accordion">
-    <summary>Correcoes do mes</summary>
+    <summary>Correções do mês</summary>
     <div class="accordion-conteudo">
         <div id="listaCorrecoesMes" class="detalhe-lista"></div>
     </div>
 </details>
 
 <details class="bloco accordion">
-    <summary>Comparacao com mes anterior</summary>
+    <summary>Comparação com mês anterior</summary>
     <div class="accordion-conteudo">
         <div id="comparacaoTexto" class="comparacao">-</div>
     </div>
@@ -235,7 +237,7 @@
 
 <div class="bloco">
     <p>
-        O resumo considera apenas os lancamentos atuais do financeiro e as correcoes registradas no periodo.
+        O resumo considera apenas os lançamentos atuais do financeiro e as correções registradas no período.
     </p>
 </div>
 
@@ -251,11 +253,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
-<script src="../js/auth-guard.js"></script>
-<script src="../js/core/plans.js"></script>
+<script src="../js/auth-guard.js?v=20260607-gratis"></script>
+<script src="../js/core/plans.js?v=20260607-gratis"></script>
 <script src="../js/core/profile.js"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
 <script src="../js/app.js"></script>
+<script src="../js/assistente-senso.js"></script>
+<script src="../js/assistente-ajuda.js"></script>
 
 <script>
 const filtroMes = document.getElementById("filtroMes");
@@ -311,6 +315,8 @@ function resumoItensServico(servico) {
 function carregarMeses() {
     const data = getData();
     const meses = new Set();
+    const hoje = new Date();
+    const mesHoje = `${hoje.getFullYear()}-${hoje.getMonth()}`;
 
     listarFinanceiroValido(data).forEach(f => {
         if (!f?.data) return;
@@ -324,10 +330,7 @@ function carregarMeses() {
         meses.add(`${d.getFullYear()}-${d.getMonth()}`);
     });
 
-    if (!meses.size) {
-        const hoje = new Date();
-        meses.add(`${hoje.getFullYear()}-${hoje.getMonth()}`);
-    }
+    meses.add(mesHoje);
 
     filtroMes.innerHTML = "";
     [...meses].sort().reverse().forEach(m => {
@@ -341,6 +344,7 @@ function carregarMeses() {
         filtroMes.appendChild(opt);
     });
 
+    filtroMes.value = mesHoje;
     mesAtual = filtroMes.value;
 }
 
@@ -379,7 +383,7 @@ function calcularResumo(ano, mes) {
 
             const servico = (data.servicos || []).find(s => s.id === f.origemServicoId);
             servicosDetalhes.push({
-                titulo: servico?.cliente?.nome || f.descricao || "Servico",
+                titulo: servico?.cliente?.nome || f.descricao || "Serviço",
                 sub: servico
                     ? `${resumoItensServico(servico)} - ${new Date(f.data).toLocaleDateString("pt-BR")}`
                     : new Date(f.data).toLocaleDateString("pt-BR"),
@@ -393,7 +397,7 @@ function calcularResumo(ano, mes) {
             if (f.tipo === "saida") {
                 gastosManuais += valor;
                 gastosDetalhes.push({
-                    titulo: f.descricao || "Gasto sem descricao",
+                    titulo: f.descricao || "Gasto sem descrição",
                     sub: new Date(f.data).toLocaleDateString("pt-BR"),
                     valor: -valor
                 });
@@ -409,8 +413,8 @@ function calcularResumo(ano, mes) {
         correcoesImpacto += impacto;
 
         correcoesDetalhes.push({
-            titulo: c.clienteNome || "Cliente nao informado",
-            sub: c.itensResumo || "Servico sem itens",
+            titulo: c.clienteNome || "Cliente não informado",
+            sub: c.itensResumo || "Serviço sem itens",
             valor: impacto
         });
     });
@@ -466,9 +470,9 @@ function renderResumo() {
     resumoGanhosManuais.textContent = "R$ " + formatarMoedaBR(atual.ganhosManuais);
     resumoGastosManuais.textContent = "R$ " + formatarMoedaBR(atual.gastosManuais);
 
-    renderLista(listaServicosMes, atual.servicosDetalhes, "Nenhum servico executado neste mes.");
-    renderLista(listaGastosMes, atual.gastosDetalhes, "Nenhum gasto manual neste mes.");
-    renderLista(listaCorrecoesMes, atual.correcoesDetalhes, "Nenhuma correcao registrada neste mes.");
+    renderLista(listaServicosMes, atual.servicosDetalhes, "Nenhum serviço executado neste mês.");
+    renderLista(listaGastosMes, atual.gastosDetalhes, "Nenhum gasto manual neste mês.");
+    renderLista(listaCorrecoesMes, atual.correcoesDetalhes, "Nenhuma correção registrada neste mês.");
 
     const mesAnterior = new Date(ano, mes - 1, 1);
     const anterior = calcularResumo(
@@ -481,10 +485,10 @@ function renderResumo() {
     if (anterior.entradas || anterior.saidas || anterior.servicosQtd || anterior.correcoesQtd) {
         comparacaoTexto.innerHTML =
             diff >= 0
-            ? `<span class="up">Saldo subiu ${formatarMoedaComSinal(diff)}</span> em relacao ao mes anterior`
-            : `<span class="down">Saldo caiu R$ ${formatarMoedaBR(Math.abs(diff))}</span> em relacao ao mes anterior`;
+            ? `<span class="up">Saldo subiu ${formatarMoedaComSinal(diff)}</span> em relação ao mês anterior`
+            : `<span class="down">Saldo caiu R$ ${formatarMoedaBR(Math.abs(diff))}</span> em relação ao mês anterior`;
     } else {
-        comparacaoTexto.textContent = "Sem dados para comparacao.";
+        comparacaoTexto.textContent = "Sem dados para comparação.";
     }
 }
 
@@ -495,7 +499,7 @@ filtroMes.onchange = () => {
 
 document.getElementById("btnApagarResumo").onclick = () => {
     const confirmar = confirm(
-        "Tem certeza que deseja apagar somente os dados do resumo (correcoes)?"
+        "Tem certeza que deseja apagar somente os dados do resumo (correções)?"
     );
     if (!confirmar) return;
 
