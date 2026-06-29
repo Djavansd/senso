@@ -240,16 +240,16 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: linear-gradient(145deg, rgba(255,255,255,.95), rgba(255,255,255,.76));
+            background: linear-gradient(145deg, rgba(255,255,255,.72), rgba(255,255,255,.48));
             border-radius: 16px;
             padding: 16px;
             text-align: center;
-            box-shadow: 0 14px 28px rgba(2,6,23,.14), 0 0 0 1px var(--card-ring);
+            box-shadow: 0 14px 28px rgba(2,6,23,.12), inset 0 1px 0 rgba(255,255,255,.72), 0 0 0 1px var(--card-ring);
             text-decoration: none;
             color: #000;
             border: 1px solid var(--card-border);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(11px) saturate(1.18);
+            -webkit-backdrop-filter: blur(11px) saturate(1.18);
             transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
         }
 
@@ -259,7 +259,7 @@
             inset: 0;
             z-index: 0;
             pointer-events: none;
-            background: linear-gradient(120deg, rgba(255,255,255,.7) 0%, rgba(255,255,255,0) 36%);
+            background: linear-gradient(120deg, rgba(255,255,255,.58) 0%, rgba(255,255,255,.08) 34%, rgba(255,255,255,0) 58%);
         }
 
         .card > * {
@@ -303,7 +303,7 @@
             --card-ring: rgba(37,99,235,.3);
             --card-title-color: #1e3a8a;
             --card-value-color: #1e40af;
-            background: linear-gradient(145deg, rgba(147,197,253,.64), rgba(255,255,255,.7));
+            background: linear-gradient(145deg, rgba(147,197,253,.42), rgba(255,255,255,.48));
         }
         .servico {
             --card-accent: #16a34a;
@@ -311,7 +311,7 @@
             --card-ring: rgba(22,163,74,.3);
             --card-title-color: #14532d;
             --card-value-color: #166534;
-            background: linear-gradient(145deg, rgba(134,239,172,.64), rgba(255,255,255,.7));
+            background: linear-gradient(145deg, rgba(134,239,172,.42), rgba(255,255,255,.48));
         }
         .orcamentos {
             --card-accent: #0f766e;
@@ -319,7 +319,7 @@
             --card-ring: rgba(15,118,110,.3);
             --card-title-color: #134e4a;
             --card-value-color: #115e59;
-            background: linear-gradient(145deg, rgba(153,246,228,.64), rgba(255,255,255,.7));
+            background: linear-gradient(145deg, rgba(153,246,228,.42), rgba(255,255,255,.48));
         }
         .agenda {
             --card-accent: #0284c7;
@@ -327,7 +327,7 @@
             --card-ring: rgba(2,132,199,.3);
             --card-title-color: #0c4a6e;
             --card-value-color: #075985;
-            background: linear-gradient(145deg, rgba(125,211,252,.64), rgba(255,255,255,.7));
+            background: linear-gradient(145deg, rgba(125,211,252,.42), rgba(255,255,255,.48));
         }
         .financeiro {
             --card-accent: #f59e0b;
@@ -335,7 +335,7 @@
             --card-ring: rgba(245,158,11,.3);
             --card-title-color: #78350f;
             --card-value-color: #92400e;
-            background: linear-gradient(145deg, rgba(253,230,138,.68), rgba(255,255,255,.72));
+            background: linear-gradient(145deg, rgba(253,230,138,.46), rgba(255,255,255,.5));
         }
         .resumo {
             --card-accent: #ea580c;
@@ -343,7 +343,7 @@
             --card-ring: rgba(234,88,12,.3);
             --card-title-color: #7c2d12;
             --card-value-color: #9a3412;
-            background: linear-gradient(145deg, rgba(254,205,170,.68), rgba(255,255,255,.72));
+            background: linear-gradient(145deg, rgba(254,205,170,.46), rgba(255,255,255,.5));
         }
     </style>
 </head>
