@@ -426,3 +426,52 @@ input, select {
 .servico-total {
     color: var(--app-primary) !important;
 }
+
+/* ===== IDENTIDADE VISUAL BRASIL ===== */
+html {
+    min-height: 100%;
+    background: #eef8f2;
+}
+
+body {
+    position: relative;
+    isolation: isolate;
+    min-height: 100vh;
+    background: transparent !important;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, .70), rgba(239, 250, 244, .78)),
+        url("../assets/brasil-textura.jpg") center / cover no-repeat;
+    filter: saturate(.92);
+}
+
+.app {
+    background: rgba(246, 250, 248, .72) !important;
+    box-shadow: 0 0 34px rgba(10, 80, 55, .08);
+}
+
+@media (max-width: 520px) {
+    body::before {
+        background-position: center top;
+    }
+}
+
+@media print {
+    html,
+    body,
+    .app {
+        background: #ffffff !important;
+        box-shadow: none !important;
+    }
+
+    body::before {
+        display: none !important;
+    }
+}
