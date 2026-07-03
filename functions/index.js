@@ -103,7 +103,7 @@ exports.syncAppDataV2 = onDocumentWritten({ document: "users/{uid}/appData/{prof
     logger.info("Estrutura v2 sincronizada pelo backend.", { uid, profileId, version, counts });
 });
 
-exports.deleteSensoUser = onCall({ region: REGION }, async request => {
+exports.deleteSensoUser = onCall({ region: REGION, enforceAppCheck: true }, async request => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Autenticação obrigatória.");
 
     const actorUid = request.auth.uid;
