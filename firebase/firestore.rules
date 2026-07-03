@@ -1,61 +1,213 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
     function isOwner(uid) {
-      return request.auth != null && request.auth.uid == uid;
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.keys().hasAny(["sign_in_second_factor"])
+        && request.auth.token.firebase.sign_in_second_factor == "phone"
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.autorizado == true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == "ativo";
     }
 
     function userIdentityKeys() {
-      return ["uid", "email", "nome", "updatedAt"];
+      return ["uid", "email", "nome", "empresa", "telefone", "documento", "endereco", "empresaConfigurada", "negocios", "negocioAtivo", "negocioAtivoNome", "updatedAt"];
+    }
+
+    function validBusinessEntry(entry, businessId) {
+      return entry is map
+        && entry.keys().hasOnly(["businessId", "tipo", "empresa", "telefone", "documento", "endereco", "configurado", "updatedAt"])
+        && entry.businessId == businessId
+        && entry.tipo is string && entry.tipo.size() <= 80
+        && entry.empresa is string && entry.empresa.size() <= 160
+        && entry.telefone is string && entry.telefone.size() <= 30
+        && entry.documento is string && entry.documento.size() <= 30
+        && entry.endereco is string && entry.endereco.size() <= 300
+        && entry.configurado == true
+        && entry.updatedAt is timestamp;
+    }
+
+    function validBusinesses() {
+      let businesses = request.resource.data.negocios;
+      return businesses is map
+        && businesses.keys().hasOnly([
+          "mecanica", "lava_rapido", "estetica_automotiva", "funilaria", "pintura_automotiva",
+          "eletrica_automotiva", "borracharia", "auto_center", "ar_automotivo", "som_acessorios",
+          "prestador", "pedreiro", "pintor", "encanador", "eletricista", "faxineiro", "jardineiro",
+          "tecnico_ar", "montador_moveis", "chaveiro", "vidraceiro", "marceneiro", "gesseiro", "piscineiro"
+        ])
+        && (!businesses.keys().hasAny(["mecanica"]) || validBusinessEntry(businesses.mecanica, "mecanica"))
+        && (!businesses.keys().hasAny(["lava_rapido"]) || validBusinessEntry(businesses.lava_rapido, "lava_rapido"))
+        && (!businesses.keys().hasAny(["estetica_automotiva"]) || validBusinessEntry(businesses.estetica_automotiva, "estetica_automotiva"))
+        && (!businesses.keys().hasAny(["funilaria"]) || validBusinessEntry(businesses.funilaria, "funilaria"))
+        && (!businesses.keys().hasAny(["pintura_automotiva"]) || validBusinessEntry(businesses.pintura_automotiva, "pintura_automotiva"))
+        && (!businesses.keys().hasAny(["eletrica_automotiva"]) || validBusinessEntry(businesses.eletrica_automotiva, "eletrica_automotiva"))
+        && (!businesses.keys().hasAny(["borracharia"]) || validBusinessEntry(businesses.borracharia, "borracharia"))
+        && (!businesses.keys().hasAny(["auto_center"]) || validBusinessEntry(businesses.auto_center, "auto_center"))
+        && (!businesses.keys().hasAny(["ar_automotivo"]) || validBusinessEntry(businesses.ar_automotivo, "ar_automotivo"))
+        && (!businesses.keys().hasAny(["som_acessorios"]) || validBusinessEntry(businesses.som_acessorios, "som_acessorios"))
+        && (!businesses.keys().hasAny(["prestador"]) || validBusinessEntry(businesses.prestador, "prestador"))
+        && (!businesses.keys().hasAny(["pedreiro"]) || validBusinessEntry(businesses.pedreiro, "pedreiro"))
+        && (!businesses.keys().hasAny(["pintor"]) || validBusinessEntry(businesses.pintor, "pintor"))
+        && (!businesses.keys().hasAny(["encanador"]) || validBusinessEntry(businesses.encanador, "encanador"))
+        && (!businesses.keys().hasAny(["eletricista"]) || validBusinessEntry(businesses.eletricista, "eletricista"))
+        && (!businesses.keys().hasAny(["faxineiro"]) || validBusinessEntry(businesses.faxineiro, "faxineiro"))
+        && (!businesses.keys().hasAny(["jardineiro"]) || validBusinessEntry(businesses.jardineiro, "jardineiro"))
+        && (!businesses.keys().hasAny(["tecnico_ar"]) || validBusinessEntry(businesses.tecnico_ar, "tecnico_ar"))
+        && (!businesses.keys().hasAny(["montador_moveis"]) || validBusinessEntry(businesses.montador_moveis, "montador_moveis"))
+        && (!businesses.keys().hasAny(["chaveiro"]) || validBusinessEntry(businesses.chaveiro, "chaveiro"))
+        && (!businesses.keys().hasAny(["vidraceiro"]) || validBusinessEntry(businesses.vidraceiro, "vidraceiro"))
+        && (!businesses.keys().hasAny(["marceneiro"]) || validBusinessEntry(businesses.marceneiro, "marceneiro"))
+        && (!businesses.keys().hasAny(["gesseiro"]) || validBusinessEntry(businesses.gesseiro, "gesseiro"))
+        && (!businesses.keys().hasAny(["piscineiro"]) || validBusinessEntry(businesses.piscineiro, "piscineiro"));
+    }
+
+    function validActiveBusiness() {
+      return request.resource.data.negocioAtivo in [
+          "mecanica", "lava_rapido", "estetica_automotiva", "funilaria", "pintura_automotiva",
+          "eletrica_automotiva", "borracharia", "auto_center", "ar_automotivo", "som_acessorios",
+          "prestador", "pedreiro", "pintor", "encanador", "eletricista", "faxineiro", "jardineiro",
+          "tecnico_ar", "montador_moveis", "chaveiro", "vidraceiro", "marceneiro", "gesseiro", "piscineiro"
+        ]
+        && request.resource.data.negocioAtivoNome is string
+        && request.resource.data.negocioAtivoNome.size() <= 80;
+    }
+
+    function validOwnerProfileSync() {
+      let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return (
+          changedKeys.hasOnly(["negocioAtivo", "negocioAtivoNome", "updatedAt"])
+          && validActiveBusiness()
+        ) || !changedKeys.hasAny(["empresa", "telefone", "documento", "endereco", "empresaConfigurada", "negocios", "negocioAtivo", "negocioAtivoNome"])
+        || (
+          request.resource.data.empresa is string
+          && request.resource.data.empresa.size() <= 160
+          && request.resource.data.telefone is string
+          && request.resource.data.telefone.size() <= 30
+          && request.resource.data.documento is string
+          && request.resource.data.documento.size() <= 30
+          && request.resource.data.endereco is string
+          && request.resource.data.endereco.size() <= 300
+          && request.resource.data.empresaConfigurada == true
+          && (!changedKeys.hasAny(["negocios"]) || validBusinesses())
+          && (!changedKeys.hasAny(["negocioAtivo", "negocioAtivoNome"]) || validActiveBusiness())
+        );
     }
 
     function userCreateKeys() {
-      return ["uid", "email", "nome", "updatedAt", "autorizado", "plano", "status", "tipoPagamento", "validade"];
+      return ["uid", "email", "nome", "updatedAt", "dataCadastro", "autorizado", "admin", "plano", "status", "tipoPagamento", "validade"];
+    }
+
+    function validInitialUser(uid) {
+      return request.resource.data.keys().hasOnly(userCreateKeys())
+        && request.resource.data.uid == uid
+        && request.resource.data.autorizado == false
+        && request.resource.data.admin == false
+        && request.resource.data.plano == "gratis"
+        && request.resource.data.status == "aguardando"
+        && request.resource.data.tipoPagamento == "mensal"
+        && request.resource.data.validade == null
+        && request.resource.data.dataCadastro == request.time;
+    }
+
+    function adminMutableKeys() {
+      return ["autorizado", "status", "plano", "tipoPagamento", "validade", "precoContratado", "dataContratacao", "tipoPlano", "lastAdminActionId", "updatedAt"];
+    }
+
+    function validAdminValues() {
+      return request.resource.data.status in ["aguardando", "ativo", "bloqueado"]
+        && request.resource.data.plano in ["gratis", "basico", "pro"]
+        && request.resource.data.autorizado is bool;
+    }
+
+    function validAdminPlanChange() {
+      let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return !changedKeys.hasAny(["plano", "tipoPagamento", "validade", "precoContratado", "dataContratacao", "tipoPlano"])
+        || (
+          request.resource.data.tipoPagamento == "mensal"
+          && (
+            (
+              request.resource.data.plano == "gratis"
+              && request.resource.data.validade == null
+              && request.resource.data.precoContratado == null
+              && request.resource.data.dataContratacao == null
+              && request.resource.data.tipoPlano == null
+            )
+            || (
+              request.resource.data.plano == "basico"
+              && request.resource.data.validade is timestamp
+              && request.resource.data.validade > request.time
+              && request.resource.data.validade <= request.time + duration.value(365, "d")
+              && request.resource.data.precoContratado == 29.90
+              && request.resource.data.dataContratacao is timestamp
+              && request.resource.data.tipoPlano == "mensal"
+            )
+            || (
+              request.resource.data.plano == "pro"
+              && request.resource.data.validade is timestamp
+              && request.resource.data.validade > request.time
+              && request.resource.data.validade <= request.time + duration.value(365, "d")
+              && request.resource.data.precoContratado == 59.90
+              && request.resource.data.dataContratacao is timestamp
+              && request.resource.data.tipoPlano == "mensal"
+            )
+          )
+        );
+    }
+
+    function hasMatchingAudit(uid) {
+      let actionId = request.resource.data.lastAdminActionId;
+      let auditPath = /databases/$(database)/documents/adminAudit/$(actionId);
+      return actionId is string
+        && actionId.size() > 10
+        && existsAfter(auditPath)
+        && getAfter(auditPath).data.actionId == actionId
+        && getAfter(auditPath).data.actorUid == request.auth.uid
+        && getAfter(auditPath).data.targetUid == uid
+        && getAfter(auditPath).data.createdAt == request.time;
     }
 
     function userAccessAllowed(uid) {
       return isOwner(uid)
         && exists(/databases/$(database)/documents/users/$(uid))
-        && get(/databases/$(database)/documents/users/$(uid)).data.autorizado != false
+        && get(/databases/$(database)/documents/users/$(uid)).data.autorizado == true
+        && get(/databases/$(database)/documents/users/$(uid)).data.status == "ativo"
         && paymentAccessAllowed(uid);
     }
 
-    function normalizeUserPlan(uid) {
+    function userPlan(uid) {
       return get(/databases/$(database)/documents/users/$(uid)).data;
     }
 
-    function isBasicMonthly(uid) {
-      let user = normalizeUserPlan(uid);
-      return user.plano == "basico"
-        && user.tipoPagamento != "avista"
-        && user.tipoPagamento != "a vista"
-        && user.tipoPagamento != "à vista";
+    function isFreePlan(uid) {
+      let user = userPlan(uid);
+      return user.plano == "gratis" || !user.keys().hasAny(["plano"]);
     }
 
-    function isFreePlan(uid) {
-      let user = normalizeUserPlan(uid);
-      return user.plano == "gratis" || !user.keys().hasAny(["plano"]);
+    function isBasicMonthly(uid) {
+      let user = userPlan(uid);
+      return user.plano == "basico" && user.tipoPagamento != "avista" && user.tipoPagamento != "a vista";
     }
 
     function isMonthlyAppPlan(user) {
       return (user.plano == "pro" || user.plano == "basico")
-        && user.tipoPagamento != "avista"
-        && user.tipoPagamento != "a vista"
-        && user.tipoPagamento != "à vista"
-        && user.tipoPagamento != "Ã  vista";
+        && user.tipoPagamento != "avista" && user.tipoPagamento != "a vista";
     }
 
     function paymentAccessAllowed(uid) {
-      let user = normalizeUserPlan(uid);
+      let user = userPlan(uid);
       return user.status != "bloqueado"
-        && (
-          !isMonthlyAppPlan(user)
-          || (
-            user.keys().hasAny(["validade"])
-            && user.validade is timestamp
-            && request.time <= user.validade + duration.value(5, "d")
-          )
-        );
+        && (!isMonthlyAppPlan(user) || (user.validade is timestamp && request.time <= user.validade + duration.value(5, "d")));
     }
 
     function hasAppDataPayload() {
@@ -63,39 +215,37 @@ service cloud.firestore {
     }
 
     function clientesCount() {
-      return hasAppDataPayload()
-        && request.resource.data.data.keys().hasAll(["clientes"])
-        ? request.resource.data.data.clientes.size()
-        : 0;
+      return hasAppDataPayload() && request.resource.data.data.keys().hasAll(["clientes"])
+        ? request.resource.data.data.clientes.size() : 0;
     }
 
-    function servicosCount() {
-      return hasAppDataPayload()
-        && request.resource.data.data.keys().hasAll(["servicos"])
-        ? request.resource.data.data.servicos.size()
-        : 0;
+    function orcamentosCount() {
+      return hasAppDataPayload() && request.resource.data.data.keys().hasAll(["orcamentos"])
+        ? request.resource.data.data.orcamentos.size() : 0;
     }
 
     function appDataWithinPlan(uid) {
       return isFreePlan(uid)
-        ? (clientesCount() <= 5 && servicosCount() <= 10)
-        : (
-            !isBasicMonthly(uid)
-            || (clientesCount() <= 50 && servicosCount() <= 150)
-          );
+        ? (clientesCount() <= 5 && orcamentosCount() <= 10)
+        : (!isBasicMonthly(uid) || (clientesCount() <= 50 && orcamentosCount() <= 150));
     }
 
     match /users/{uid} {
-      allow read: if isOwner(uid);
-      allow create: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(userCreateKeys())
-        && request.resource.data.autorizado == false
-        && request.resource.data.plano == "gratis"
-        && request.resource.data.status == "ativo"
-        && request.resource.data.tipoPagamento == "mensal"
-        && request.resource.data.validade == null;
-      allow update: if isOwner(uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(userIdentityKeys());
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(uid) && validInitialUser(uid);
+      allow update: if (
+          isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(userIdentityKeys())
+          && validOwnerProfileSync()
+        ) || (
+          isAdmin()
+          && request.auth.uid != uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(adminMutableKeys())
+          && validAdminValues()
+          && validAdminPlanChange()
+          && hasMatchingAudit(uid)
+        );
       allow delete: if false;
 
       match /appData/{profileId} {
@@ -107,10 +257,35 @@ service cloud.firestore {
         allow read, write: if userAccessAllowed(uid);
       }
 
+      match /profiles/{profileId} {
+        allow read: if userAccessAllowed(uid);
+        allow create, update: if isOwner(uid) && isAdmin();
+        allow delete: if false;
+
+        match /{entity}/{entityId} {
+          allow read: if userAccessAllowed(uid)
+            && entity in ["clientes", "servicos", "agenda", "financeiro", "orcamentos", "correcoes"];
+          allow write: if isOwner(uid) && isAdmin()
+            && entity in ["clientes", "servicos", "agenda", "financeiro", "orcamentos", "correcoes"];
+        }
+      }
+
       match /{document=**} {
         allow read: if userAccessAllowed(uid);
         allow write: if false;
       }
+    }
+
+    match /adminAudit/{actionId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(["actionId", "actorUid", "actorEmail", "targetUid", "action", "changes", "createdAt"])
+        && request.resource.data.actionId == actionId
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.targetUid != request.auth.uid
+        && request.resource.data.action in ["aprovar_usuario", "bloquear_usuario", "alterar_plano"]
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
     }
 
     match /billingAlerts/{uid} {

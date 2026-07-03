@@ -43,7 +43,7 @@
     }
 
     function isMecanicaProfile() {
-        return getActiveProfileId() === "mecanica";
+        return window.SensoProfile?.usesVehicleFields?.() === true;
     }
 
     function getServicePanelLabels() {

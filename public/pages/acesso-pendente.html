@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Acesso à conta | Senso</title>
+    <link rel="stylesheet" href="../css/admin-senso.css">
+</head>
+<body class="access-body">
+    <main class="access-card" id="accessCard" aria-live="polite" style="visibility:hidden">
+        <img src="../assets/logo-senso.png" alt="Senso" class="access-logo">
+        <img id="blockedMascot" class="blocked-mascot" src="../assets/assistente-senso/conta-bloqueada.png" alt="Mascote Senso triste" hidden>
+        <h1 id="accessTitle"></h1>
+        <p id="accessMessage"></p>
+        <a id="blockedSupport" class="blocked-support" href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20minha%20conta%20do%20Senso%20est%C3%A1%20bloqueada%20e%20preciso%20de%20ajuda%20para%20recuperar%20o%20acesso." target="_blank" rel="noopener noreferrer" hidden>
+            Falar com o suporte<br><strong>(11) 99284-1312</strong>
+        </a>
+        <button id="pendingSignOut" type="button">Sair da conta</button>
+    </main>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/auth-guard.js?v=20260702-leituras1"></script>
+    <script>
+        const blockedMascot = document.getElementById("blockedMascot");
+        const blockedSupport = document.getElementById("blockedSupport");
+        document.getElementById("pendingSignOut").addEventListener("click", () => window.sensoSignOut?.());
+
+        function renderAccessStatus(currentStatus) {
+            if (currentStatus === "ativo") return;
+            if (currentStatus === "bloqueado") {
+                blockedMascot.hidden = false;
+                blockedSupport.hidden = false;
+                document.getElementById("accessTitle").textContent = "Conta bloqueada";
+                document.getElementById("accessMessage").textContent = "Seu acesso foi bloqueado pelo administrador. Entre em contato com o suporte.";
+            } else {
+                blockedMascot.hidden = true;
+                blockedSupport.hidden = true;
+                document.getElementById("accessTitle").textContent = "Conta aguardando aprovação";
+                document.getElementById("accessMessage").textContent = "Sua conta está aguardando aprovação do administrador.";
+            }
+            document.getElementById("accessCard").style.visibility = "visible";
+        }
+
+        window.addEventListener("senso-access-status", event => {
+            renderAccessStatus(event.detail?.status);
+        });
+        window.addEventListener("senso-auth-ready", event => {
+            const profile = event.detail?.profile || {};
+            renderAccessStatus(profile.status === "bloqueado" ? "bloqueado" : profile.autorizado === false ? "aguardando" : "ativo");
+        });
+        if (window.SensoAuth?.profile) {
+            const profile = window.SensoAuth.profile;
+            renderAccessStatus(profile.status === "bloqueado" ? "bloqueado" : profile.autorizado === false ? "aguardando" : "ativo");
+        }
+
+        firebase.auth().onAuthStateChanged(async user => {
+            if (!user) return;
+            try {
+                const snapshot = await firebase.firestore().collection("users").doc(user.uid).get({ source: "server" });
+                if (!snapshot.exists) {
+                    renderAccessStatus("aguardando");
+                    return;
+                }
+                const profile = snapshot.data() || {};
+                const currentStatus = profile.status === "bloqueado"
+                    ? "bloqueado"
+                    : profile.autorizado === false
+                        ? "aguardando"
+                        : "ativo";
+                if (currentStatus === "ativo") {
+                    location.replace("../index.html");
+                    return;
+                }
+                renderAccessStatus(currentStatus);
+            } catch (error) {
+                console.error("Falha ao confirmar o acesso da conta.", error);
+                renderAccessStatus(new URLSearchParams(location.search).get("status") || "aguardando");
+            }
+        });
+    </script>
+</body>
+</html>

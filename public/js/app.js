@@ -24,6 +24,7 @@ const LEGACY_STORAGE_KEY = "appData";
 const LEGACY_SETTINGS_KEY = "appSettings";
 const STORAGE_KEY_BASE = `appData:${ACTIVE_PROFILE.id}`;
 const LAST_UID_KEY = "senso:lastAuthUid";
+const ACTIVE_BUSINESS_SYNC_KEY = "senso:activeBusinessSynced";
 
 let cloudHydrationStarted = false;
 let cloudSyncTimer = null;
@@ -58,6 +59,28 @@ function getAuthUid() {
     return null;
 }
 
+async function syncActiveBusinessForAdmin() {
+    const uid = getAuthUid();
+    const business = window.SensoProfile?.getBusinessType?.();
+    if (!uid || !business?.id || !window.firebase?.firestore) return;
+
+    const syncKey = `${ACTIVE_BUSINESS_SYNC_KEY}:${uid}`;
+    try {
+        if (sessionStorage.getItem(syncKey) === business.id) return;
+        await firebase.firestore().collection("users").doc(uid).update({
+            negocioAtivo: business.id,
+            negocioAtivoNome: business.label || business.id,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        sessionStorage.setItem(syncKey, business.id);
+    } catch (error) {
+        console.warn("Não foi possível sincronizar o negócio ativo.", error);
+    }
+}
+
+window.addEventListener("senso-auth-ready", syncActiveBusinessForAdmin);
+setTimeout(syncActiveBusinessForAdmin, 0);
+
 function getStorageKey() {
     const uid = getAuthUid();
     if (uid) return `${STORAGE_KEY_BASE}:uid:${uid}`;
@@ -67,7 +90,7 @@ function getStorageKey() {
 
 function getProfileId(profileId) {
     const id = String(profileId || ACTIVE_PROFILE.id || "base");
-    return id === "prestador" || id === "mecanica" ? id : "base";
+    return window.SensoProfile?.profiles?.[id] ? id : "base";
 }
 
 function getSettingsKey(profileId) {
@@ -317,6 +340,8 @@ function hasCompanyIdentitySettings(settings) {
 }
 
 function migrateLegacySettingsIfNeeded(targetKey, profileId) {
+    const resolvedProfileId = getProfileId(profileId);
+    if (resolvedProfileId !== "mecanica" && resolvedProfileId !== "prestador") return;
     migrateLegacyStorageIfNeeded(targetKey, LEGACY_SETTINGS_KEY);
 }
 
@@ -386,6 +411,7 @@ function saveData(data) {
     dataCacheRaw = raw;
     dataCacheValue = normalized;
     queueCloudDataSync(normalized);
+    window.SensoV2Sync?.queue?.(normalized);
     notifyLiveUpdate("save-data");
 }
 
@@ -526,12 +552,22 @@ function telefoneJaExiste(telefone, ignorarClienteId = "") {
 }
 
 function getUsageLimits() {
+    const planState = window.SensoPlans?.state;
+    if (!planState?.ready || planState.loading || planState.error) {
+        return {
+            clientes: Infinity,
+            orcamentos: Infinity,
+            servicos: Infinity
+        };
+    }
+
     if (window.SensoPlans && typeof window.SensoPlans.getUsageLimits === "function") {
         return window.SensoPlans.getUsageLimits();
     }
 
     return {
         clientes: Infinity,
+        orcamentos: Infinity,
         servicos: Infinity
     };
 }
@@ -572,6 +608,18 @@ function podeAdicionarServico(dataRef) {
     if (totalServicos < limite) return true;
 
     mostrarAlertaLimite("servicos", limite);
+    return false;
+}
+
+function podeAdicionarOrcamento(dataRef) {
+    const data = dataRef || getData();
+    const limite = getUsageLimits().orcamentos;
+    if (!limiteFinito(limite)) return true;
+
+    const totalOrcamentos = (data.orcamentos || []).length;
+    if (totalOrcamentos < limite) return true;
+
+    mostrarAlertaLimite("orcamentos", limite);
     return false;
 }
 
@@ -715,6 +763,8 @@ function gerarOrcamentoDoServico(servicoId) {
         saveData(data);
         return orcamentoExistente.numero;
     }
+
+    if (!podeAdicionarOrcamento(data)) return null;
 
     const numero = gerarNumeroOrcamento();
 
@@ -907,7 +957,9 @@ function getAppSettings(profileId) {
         buttonTextColor: settings.buttonTextColor || "#ffffff",
         buttonSecondaryTextColor: settings.buttonSecondaryTextColor || "#111827",
         logoDataUrl: settings.logoDataUrl || "",
-        companyName: settings.companyName || profileDefaults.companyName || "Senso",
+        companyName: Object.prototype.hasOwnProperty.call(settings, "companyName")
+            ? String(settings.companyName || "")
+            : (profileDefaults.companyName ?? "Senso"),
         companyDocument: resolvedDocument,
         companyDocumentType: resolvedDocumentType,
         companyAddress: settings.companyAddress || profileDefaults.companyAddress || "",

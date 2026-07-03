@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com; style-src 'unsafe-inline' 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.google.com https://www.recaptcha.net; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.google.com https://www.recaptcha.net; frame-src https://www.google.com https://www.recaptcha.net; style-src 'unsafe-inline' 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';" />
     <title>Entrar - Senso</title>
     <link rel="stylesheet" href="../css/style.css?v=20260629-brasil-mobile">
     <style>
@@ -98,12 +98,17 @@
             color: #0f766e;
             font-weight: 700;
         }
+        .mfa-step { margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+        .mfa-step[hidden] { display: none; }
     </style>
 </head>
 <body>
     <main class="card">
         <h1>Senso</h1>
         <p>Entre com sua conta para acessar seus dados.</p>
+
+        <label for="nomeCompleto">Nome completo <span style="font-weight:normal;color:#64748b">(cadastro ou atualização)</span></label>
+        <input id="nomeCompleto" type="text" autocomplete="name" maxlength="120" placeholder="Seu nome completo" />
 
         <label for="email">Email</label>
         <input id="email" type="email" autocomplete="email" maxlength="120" spellcheck="false" />
@@ -120,17 +125,36 @@
             <a href="privacidade.html">Política de Privacidade</a>.
         </p>
         <div class="status" id="status"></div>
+        <section class="mfa-step" id="mfaStep" hidden>
+            <p>Digite o código de segurança enviado para o telefone cadastrado.</p>
+            <label for="mfaCode">Código de verificação</label>
+            <input id="mfaCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" />
+            <button class="btn-primary" id="btnConfirmMfa" type="button">Confirmar código</button>
+            <button class="btn-secondary" id="btnCancelMfa" type="button">Cancelar</button>
+        </section>
+        <div id="recaptcha-container"></div>
     </main>
 
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="../js/firebase-config.js"></script>
     <script>
+        const nomeCompletoEl = document.getElementById("nomeCompleto");
         const emailEl = document.getElementById("email");
         const senhaEl = document.getElementById("senha");
         const statusEl = document.getElementById("status");
         const btnEntrar = document.getElementById("btnEntrar");
         const btnCriar = document.getElementById("btnCriar");
+        const mfaStep = document.getElementById("mfaStep");
+        const mfaCode = document.getElementById("mfaCode");
+        const btnConfirmMfa = document.getElementById("btnConfirmMfa");
+        const btnCancelMfa = document.getElementById("btnCancelMfa");
+        let mfaResolver = null;
+        let mfaVerificationId = null;
+        let recaptchaVerifier = null;
+        let criandoConta = false;
+        let atualizandoNomeLogin = false;
+        let nomePendenteLogin = "";
         const nextParam = new URLSearchParams(window.location.search).get("next");
         const DANGEROUS_INPUT = [
             /<\s*\/?\s*(script|iframe|object|embed|link|meta|style|svg|img|form|input|button)[\s>/]/i,
@@ -176,13 +200,14 @@
             if (!firebase.apps.length) {
                 firebase.initializeApp(cfg);
             }
+            window.sensoConnectFirebaseEmulators?.();
 
             firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {
                 // Mantém fluxo mesmo se o navegador limitar persistência.
             });
 
             firebase.auth().onAuthStateChanged(user => {
-                if (user) {
+                if (user && !criandoConta && !atualizandoNomeLogin) {
                     window.location.replace(getSafeNext());
                 }
             });
@@ -194,11 +219,71 @@
             statusEl.textContent = msg || "";
         }
 
+        function resetMfa() {
+            mfaResolver = null;
+            mfaVerificationId = null;
+            mfaCode.value = "";
+            mfaStep.hidden = true;
+            emailEl.disabled = false;
+            senhaEl.disabled = false;
+            btnEntrar.disabled = false;
+            btnCriar.disabled = false;
+            atualizandoNomeLogin = false;
+            nomePendenteLogin = "";
+            if (recaptchaVerifier) {
+                recaptchaVerifier.clear();
+                recaptchaVerifier = null;
+            }
+        }
+
+        async function startMfa(error) {
+            mfaResolver = error.resolver;
+            const hint = mfaResolver?.hints?.find(item => item.factorId === firebase.auth.PhoneMultiFactorGenerator.FACTOR_ID);
+            if (!hint) throw new Error("Nenhum segundo fator por SMS foi encontrado.");
+
+            recaptchaVerifier = new firebase.auth.RecaptchaVerifier("recaptcha-container", { size: "invisible" });
+            const phoneInfoOptions = { multiFactorHint: hint, session: mfaResolver.session };
+            mfaVerificationId = await new firebase.auth.PhoneAuthProvider().verifyPhoneNumber(phoneInfoOptions, recaptchaVerifier);
+            emailEl.disabled = true;
+            senhaEl.disabled = true;
+            btnEntrar.disabled = true;
+            btnCriar.disabled = true;
+            mfaStep.hidden = false;
+            setStatus("Código de segurança enviado.");
+            mfaCode.focus();
+        }
+
+        async function confirmMfa() {
+            const code = mfaCode.value.replace(/\D/g, "");
+            if (!mfaResolver || !mfaVerificationId || code.length !== 6) {
+                setStatus("Informe o código de 6 dígitos.");
+                return;
+            }
+            btnConfirmMfa.disabled = true;
+            setStatus("Confirmando segundo fator...");
+            try {
+                const credential = firebase.auth.PhoneAuthProvider.credential(mfaVerificationId, code);
+                const assertion = firebase.auth.PhoneMultiFactorGenerator.assertion(credential);
+                const signInResult = await mfaResolver.resolveSignIn(assertion);
+                if (nomePendenteLogin) {
+                    await signInResult.user.updateProfile({ displayName: nomePendenteLogin });
+                }
+                setStatus("");
+                window.location.replace(getSafeNext());
+            } catch (error) {
+                console.error("Falha no segundo fator.", error);
+                setStatus("Código inválido ou expirado.");
+            } finally {
+                btnConfirmMfa.disabled = false;
+            }
+        }
+
         if (new URLSearchParams(window.location.search).get("access") === "pending") {
             setStatus("Conta criada. Aguarde a autorização do administrador para acessar.");
         }
 
         async function login() {
+            const nomeCompleto = nomeCompletoEl.value.trim().replace(/\s+/g, " ");
             const email = emailSeguro();
             const senha = senhaEl.value;
 
@@ -209,17 +294,42 @@
             }
 
             setStatus("Entrando...");
+            nomePendenteLogin = nomeCompleto.length >= 3 ? nomeCompleto : "";
+            atualizandoNomeLogin = !!nomePendenteLogin;
             try {
-                await firebase.auth().signInWithEmailAndPassword(email, senha);
+                const credential = await firebase.auth().signInWithEmailAndPassword(email, senha);
+                if (nomePendenteLogin) {
+                    await credential.user.updateProfile({ displayName: nomePendenteLogin });
+                }
                 setStatus("");
+                if (atualizandoNomeLogin) window.location.replace(getSafeNext());
             } catch (err) {
+                if (err.code === "auth/multi-factor-auth-required") {
+                    try {
+                        await startMfa(err);
+                    } catch (mfaError) {
+                        console.error("Não foi possível iniciar o MFA.", mfaError);
+                        resetMfa();
+                        setStatus("Não foi possível iniciar a verificação em duas etapas.");
+                    }
+                    return;
+                }
+                atualizandoNomeLogin = false;
+                nomePendenteLogin = "";
                 setStatus("Email ou senha inválidos.");
             }
         }
 
         async function criarConta() {
+            const nomeCompleto = nomeCompletoEl.value.trim().replace(/\s+/g, " ");
             const email = emailSeguro();
             const senha = senhaEl.value;
+
+            if (!nomeCompleto || nomeCompleto.length < 3) {
+                setStatus("Informe seu nome completo.");
+                nomeCompletoEl.focus();
+                return;
+            }
 
             if (!email || !senha) {
                 if (!email) return;
@@ -233,16 +343,23 @@
             }
 
             setStatus("Criando conta...");
+            criandoConta = true;
             try {
-                await firebase.auth().createUserWithEmailAndPassword(email, senha);
+                const credential = await firebase.auth().createUserWithEmailAndPassword(email, senha);
+                await credential.user.updateProfile({ displayName: nomeCompleto });
                 setStatus("");
+                window.location.replace(getSafeNext());
             } catch (err) {
+                criandoConta = false;
                 setStatus("Não foi possível criar a conta com esses dados.");
             }
         }
 
         btnEntrar.addEventListener("click", login);
         btnCriar.addEventListener("click", criarConta);
+        btnConfirmMfa.addEventListener("click", confirmMfa);
+        btnCancelMfa.addEventListener("click", () => { resetMfa(); setStatus(""); });
+        mfaCode.addEventListener("keydown", event => { if (event.key === "Enter") confirmMfa(); });
         initFirebaseAuth();
     </script>
 </body>

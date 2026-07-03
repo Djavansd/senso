@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow,noarchive">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com https://www.recaptcha.net; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.google.com https://www.recaptcha.net; frame-src https://www.google.com https://www.recaptcha.net; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+    <title>Segurança da conta | Senso</title>
+    <link rel="stylesheet" href="../css/admin-senso.css">
+    <script src="../js/auth-boot.js?v=20260630"></script>
+</head>
+<body class="access-body">
+    <main class="access-card security-card">
+        <img src="../assets/logo-senso.png" alt="Senso" class="access-logo">
+        <span class="eyebrow security-eyebrow">Área administrativa</span>
+        <h1>Proteção em duas etapas</h1>
+        <p id="securityMessage" aria-live="polite">Validando a segurança da sua conta…</p>
+
+        <section id="verifyEmailStep" hidden>
+            <p>O Firebase exige que o e-mail esteja verificado antes de cadastrar o segundo fator.</p>
+            <button id="sendVerification" type="button">Enviar verificação por e-mail</button>
+            <button class="secondary-action" id="reloadAccount" type="button">Já confirmei meu e-mail</button>
+        </section>
+
+        <section id="enrollPhoneStep" hidden>
+            <label for="adminPhone">Telefone com DDD</label>
+            <input id="adminPhone" type="tel" autocomplete="tel" placeholder="+55 11 99284-1312" maxlength="20">
+            <button id="sendMfaCode" type="button">Enviar código por SMS</button>
+            <button class="secondary-action" id="reauthenticate" type="button" hidden>Sair e entrar novamente</button>
+        </section>
+
+        <section id="confirmCodeStep" hidden>
+            <label for="enrollCode">Código de 6 dígitos</label>
+            <input id="enrollCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+            <button id="confirmEnrollment" type="button">Ativar proteção</button>
+        </section>
+
+        <section id="mfaActiveStep" hidden>
+            <p class="success-message">✓ O segundo fator está ativo nesta conta.</p>
+            <a class="primary-link" id="securityContinue" href="gestao-interna-4m8x2.html">Abrir gestão interna</a>
+        </section>
+
+        <a class="back-link" href="../index.html">Voltar ao Senso</a>
+        <div id="enroll-recaptcha"></div>
+    </main>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/auth-guard.js?v=20260702-leituras1"></script>
+    <script src="../js/seguranca-conta.js?v=20260630-mfa"></script>
+</body>
+</html>

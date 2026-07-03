@@ -1,10 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Configurações</title>
 <link rel="stylesheet" href="../css/style.css?v=20260629-brasil-mobile">
+<link rel="stylesheet" href="../css/assistente-senso.css">
+<link rel="stylesheet" href="../css/assistente-ajuda.css">
 <style>
 body { background:#f4f6f8; }
 .app { max-width:420px; margin:0 auto; }
@@ -82,7 +84,13 @@ textarea {
     background:#fee2e2 !important;
     color:#991b1b !important;
 }
+.migration-pilot { margin-top:16px; padding:14px; border:2px solid #1686e8; border-radius:12px; background:#eff8ff; box-shadow:0 6px 18px rgba(22,134,232,.14); }
+.migration-pilot[hidden] { display:none; }
+.migration-pilot button { width:100%; margin-top:10px; }
+.migration-status { margin-top:10px; color:#175c4e; font-size:12px; line-height:1.5; }
+.migration-status.migration-error { color:#a12c2c; }
 </style>
+<script src="../js/auth-boot.js?v=20260630"></script>
 </head>
 <body>
 
@@ -93,10 +101,36 @@ textarea {
             <div class="group">
                 <label for="businessType">Tipo de negócio</label>
                 <select id="businessType">
-                    <option value="mecanica">Mecânico</option>
-                    <option value="prestador">Prestador de serviço</option>
+                    <optgroup label="Automotivo">
+                        <option value="mecanica">Mecânica</option>
+                        <option value="lava_rapido">Lava-rápido</option>
+                        <option value="estetica_automotiva">Estética automotiva</option>
+                        <option value="funilaria">Funilaria</option>
+                        <option value="pintura_automotiva">Pintura automotiva</option>
+                        <option value="eletrica_automotiva">Elétrica automotiva</option>
+                        <option value="borracharia">Borracharia</option>
+                        <option value="auto_center">Auto center</option>
+                        <option value="ar_automotivo">Ar-condicionado automotivo</option>
+                        <option value="som_acessorios">Som e acessórios automotivos</option>
+                    </optgroup>
+                    <optgroup label="Serviços gerais">
+                        <option value="prestador">Prestador de serviço</option>
+                        <option value="pedreiro">Pedreiro</option>
+                        <option value="pintor">Pintor residencial/comercial</option>
+                        <option value="encanador">Encanador</option>
+                        <option value="eletricista">Eletricista</option>
+                        <option value="faxineiro">Limpeza e faxina</option>
+                        <option value="jardineiro">Jardineiro</option>
+                        <option value="tecnico_ar">Técnico de ar-condicionado</option>
+                        <option value="montador_moveis">Montador de móveis</option>
+                        <option value="chaveiro">Chaveiro</option>
+                        <option value="vidraceiro">Vidraceiro</option>
+                        <option value="marceneiro">Marceneiro</option>
+                        <option value="gesseiro">Gesseiro / Drywall</option>
+                        <option value="piscineiro">Piscineiro</option>
+                    </optgroup>
                 </select>
-                <div class="muted">Define campos de cliente e orçamento do app.</div>
+                <div class="muted">O Senso adapta os campos de cliente e serviço à profissão escolhida.</div>
             </div>
 
             <div class="group">
@@ -178,6 +212,16 @@ textarea {
                 </div>
                 <a class="btn-primary" href="privacidade.html">Ver política de privacidade</a>
             </div>
+
+            <section class="migration-pilot" id="migrationPilotSection" hidden>
+                <label>Migração piloto da minha conta</label>
+                <div class="muted">Baixa um backup e copia os dados para coleções separadas. Não apaga nem troca o appData atual.</div>
+                <button id="btnMigrationPilot" type="button">Criar backup e migrar minha conta</button>
+                <button id="btnVerifyV2Integrity" class="btn-sec" type="button">Verificar integridade v2</button>
+                <button id="btnEnableV2Read" class="btn-sec" type="button" hidden>Ativar leitura v2 piloto</button>
+                <button id="btnDisableV2Read" class="btn-sec" type="button" hidden>Voltar para leitura antiga</button>
+                <div class="migration-status" id="migrationPilotStatus" role="status">Pronto para iniciar com segurança.</div>
+            </section>
         </div>
     </div>
 </div>
@@ -186,11 +230,15 @@ textarea {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
-<script src="../js/auth-guard.js?v=20260607-gratis"></script>
-<script src="../js/core/plans.js?v=20260607-gratis"></script>
-<script src="../js/core/profile.js"></script>
+<script src="../js/auth-guard.js?v=20260702-leituras1"></script>
+<script src="../js/core/plans.js?v=20260702-leituras1"></script>
+<script src="../js/core/profile.js?v=20260702-negocios2"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
-<script src="../js/app.js"></script>
+<script src="../js/app.js?v=20260702-negocio-ativo"></script>
+<script src="../js/data-sync-v2.js?v=20260702-leituras1"></script>
+<script src="../js/migration-v2.js?v=20260701-pilot5"></script>
+<script src="../js/assistente-senso.js"></script>
+<script src="../js/assistente-ajuda.js"></script>
 <script>
 const primaryColorInput = document.getElementById("primaryColor");
 const buttonTextColorInput = document.getElementById("buttonTextColor");
@@ -250,10 +298,13 @@ const perfilAtivo = (
 )
     ? window.SensoProfile.getActiveProfile()
     : { id: "mecanica" };
-businessTypeInput.value = perfilAtivo.id === "prestador" ? "prestador" : "mecanica";
+const negocioAtivo = window.SensoProfile?.getBusinessType?.();
+businessTypeInput.value = negocioAtivo?.id || (perfilAtivo.id === "prestador" ? "prestador" : "mecanica");
 
 function getPerfilSelecionado() {
-    return businessTypeInput.value === "prestador" ? "prestador" : "mecanica";
+    return window.SensoProfile?.businessTypes?.[businessTypeInput.value]
+        ? businessTypeInput.value
+        : "mecanica";
 }
 
 function carregarConfiguracoesDoPerfil(profileId) {
@@ -366,30 +417,64 @@ btnRemoverLogo.addEventListener("click", () => {
     renderLogoPreview();
 });
 
-btnSalvar.addEventListener("click", () => {
+btnSalvar.addEventListener("click", async () => {
     const perfilSelecionado = getPerfilSelecionado();
     const mudouPerfil = perfilSelecionado !== (perfilAtivo.id || "mecanica");
+    const empresa = companyNameInput.value.trim();
+    const documento = companyDocumentTypeInput.value === "none"
+        ? ""
+        : formatarDocumentoPorTipo(companyDocumentInput.value.trim(), companyDocumentTypeInput.value);
+    const endereco = companyAddressInput.value.trim();
+    const telefone = companyPhoneInput.value.trim();
 
     saveAppSettings({
         primaryColor: primaryColorInput.value,
         buttonTextColor: buttonTextColorInput.value,
         buttonSecondaryTextColor: buttonSecondaryTextColorInput.value,
         logoDataUrl,
-        companyName: companyNameInput.value.trim(),
+        companyName: empresa,
         companyDocumentType: companyDocumentTypeInput.value,
-        companyDocument: companyDocumentTypeInput.value === "none"
-            ? ""
-            : formatarDocumentoPorTipo(
-                companyDocumentInput.value.trim(),
-                companyDocumentTypeInput.value
-        ),
-        companyAddress: companyAddressInput.value.trim(),
-        companyPhone: companyPhoneInput.value.trim(),
+        companyDocument: documento,
+        companyAddress: endereco,
+        companyPhone: telefone,
         companyPhone2: companyPhone2Input.value.trim(),
-        headerServices: headerServicesInput.value.trim().slice(0, 120)
+        headerServices: headerServicesInput.value.trim().slice(0, 120),
+        businessType: businessTypeInput.value
     }, perfilSelecionado);
 
+    try {
+        const currentUser = firebase.auth().currentUser;
+        if (!currentUser) throw new Error("Sessão não encontrada.");
+        const businessId = businessTypeInput.value;
+        const businessLabel = window.SensoProfile?.businessTypes?.[businessId]?.label || businessId;
+        await firebase.firestore().collection("users").doc(currentUser.uid).update({
+            empresa,
+            telefone,
+            documento,
+            endereco,
+            empresaConfigurada: true,
+            negocioAtivo: businessId,
+            negocioAtivoNome: businessLabel,
+            [`negocios.${businessId}`]: {
+                businessId,
+                tipo: businessLabel,
+                empresa,
+                telefone,
+                documento,
+                endereco,
+                configurado: true,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            },
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Falha ao sincronizar dados da empresa no usuário.", error);
+        alert("As configurações foram salvas no aparelho, mas os dados da empresa não puderam ser sincronizados. Verifique a internet e tente Salvar novamente.");
+        return;
+    }
+
     if (window.SensoProfile && typeof window.SensoProfile.setActiveProfile === "function") {
+        window.SensoProfile.setBusinessType?.(businessTypeInput.value);
         profileChanged = mudouPerfil
             ? (window.SensoProfile.setActiveProfile(perfilSelecionado) || false)
             : false;

@@ -13,17 +13,20 @@
     const PAYMENT_GRACE_DAYS = 5;
     const FREE_LIMITS = Object.freeze({
         clientes: 5,
-        servicos: 10
+        orcamentos: 10,
+        servicos: Infinity
     });
     const BASIC_MONTHLY_LIMITS = Object.freeze({
         clientes: 50,
-        servicos: 150
+        orcamentos: 150,
+        servicos: Infinity
     });
 
     const state = {
         ready: false,
         loading: false,
         uid: null,
+        listenerUid: null,
         error: null,
         loadPromise: null,
         unsubscribe: null,
@@ -55,13 +58,48 @@
         return texto === "avista" ? "avista" : "mensal";
     }
 
+    function normalizeText(value) {
+        return String(value || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/gi, "")
+            .toLowerCase();
+    }
+
+    function normalizePlanId(data) {
+        const candidates = [
+            data.plano,
+            data.plan,
+            data.tipoPlano,
+            data.nomePlano,
+            data.subscriptionPlan
+        ].map(normalizeText).filter(Boolean);
+
+        const hasPaidPlan = candidates.some(value => (
+                ["pro", "premium", "profissional", "professional", "pago", "paid", "ativo"].includes(value)
+                || value.includes("premium")
+                || value === "planopro"
+        ));
+
+        if (
+            hasPaidPlan
+            || data.pro === true
+            || data.premium === true
+            || data.assinaturaAtiva === true
+        ) {
+            return "pro";
+        }
+
+        if (candidates.some(value => ["basico", "basic", "starter"].includes(value))) {
+            return "basico";
+        }
+
+        return "gratis";
+    }
+
     function normalizePlan(input) {
         const data = input && typeof input === "object" ? input : {};
-        const plano = data.plano === "pro"
-            ? "pro"
-            : data.plano === "basico"
-                ? "basico"
-                : "gratis";
+        const plano = normalizePlanId(data);
         const status = data.status === "bloqueado" ? "bloqueado" : "ativo";
         const tipoPagamento = normalizeTipoPagamento(data.tipoPagamento);
 
@@ -188,9 +226,22 @@
         enforcePaymentAccess(state.data);
     }
 
+    function setLoadError(uid, error) {
+        state.ready = false;
+        state.loading = false;
+        state.uid = uid || null;
+        state.error = error || new Error("Plano nao confirmado no Firebase.");
+        state.loadPromise = null;
+        state.data = { ...DEFAULT_PLAN };
+
+        global.dispatchEvent(new CustomEvent("senso-plan-error", {
+            detail: { uid: state.uid, error: state.error }
+        }));
+    }
+
     async function ensureUserPlan(uid) {
         if (!uid || !hasFirestore()) {
-            setState(uid, DEFAULT_PLAN);
+            setLoadError(uid, new Error("Firebase indisponivel para confirmar o plano."));
             return state.data;
         }
 
@@ -199,13 +250,25 @@
         }
 
         state.loading = true;
+        state.ready = false;
         state.uid = uid;
+        state.error = null;
+        state.data = { ...DEFAULT_PLAN };
 
         const docRef = global.firebase.firestore().collection("users").doc(uid);
+        const authenticatedProfile = global.SensoAuth?.uid === uid
+            ? global.SensoAuth?.profile
+            : null;
+        if (authenticatedProfile && typeof authenticatedProfile === "object") {
+            setState(uid, { ...DEFAULT_PLAN, ...authenticatedProfile });
+            startPlanListener(uid, docRef);
+            state.loadPromise = Promise.resolve(state.data);
+            return state.loadPromise;
+        }
+
         startPlanListener(uid, docRef);
 
         state.loadPromise = docRef.get({ source: "server" })
-            .catch(() => docRef.get())
             .then(snapshot => {
                 const current = snapshot.exists ? (snapshot.data() || {}) : {};
                 setState(uid, { ...DEFAULT_PLAN, ...current });
@@ -213,7 +276,7 @@
             })
             .catch(err => {
                 console.warn("Nao foi possivel carregar o plano do usuario.", err);
-                setState(uid, DEFAULT_PLAN, err);
+                setLoadError(uid, err);
                 return state.data;
             });
 
@@ -221,14 +284,18 @@
     }
 
     function startPlanListener(uid, docRef) {
-        if (state.unsubscribe && state.uid === uid) return;
+        if (state.unsubscribe && state.listenerUid === uid) return;
 
         if (state.unsubscribe) {
             state.unsubscribe();
             state.unsubscribe = null;
         }
 
+        state.listenerUid = uid;
+
         state.unsubscribe = docRef.onSnapshot(snapshot => {
+            if (state.uid !== uid || state.loading) return;
+            if (!state.ready && snapshot.metadata?.fromCache !== false) return;
             const current = snapshot.exists ? (snapshot.data() || {}) : {};
             setState(uid, { ...DEFAULT_PLAN, ...current });
         }, err => {
@@ -258,6 +325,14 @@
     }
 
     function getUsageLimits(plan) {
+        if (!plan && (!state.ready || state.loading || state.error)) {
+            return {
+                clientes: Infinity,
+                orcamentos: Infinity,
+                servicos: Infinity
+            };
+        }
+
         if (isFree(plan)) {
             return { ...FREE_LIMITS };
         }
@@ -265,6 +340,7 @@
         if (!isBasicMonthly(plan)) {
             return {
                 clientes: Infinity,
+                orcamentos: Infinity,
                 servicos: Infinity
             };
         }
@@ -280,6 +356,7 @@
         state,
         ensureUserPlan,
         getCurrentPlan: () => ({ ...state.data }),
+        isReady: () => state.ready && !state.loading && !state.error,
         getPaymentStatus,
         isFree: () => state.data.plano === "gratis",
         isBasic: () => state.data.plano === "basico",

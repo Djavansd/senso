@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -25,12 +25,28 @@
     }
 
     .agenda-card {
-      background: #fff;
-      border-radius: 12px;
+      --agenda-accent: #1686e8;
+      --agenda-shadow: rgba(22, 134, 232, .18);
+      background: linear-gradient(145deg, #fff, #f8fbff);
+      border: 2px solid var(--agenda-accent);
+      border-radius: 14px;
       padding: 10px 12px;
       margin-bottom: 8px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, .05);
+      box-shadow:
+        0 10px 24px rgba(15, 23, 42, .10),
+        0 4px 14px var(--agenda-shadow),
+        inset 0 1px 0 rgba(255,255,255,.92);
       font-size: 14px;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .agenda-card.futuro { --agenda-accent: #16a34a; --agenda-shadow: rgba(22,163,74,.20); background:linear-gradient(145deg,#fff,#f0fdf4); }
+    .agenda-card.hoje { --agenda-accent: #eab308; --agenda-shadow: rgba(234,179,8,.28); background:linear-gradient(145deg,#fff,#fef9c3); }
+    .agenda-card.atrasado { --agenda-accent: #dc2626; --agenda-shadow: rgba(220,38,38,.30); background:linear-gradient(145deg,#fff,#fee2e2); }
+    .agenda-card:hover,
+    .agenda-card:focus-within {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(15,23,42,.13), 0 6px 18px var(--agenda-shadow);
     }
 
     .agenda-row {
@@ -60,6 +76,11 @@
       padding: 6px 8px;
       border: none;
       cursor: pointer;
+    }
+
+    .agenda-row strong,
+    .agenda-card .agenda-ultimo-nome {
+      color: #172033;
     }
 
     .btn-editar,
@@ -103,6 +124,93 @@
       display: none;
     }
 
+    .agenda-ultimo-servico {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #dbeafe;
+      border-radius: 10px;
+      background: rgba(239, 246, 255, .82);
+    }
+
+    .agenda-ultimo-titulo {
+      color: #1d4ed8;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .agenda-ultimo-nome {
+      margin-top: 4px;
+      color: #172033;
+      font-weight: 750;
+    }
+
+    .agenda-ultimo-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+      color: #52635c;
+      font-size: 12px;
+    }
+
+    .agenda-btn-historico {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: #0a7cff;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .agenda-historico-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(15, 23, 42, .48);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .agenda-historico-conteudo {
+      width: min(520px, 100%);
+      max-height: 82vh;
+      overflow: auto;
+      padding: 16px;
+      border: 2px solid #1686e8;
+      border-radius: 18px 18px 12px 12px;
+      background: linear-gradient(145deg, rgba(255,255,255,.99), rgba(239,248,255,.98));
+      box-shadow:
+        0 24px 55px rgba(15, 23, 42, .30),
+        0 8px 24px rgba(22, 134, 232, .28),
+        inset 0 1px 0 rgba(255,255,255,.95);
+    }
+
+    .agenda-historico-topo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .agenda-historico-topo h3 { margin: 0; color: #0a4ea9; }
+    .agenda-historico-fechar { border: 1px solid #bfdbfe; border-radius: 999px; width: 34px; height: 34px; color:#0a4ea9; background:#eff6ff; cursor: pointer; }
+    .agenda-historico-item { margin-top: 10px; padding: 12px; border: 1px solid #cfe4f8; border-radius: 10px; background: rgba(255,255,255,.88); box-shadow: 0 5px 14px rgba(22,134,232,.08); }
+    .agenda-historico-item strong { color: #0a4ea9; }
+    .agenda-historico-item ul { margin: 7px 0; padding-left: 18px; }
+    .agenda-historico-observacao { color: #52635c; font-style: italic; }
+
     .agenda-edicao {
       display: none;
       margin-top: 8px;
@@ -130,21 +238,22 @@
       margin-left: 6px;
     }
 
-    .atrasado {
-      background: #fdecea;
-      color: #d93025;
+    .badge.atrasado {
+      background: #dc2626;
+      color: #fff;
     }
 
-    .hoje {
-      background: #fff4e5;
-      color: #f57c00;
+    .badge.hoje {
+      background: #facc15;
+      color: #422006;
     }
 
-    .futuro {
-      background: #e6f4ea;
-      color: #1e8e3e;
+    .badge.futuro {
+      background: #16a34a;
+      color: #fff;
     }
   </style>
+<script src="../js/auth-boot.js?v=20260630"></script>
 </head>
 
 <body>
@@ -168,11 +277,12 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="../js/firebase-config.js"></script>
-  <script src="../js/auth-guard.js?v=20260607-gratis"></script>
-  <script src="../js/core/plans.js?v=20260607-gratis"></script>
-  <script src="../js/core/profile.js"></script>
+  <script src="../js/auth-guard.js?v=20260702-leituras1"></script>
+  <script src="../js/core/plans.js?v=20260702-leituras1"></script>
+  <script src="../js/core/profile.js?v=20260702-negocios2"></script>
   <script src="../js/domains/mecanica/domain.js"></script>
-  <script src="../js/app.js"></script>
+  <script src="../js/app.js?v=20260702-negocio-ativo"></script>
+<script src="../js/data-sync-v2.js?v=20260702-leituras1"></script>
   <script src="../js/assistente-senso.js"></script>
   <script src="../js/assistente-ajuda.js"></script>
 
@@ -297,6 +407,87 @@
       );
     }
 
+    function dataServicoTimestamp(servico) {
+      const date = new Date(servico?.executadoEm || servico?.criadoEm || 0);
+      return Number.isFinite(date.getTime()) ? date.getTime() : 0;
+    }
+
+    function obterHistoricoCliente(cliente, dataRef) {
+      const clienteId = String(cliente?.id || "");
+      const nome = String(cliente?.nome || "").trim().toLocaleLowerCase("pt-BR");
+      return (dataRef.servicos || [])
+        .filter(servico => {
+          if (servico?.status !== "executado") return false;
+          const servicoClienteId = String(servico?.cliente?.id || servico?.clienteId || "");
+          if (clienteId && servicoClienteId) return clienteId === servicoClienteId;
+          return nome && String(servico?.cliente?.nome || "").trim().toLocaleLowerCase("pt-BR") === nome;
+        })
+        .sort((a, b) => dataServicoTimestamp(b) - dataServicoTimestamp(a));
+    }
+
+    function obterUltimoServicoCliente(cliente, dataRef) {
+      return obterHistoricoCliente(cliente, dataRef)[0] || null;
+    }
+
+    function abrirHistoricoAgenda(cliente, dataRef) {
+      const historico = obterHistoricoCliente(cliente, dataRef);
+      const modal = document.createElement("div");
+      modal.className = "agenda-historico-modal";
+      const historyHtml = historico.length
+        ? historico.map(servico => {
+            const itens = Array.isArray(servico.itens) ? servico.itens : [];
+            const itensHtml = itens
+              .map(item => String(item?.descricao || item?.nome || "").trim())
+              .filter(Boolean)
+              .map(item => `<li>${escapeHtml(item)}</li>`)
+              .join("");
+            return `
+              <div class="agenda-historico-item">
+                <strong>${escapeHtml(formatarData(servico.executadoEm || servico.criadoEm))}</strong>
+                <div>R$ ${escapeHtml(formatarMoedaBR(servico.totalGeral || 0))}</div>
+                ${itensHtml ? `<ul>${itensHtml}</ul>` : ""}
+                ${servico.observacoes ? `<div class="agenda-historico-observacao">${escapeHtml(servico.observacoes)}</div>` : ""}
+              </div>`;
+          }).join("")
+        : "<p>Nenhum atendimento realizado encontrado.</p>";
+
+      modal.innerHTML = `
+        <div class="agenda-historico-conteudo" role="dialog" aria-modal="true" aria-labelledby="agendaHistoricoTitulo">
+          <div class="agenda-historico-topo">
+            <div><h3 id="agendaHistoricoTitulo">Histórico de atendimentos</h3><small>${escapeHtml(cliente?.nome || "Cliente")}</small></div>
+            <button class="agenda-historico-fechar" type="button" aria-label="Fechar histórico">×</button>
+          </div>
+          ${historyHtml}
+        </div>`;
+
+      const fechar = () => modal.remove();
+      modal.querySelector(".agenda-historico-fechar").onclick = fechar;
+      modal.onclick = event => { if (event.target === modal) fechar(); };
+      document.body.appendChild(modal);
+    }
+
+    function renderUltimoServicoAgenda(cliente, dataRef) {
+      const ultimo = obterUltimoServicoCliente(cliente, dataRef);
+      if (!ultimo) return `
+        <div class="agenda-ultimo-servico">
+          <div class="agenda-ultimo-titulo">Último atendimento</div>
+          <div class="agenda-ultimo-meta">Nenhum atendimento realizado encontrado.</div>
+        </div>`;
+
+      const itens = Array.isArray(ultimo.itens) ? ultimo.itens : [];
+      const titulo = String(itens[0]?.descricao || itens[0]?.nome || "Atendimento realizado");
+      return `
+        <div class="agenda-ultimo-servico">
+          <div class="agenda-ultimo-titulo">Último atendimento</div>
+          <div class="agenda-ultimo-nome">${escapeHtml(titulo)}</div>
+          <div class="agenda-ultimo-meta">
+            <span>${escapeHtml(formatarData(ultimo.executadoEm || ultimo.criadoEm))}</span>
+            <span>R$ ${escapeHtml(formatarMoedaBR(ultimo.totalGeral || 0))}</span>
+          </div>
+          <button class="agenda-btn-historico" type="button">Ver histórico completo</button>
+        </div>`;
+    }
+
     function renderAgenda() {
       const data = getData();
       let agenda = (data.agenda || []).filter(a => a.status === "agendado");
@@ -320,9 +511,10 @@
         const telefone = (c.telefone || "").replace(/\D/g, "");
         const status = statusPorData(a.dataRetorno);
         const msg = gerarMensagemWhats(c, a.dataRetorno);
+        const ultimoServicoHtml = renderUltimoServicoAgenda(c, data);
 
         const card = document.createElement("div");
-        card.className = "agenda-card";
+        card.className = `agenda-card ${status}`;
 
         card.innerHTML = `
         <div class="agenda-row">
@@ -341,6 +533,8 @@
             <button class="btn-ver">Ver</button>
           </div>
         </div>
+
+        ${ultimoServicoHtml}
 
         <div class="agenda-edicao">
           <input class="input-data-retorno" type="date" value="${escapeHtml(formatarDataInput(a.dataRetorno))}">
@@ -364,6 +558,7 @@
       `;
 
         const btnVer = card.querySelector(".btn-ver");
+        const btnHistorico = card.querySelector(".agenda-btn-historico");
         const btnEditar = card.querySelector(".btn-editar");
         const btnSalvarEdicao = card.querySelector(".btn-salvar-edicao");
         const btnCancelarEdicao = card.querySelector(".btn-cancelar-edicao");
@@ -376,6 +571,10 @@
           detalhes.style.display = aberto ? "none" : "block";
           btnVer.textContent = aberto ? "Ver" : "Fechar";
         };
+
+        if (btnHistorico) {
+          btnHistorico.onclick = () => abrirHistoricoAgenda(c, getData());
+        }
 
         btnEditar.onclick = () => {
           const aberto = edicao.style.display === "flex";

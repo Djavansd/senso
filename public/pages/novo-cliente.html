@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="../css/style.css?v=20260629-brasil-mobile" />
     <link rel="stylesheet" href="../css/assistente-senso.css" />
     <link rel="stylesheet" href="../css/assistente-ajuda.css" />
+<script src="../js/auth-boot.js?v=20260630"></script>
 </head>
 
 <body>
@@ -41,7 +42,7 @@
 
                     <div class="form-group">
                         <label>CPF / CNPJ</label>
-                        <input id="documento" placeholder="Opcional" maxlength="24" />
+                        <input id="documento" placeholder="000.000.000-00 ou 00.000.000/0000-00" maxlength="18" inputmode="numeric" autocomplete="off" />
                     </div>
 
                     <div class="form-group campo-veiculo">
@@ -82,11 +83,12 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="../js/firebase-config.js"></script>
-    <script src="../js/auth-guard.js?v=20260607-gratis"></script>
-    <script src="../js/core/plans.js?v=20260607-gratis"></script>
-    <script src="../js/core/profile.js"></script>
+    <script src="../js/auth-guard.js?v=20260702-leituras1"></script>
+    <script src="../js/core/plans.js?v=20260702-leituras1"></script>
+    <script src="../js/core/profile.js?v=20260702-negocios2"></script>
     <script src="../js/domains/mecanica/domain.js"></script>
-    <script src="../js/app.js"></script>
+    <script src="../js/app.js?v=20260702-negocio-ativo"></script>
+<script src="../js/data-sync-v2.js?v=20260702-leituras1"></script>
     <script src="../js/assistente-senso.js"></script>
     <script src="../js/assistente-ajuda.js"></script>
 
@@ -109,11 +111,7 @@
         const clienteEmEdicao = clienteEditarId
             ? (getData().clientes || []).find(c => c.id === clienteEditarId && !c.arquivado)
             : null;
-        const modoMecanica = (
-            window.SensoProfile &&
-            typeof window.SensoProfile.getActiveProfile === "function" &&
-            window.SensoProfile.getActiveProfile()?.id === "mecanica"
-        );
+        const modoMecanica = window.SensoProfile?.usesVehicleFields?.() === true;
 
         function aplicarModoFormularioCliente() {
             camposVeiculo.forEach(campo => {
@@ -137,6 +135,12 @@
         function formatarKm(value) {
             const km = normalizarKm(value);
             return km ? Number(km).toLocaleString("pt-BR") : "";
+        }
+
+        function formatarDocumentoCliente(value) {
+            const digitos = String(value || "").replace(/\D/g, "").slice(0, 14);
+            if (!digitos) return "";
+            return formatarDocumentoPorTipo(digitos, digitos.length <= 11 ? "cpf" : "cnpj");
         }
 
         function carregarSugestoesModeloCarro() {
@@ -197,7 +201,7 @@
             telefone.value = clienteEmEdicao.telefone || "";
             telefone2.value = clienteEmEdicao.telefone2 || "";
             endereco.value = clienteEmEdicao.endereco || "";
-            documento.value = clienteEmEdicao.documento || "";
+            documento.value = formatarDocumentoCliente(clienteEmEdicao.documento);
             modeloCarro.value = clienteEmEdicao.modeloCarro || "";
             placaCarro.value = clienteEmEdicao.placaCarro || "";
             corCarro.value = clienteEmEdicao.corCarro || "";
@@ -206,6 +210,9 @@
 
         aplicarModoFormularioCliente();
         preencherClienteEdicao();
+        documento.addEventListener("input", () => {
+            documento.value = formatarDocumentoCliente(documento.value);
+        });
         if (modoMecanica) {
             carregarSugestoesModeloCarro();
             placaCarro.addEventListener("input", () => {

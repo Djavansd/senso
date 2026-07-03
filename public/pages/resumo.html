@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -112,6 +112,18 @@
     gap: 12px;
 }
 
+.btn-pdf-mensal {
+    background: linear-gradient(135deg, #0f766e, #0b5f59);
+    box-shadow: 0 9px 18px rgba(15, 118, 110, .22);
+}
+
+.pdf-status {
+    min-height: 18px;
+    color: #475569;
+    font-size: 12px;
+    text-align: center;
+}
+
 .accordion {
     padding: 0;
     overflow: hidden;
@@ -148,6 +160,7 @@
     padding: 12px 14px 14px;
 }
 </style>
+<script src="../js/auth-boot.js?v=20260630"></script>
 </head>
 
 <body>
@@ -242,6 +255,8 @@
 </div>
 
 <div class="acoes-resumo">
+    <button class="btn btn-pdf-mensal" id="btnPdfMensal">Baixar PDF detalhado do mês</button>
+    <div class="pdf-status" id="pdfStatus" role="status"></div>
     <button class="btn" id="btnApagarResumo">Apagar resumo</button>
     <button class="btn" onclick="history.back()">Voltar</button>
 </div>
@@ -252,12 +267,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="../js/firebase-config.js"></script>
-<script src="../js/auth-guard.js?v=20260607-gratis"></script>
-<script src="../js/core/plans.js?v=20260607-gratis"></script>
-<script src="../js/core/profile.js"></script>
+<script src="../js/auth-guard.js?v=20260702-leituras1"></script>
+<script src="../js/core/plans.js?v=20260702-leituras1"></script>
+<script src="../js/core/profile.js?v=20260702-negocios2"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
-<script src="../js/app.js"></script>
+<script src="../js/app.js?v=20260702-negocio-ativo"></script>
+<script src="../js/data-sync-v2.js?v=20260702-leituras1"></script>
 <script src="../js/assistente-senso.js"></script>
 <script src="../js/assistente-ajuda.js"></script>
 
@@ -277,6 +294,8 @@ const listaServicosMes = document.getElementById("listaServicosMes");
 const listaGastosMes = document.getElementById("listaGastosMes");
 const listaCorrecoesMes = document.getElementById("listaCorrecoesMes");
 const comparacaoTexto = document.getElementById("comparacaoTexto");
+const btnPdfMensal = document.getElementById("btnPdfMensal");
+const pdfStatus = document.getElementById("pdfStatus");
 
 let mesAtual;
 
@@ -492,10 +511,283 @@ function renderResumo() {
     }
 }
 
+function dataSeguraPdf(value) {
+    const data = new Date(value || "");
+    return Number.isNaN(data.getTime()) ? "Data não informada" : data.toLocaleDateString("pt-BR");
+}
+
+function textoSeguroPdf(value, fallback = "Não informado") {
+    const texto = String(value || "").replace(/\s+/g, " ").trim();
+    return texto || fallback;
+}
+
+function orcamentosDoMes(data, ano, mes) {
+    return (data.orcamentos || [])
+        .filter(item => mesmoMes(item.criadoEm || item.data, ano, mes))
+        .slice()
+        .sort((a, b) => new Date(a.criadoEm || a.data || 0) - new Date(b.criadoEm || b.data || 0));
+}
+
+async function gerarPdfMensal() {
+    if (!window.jspdf?.jsPDF) {
+        pdfStatus.textContent = "Biblioteca de PDF indisponível. Tente novamente.";
+        return;
+    }
+
+    btnPdfMensal.disabled = true;
+    pdfStatus.textContent = "Gerando relatório detalhado…";
+    try {
+        const [ano, mes] = mesAtual.split("-").map(Number);
+        const data = getData();
+        const resumo = calcularResumo(ano, mes);
+        const financeiro = listarFinanceiroValido(data)
+            .filter(item => mesmoMes(item.data, ano, mes))
+            .slice()
+            .sort((a, b) => new Date(a.data || 0) - new Date(b.data || 0));
+        const orcamentos = orcamentosDoMes(data, ano, mes);
+        const correcoes = (data.correcoes || [])
+            .filter(item => mesmoMes(item.data, ano, mes))
+            .slice()
+            .sort((a, b) => new Date(a.data || 0) - new Date(b.data || 0));
+        const settings = getAppSettings();
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 14;
+        const contentWidth = pageWidth - margin * 2;
+        function parseHexColor(value, fallback) {
+            const hex = String(value || "").trim().replace("#", "");
+            if (!/^[0-9a-f]{6}$/i.test(hex)) return fallback;
+            return [0, 2, 4].map(index => parseInt(hex.slice(index, index + 2), 16));
+        }
+
+        function softColor(color, ratio = .9) {
+            return color.map(channel => Math.round(channel + (255 - channel) * ratio));
+        }
+
+        const primary = parseHexColor(settings.primaryColor, [15, 118, 110]);
+        const primarySoft = softColor(primary, .91);
+        const periodo = new Date(ano, mes).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+        let y = 15;
+
+        function footer() {
+            const page = pdf.internal.getNumberOfPages();
+            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(8);
+            pdf.setTextColor(100, 116, 139);
+            pdf.text(`Gerado pelo Senso em ${new Date().toLocaleString("pt-BR")}`, margin, pageHeight - 7);
+            pdf.text(`Página ${page}`, pageWidth - margin, pageHeight - 7, { align: "right" });
+        }
+
+        function newPage() {
+            footer();
+            pdf.addPage();
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(8.5);
+            pdf.setTextColor(...primary);
+            pdf.text(`${textoSeguroPdf(settings.companyName, "Senso")}  |  RELATÓRIO MENSAL  |  ${periodo.toLocaleUpperCase("pt-BR")}`, margin, 10);
+            pdf.setDrawColor(...primarySoft);
+            pdf.line(margin, 12, pageWidth - margin, 12);
+            y = 17;
+        }
+
+        function ensureSpace(height) {
+            if (y + height > pageHeight - 15) newPage();
+        }
+
+        function section(title) {
+            ensureSpace(12);
+            pdf.setTextColor(...primary);
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(10.5);
+            pdf.text(title, margin, y + 4.8);
+            pdf.setDrawColor(...primary);
+            pdf.setLineWidth(.6);
+            pdf.line(margin, y + 7, pageWidth - margin, y + 7);
+            pdf.setTextColor(15, 23, 42);
+            y += 10;
+        }
+
+        function kpiCard(x, width, label, value, color) {
+            pdf.setFillColor(...softColor(color, .92));
+            pdf.setDrawColor(...softColor(color, .55));
+            pdf.roundedRect(x, y, width, 22, 2.5, 2.5, "FD");
+            pdf.setFillColor(...color);
+            pdf.roundedRect(x, y, 2.2, 22, 1, 1, "F");
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(7.5);
+            pdf.setTextColor(71, 85, 105);
+            pdf.text(label.toLocaleUpperCase("pt-BR"), x + 5, y + 7);
+            pdf.setFontSize(12);
+            pdf.setTextColor(...color);
+            pdf.text(value, x + 5, y + 15.5);
+        }
+
+        function table(title, headers, widths, rows) {
+            section(`${title} (${rows.length})`);
+            const drawHeader = () => {
+                ensureSpace(9);
+                pdf.setFillColor(...primary);
+                pdf.roundedRect(margin, y, contentWidth, 8, 1.5, 1.5, "F");
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFont("helvetica", "bold");
+                pdf.setFontSize(7.5);
+                let x = margin;
+                headers.forEach((header, index) => {
+                    const align = index === headers.length - 1 ? "right" : "left";
+                    const tx = align === "right" ? x + widths[index] - 2 : x + 2;
+                    pdf.text(header, tx, y + 5.2, { align });
+                    x += widths[index];
+                });
+                y += 9;
+            };
+
+            if (!rows.length) {
+                drawHeader();
+                pdf.setFillColor(248, 250, 252);
+                pdf.rect(margin, y, contentWidth, 9, "F");
+                pdf.setTextColor(100, 116, 139);
+                pdf.setFont("helvetica", "italic");
+                pdf.setFontSize(8.5);
+                pdf.text("Nenhum registro encontrado neste período.", margin + 3, y + 5.7);
+                y += 12;
+                return;
+            }
+
+            drawHeader();
+            rows.forEach((rowData, rowIndex) => {
+                const lineSets = rowData.cells.map((cell, index) =>
+                    pdf.splitTextToSize(textoSeguroPdf(cell, "-"), Math.max(5, widths[index] - 4))
+                );
+                const height = Math.max(8, ...lineSets.map(lines => lines.length * 3.6 + 3));
+                if (y + height > pageHeight - 15) {
+                    newPage();
+                    section(`${title} (continuação)`);
+                    drawHeader();
+                }
+                pdf.setFillColor(...(rowIndex % 2 ? [248, 250, 252] : [255, 255, 255]));
+                pdf.rect(margin, y, contentWidth, height, "F");
+                let x = margin;
+                lineSets.forEach((lines, index) => {
+                    const last = index === lineSets.length - 1;
+                    pdf.setFont("helvetica", last ? "bold" : "normal");
+                    pdf.setFontSize(7.7);
+                    if (last && rowData.tone === "positive") pdf.setTextColor(21, 128, 61);
+                    else if (last && rowData.tone === "negative") pdf.setTextColor(185, 28, 28);
+                    else pdf.setTextColor(30, 41, 59);
+                    const tx = last ? x + widths[index] - 2 : x + 2;
+                    pdf.text(lines, tx, y + 4.8, { align: last ? "right" : "left" });
+                    x += widths[index];
+                });
+                pdf.setDrawColor(226, 232, 240);
+                pdf.line(margin, y + height, pageWidth - margin, y + height);
+                y += height;
+            });
+            y += 4;
+        }
+
+        pdf.setFillColor(...primary);
+        pdf.roundedRect(margin, y, contentWidth, 32, 4, 4, "F");
+        let titleX = margin + 6;
+        if (String(settings.logoDataUrl || "").startsWith("data:image/")) {
+            try {
+                const logoFormat = settings.logoDataUrl.includes("image/jpeg") ? "JPEG" : "PNG";
+                pdf.setFillColor(255, 255, 255);
+                pdf.roundedRect(margin + 5, y + 5, 22, 22, 3, 3, "F");
+                pdf.addImage(settings.logoDataUrl, logoFormat, margin + 7, y + 7, 18, 18, undefined, "FAST");
+                titleX = margin + 32;
+            } catch (_error) {
+                titleX = margin + 6;
+            }
+        }
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(15);
+        pdf.text(textoSeguroPdf(settings.companyName, "Senso"), titleX, y + 9);
+        pdf.setFontSize(11);
+        pdf.text("RELATÓRIO MENSAL DETALHADO", titleX, y + 16);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.5);
+        pdf.text(periodo.toLocaleUpperCase("pt-BR"), titleX, y + 22.5);
+        const contatoEmpresa = [settings.companyDocument, settings.companyPhone]
+            .map(value => String(value || "").trim()).filter(Boolean).join("  |  ");
+        if (contatoEmpresa) {
+            pdf.setFontSize(7.5);
+            pdf.text(contatoEmpresa, titleX, y + 27.5);
+        }
+        y += 38;
+        pdf.setTextColor(15, 23, 42);
+
+        section("VISÃO GERAL DO MÊS");
+        const cardGap = 4;
+        const cardWidth = (contentWidth - cardGap * 2) / 3;
+        kpiCard(margin, cardWidth, "Entradas", `R$ ${formatarMoedaBR(resumo.entradas)}`, [21, 128, 61]);
+        kpiCard(margin + cardWidth + cardGap, cardWidth, "Saídas", `R$ ${formatarMoedaBR(resumo.saidas)}`, [185, 28, 28]);
+        kpiCard(margin + (cardWidth + cardGap) * 2, cardWidth, "Saldo", `R$ ${formatarMoedaBR(resumo.saldo)}`, primary);
+        y += 27;
+        kpiCard(margin, cardWidth, "Serviços", String(resumo.servicosQtd), [37, 99, 235]);
+        kpiCard(margin + cardWidth + cardGap, cardWidth * 2 + cardGap, "Faturamento em serviços", `R$ ${formatarMoedaBR(resumo.faturamento)}`, primary);
+        y += 28;
+
+        table("MOVIMENTAÇÕES FINANCEIRAS", ["DATA", "TIPO", "DESCRIÇÃO", "VALOR"], [25, 25, 94, 38],
+            financeiro.map(item => ({
+                cells: [
+                    dataSeguraPdf(item.data),
+                    item.tipo === "saida" ? "Saída" : "Entrada",
+                    textoSeguroPdf(item.descricao, "Movimentação"),
+                    `${item.tipo === "saida" ? "-" : "+"} R$ ${formatarMoedaBR(Number(item.valor || 0))}`
+                ],
+                tone: item.tipo === "saida" ? "negative" : "positive"
+            }))
+        );
+
+        table("SERVIÇOS EXECUTADOS", ["CLIENTE", "DETALHES DO SERVIÇO", "VALOR"], [48, 96, 38],
+            resumo.servicosDetalhes.map(item => ({
+                cells: [item.titulo, item.sub, `R$ ${formatarMoedaBR(item.valor)}`],
+                tone: "positive"
+            }))
+        );
+
+        table("ORÇAMENTOS CRIADOS", ["NÚMERO / DATA", "CLIENTE", "STATUS", "TOTAL"], [42, 58, 44, 38],
+            orcamentos.map(item => ({
+                cells: [
+                    `${item.numero || "-"}\n${dataSeguraPdf(item.criadoEm || item.data)}`,
+                    item.cliente?.nome || item.clienteNome || "Cliente não informado",
+                    textoSeguroPdf(item.status, "Sem status").toLocaleUpperCase("pt-BR"),
+                    `R$ ${formatarMoedaBR(Number(item.total || item.totalGeral || 0))}`
+                ]
+            }))
+        );
+
+        table("CORREÇÕES REGISTRADAS", ["DATA / CLIENTE", "DESCRIÇÃO", "IMPACTO"], [49, 95, 38],
+            correcoes.map(item => ({
+                cells: [
+                    `${dataSeguraPdf(item.data)}\n${textoSeguroPdf(item.clienteNome, "Cliente")}`,
+                    textoSeguroPdf(item.itensResumo, "Serviço sem descrição"),
+                    formatarMoedaComSinal(Number(item.impactoSaldo || 0))
+                ],
+                tone: Number(item.impactoSaldo || 0) < 0 ? "negative" : "positive"
+            }))
+        );
+
+        footer();
+        pdf.save(`resumo-mensal-${ano}-${String(mes + 1).padStart(2, "0")}.pdf`);
+        pdfStatus.textContent = "PDF mensal gerado com sucesso.";
+    } catch (error) {
+        console.error("Falha ao gerar PDF mensal.", error);
+        pdfStatus.textContent = "Não foi possível gerar o PDF mensal.";
+    } finally {
+        btnPdfMensal.disabled = false;
+    }
+}
+
 filtroMes.onchange = () => {
     mesAtual = filtroMes.value;
     renderResumo();
 };
+
+btnPdfMensal.addEventListener("click", gerarPdfMensal);
 
 document.getElementById("btnApagarResumo").onclick = () => {
     const confirmar = confirm(

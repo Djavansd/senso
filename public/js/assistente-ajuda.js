@@ -2,7 +2,7 @@
     "use strict";
 
     const STORAGE_PREFIX = "senso:ajuda-guiada:v1";
-    const ROTEIRO_VERSION = 2;
+    const ROTEIRO_VERSION = 3;
     const CONFETTI_URL = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js";
     const IMAGENS = Object.freeze({
         apontando: "/assets/assistente-senso/ajuda-apontando.png",
@@ -286,7 +286,8 @@
                     titulo: "Entrar em contato",
                     mensagens: [
                         "Toque no botão do WhatsApp para falar com o cliente usando o telefone cadastrado.",
-                        "Use “Ver” para abrir os detalhes do retorno e conferir as informações antes do contato."
+                        "O cartão também mostra o último atendimento, a data e o valor para você ter contexto antes do contato.",
+                        "Use “Ver histórico completo” para consultar todos os atendimentos anteriores daquele cliente."
                     ]
                 },
                 {
@@ -403,14 +404,71 @@
                     ]
                 }
             ]
+        },
+        {
+            id: "configuracoes",
+            nome: "Configurações",
+            href: "/pages/configuracoes.html",
+            paginas: ["configuracoes.html"],
+            imagem: IMAGENS.instrucoes,
+            etapas: [
+                {
+                    titulo: "Tipo de negócio",
+                    mensagens: [
+                        "Escolha Mecânico ou Prestador de serviço para adaptar os campos de clientes, serviços e orçamentos ao seu trabalho.",
+                        "Ao trocar o tipo de negócio e salvar, o Senso recarrega a tela inicial para aplicar o perfil escolhido."
+                    ]
+                },
+                {
+                    titulo: "Cores do aplicativo",
+                    mensagens: [
+                        "Cor principal define a identidade dos cabeçalhos e botões principais.",
+                        "As duas cores de texto ajudam a manter a leitura correta nos botões principais e secundários."
+                    ]
+                },
+                {
+                    titulo: "Logo do orçamento",
+                    mensagens: [
+                        "Selecione a imagem da sua empresa para exibi-la no cabeçalho dos orçamentos.",
+                        "Confira a prévia antes de salvar. Use Remover logo quando não quiser mais apresentar a imagem."
+                    ]
+                },
+                {
+                    titulo: "Dados da empresa",
+                    mensagens: [
+                        "Preencha nome, CPF ou CNPJ, endereço e telefones com os dados que devem aparecer no orçamento.",
+                        "Telefone 2 é opcional. Em Tipo de documento, escolha Sem documento quando não quiser informar CPF ou CNPJ."
+                    ]
+                },
+                {
+                    titulo: "Serviços no cabeçalho",
+                    mensagens: [
+                        "Escreva uma lista curta dos principais serviços oferecidos pela empresa.",
+                        "O limite de 120 caracteres evita que o texto quebre o cabeçalho do orçamento e do PDF."
+                    ]
+                },
+                {
+                    titulo: "Salvar e navegar",
+                    mensagens: [
+                        "Toque em Salvar para confirmar os dados desta tela.",
+                        "Voltar retorna à tela anterior. Sair encerra sua sessão e leva você novamente para o login."
+                    ]
+                },
+                {
+                    titulo: "Privacidade e dados",
+                    mensagens: [
+                        "A Política de Privacidade explica como o Senso trata e protege os dados utilizados no aplicativo.",
+                        "Consulte essa área sempre que precisar revisar as informações sobre privacidade."
+                    ]
+                }
+            ]
         }
     ]);
 
     let confettiCarregando = null;
 
     function getPerfilAtivoId() {
-        const perfilId = window.SensoProfile?.getActiveProfile?.()?.id;
-        return perfilId === "prestador" ? "prestador" : "mecanica";
+        return window.SensoProfile?.usesVehicleFields?.() === true ? "mecanica" : "prestador";
     }
 
     function getUid() {
@@ -679,9 +737,12 @@
     function iniciarAjudaContextual() {
         const estado = lerEstado();
         const licao = getLicaoAtual();
-        if (!estado.ativo || !licao) return;
+        if (!licao) return;
 
-        criarBotaoFlutuante(licao);
+        if (estado.ativo || licao.id === "configuracoes") {
+            criarBotaoFlutuante(licao);
+        }
+        if (!estado.ativo) return;
         if (estado.concluidas.includes(licao.id)) return;
 
         const chaveSessao = `senso:ajuda-vista:v4:${getUid()}:${getPerfilAtivoId()}:${licao.id}`;

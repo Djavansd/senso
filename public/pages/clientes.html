@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -43,17 +43,29 @@
       overflow: hidden;
       background: linear-gradient(
         140deg,
-        rgba(255, 255, 255, 0.72),
-        rgba(255, 255, 255, 0.4)
+        rgba(255, 255, 255, 0.94),
+        rgba(239, 248, 255, 0.86)
       );
-      border: 1px solid rgba(255, 255, 255, 0.65);
+      border: 2px solid #1686e8;
       border-radius: 14px;
       padding: 12px;
       margin-bottom: 12px;
-      box-shadow: 0 16px 28px rgba(15, 23, 42, 0.12);
+      box-shadow:
+        0 14px 28px rgba(15, 23, 42, 0.12),
+        0 5px 16px rgba(22, 134, 232, 0.20),
+        inset 0 1px 0 rgba(255, 255, 255, 0.94);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       font-size: 14px;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .cliente-card:hover,
+    .cliente-card:focus-within {
+      transform: translateY(-1px);
+      box-shadow:
+        0 18px 34px rgba(15, 23, 42, 0.14),
+        0 7px 20px rgba(22, 134, 232, 0.24);
     }
 
     .cliente-card::before {
@@ -82,6 +94,7 @@
 
     .cliente-info {
       line-height: 1.4;
+      color: #172033;
     }
 
     .btn-detalhes {
@@ -379,6 +392,7 @@
       }
     }
   </style>
+<script src="../js/auth-boot.js?v=20260630"></script>
 </head>
 
 <body>
@@ -396,21 +410,19 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="../js/firebase-config.js"></script>
-  <script src="../js/auth-guard.js?v=20260607-gratis"></script>
-  <script src="../js/core/plans.js?v=20260607-gratis"></script>
-  <script src="../js/core/profile.js"></script>
+  <script src="../js/auth-guard.js?v=20260702-leituras1"></script>
+  <script src="../js/core/plans.js?v=20260702-leituras1"></script>
+  <script src="../js/core/profile.js?v=20260702-negocios2"></script>
   <script src="../js/domains/mecanica/domain.js"></script>
-  <script src="../js/app.js"></script>
+  <script src="../js/app.js?v=20260702-negocio-ativo"></script>
+<script src="../js/data-sync-v2.js?v=20260702-leituras1"></script>
   <script src="../js/assistente-senso.js"></script>
   <script src="../js/assistente-ajuda.js"></script>
 
   <script>
     const lista = document.getElementById("lista");
-    const modoMecanica = (
-      window.SensoProfile &&
-      typeof window.SensoProfile.getActiveProfile === "function" &&
-      window.SensoProfile.getActiveProfile()?.id === "mecanica"
-    );
+    const modoMecanica = window.SensoProfile?.usesVehicleFields?.() === true;
+    let historicoQueryAberto = false;
 
     function formatarDocumentoBR(doc) {
       if (!doc) return "Documento nao informado";
@@ -850,6 +862,15 @@
 
         lista.appendChild(card);
       });
+
+      if (!historicoQueryAberto) {
+        const clienteHistoricoId = new URLSearchParams(location.search).get("historico");
+        const clienteHistorico = clientes.find(cliente => String(cliente.id) === String(clienteHistoricoId || ""));
+        if (clienteHistorico) {
+          historicoQueryAberto = true;
+          renderizarHistoricoCliente(clienteHistorico, data);
+        }
+      }
     }
 
     window.addEventListener("senso-live-update", () => {

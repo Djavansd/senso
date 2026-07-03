@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
@@ -310,6 +310,7 @@ body {
     color:#0f766e;
 }
 </style>
+<script src="../js/auth-boot.js?v=20260630"></script>
 </head>
 <body>
 <div class="app">
@@ -349,7 +350,7 @@ body {
                 </div>
                 <ul class="plan-features">
                     <li class="plan-feature">Até 5 clientes ativos</li>
-                    <li class="plan-feature">Até 10 serviços cadastrados</li>
+                    <li class="plan-feature">Até 10 orçamentos cadastrados</li>
                     <li class="plan-feature">Orçamentos, agenda e financeiro para teste</li>
                     <li class="plan-feature">Ideal para experimentar o fluxo do app</li>
                 </ul>
@@ -370,7 +371,7 @@ body {
                 </div>
                 <ul class="plan-features">
                     <li class="plan-feature">Até 50 clientes ativos</li>
-                    <li class="plan-feature">Até 150 serviços cadastrados</li>
+                    <li class="plan-feature">Até 150 orçamentos cadastrados</li>
                     <li class="plan-feature">Geração e controle de orçamentos</li>
                     <li class="plan-feature">Agenda de retornos e manutenções</li>
                     <li class="plan-feature">Financeiro básico para entradas e saídas</li>
@@ -454,8 +455,8 @@ body {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
-<script src="../js/auth-guard.js?v=20260607-gratis"></script>
-<script src="../js/core/plans.js?v=20260607-gratis"></script>
+<script src="../js/auth-guard.js?v=20260702-leituras1"></script>
+<script src="../js/core/plans.js?v=20260702-leituras1"></script>
 <script src="../js/assistente-senso.js"></script>
 <script src="../js/assistente-senso-contexto.js"></script>
 <script>
@@ -644,7 +645,7 @@ function getLocalAppData() {
         }
     }
 
-    return { clientes: [], servicos: [] };
+    return { clientes: [], orcamentos: [] };
 }
 
 function getUsageSummary() {
@@ -652,9 +653,9 @@ function getUsageSummary() {
     const clientesAtivos = Array.isArray(data.clientes)
         ? data.clientes.filter(c => !c?.arquivado).length
         : 0;
-    const servicos = Array.isArray(data.servicos) ? data.servicos.length : 0;
+    const orcamentos = Array.isArray(data.orcamentos) ? data.orcamentos.length : 0;
 
-    return { clientesAtivos, servicos };
+    return { clientesAtivos, orcamentos };
 }
 
 function isBasicMonthlyPlan(plan) {
@@ -675,15 +676,15 @@ function renderUsageNotice(plan) {
     }
 
     const limits = isFreePlan(plan)
-        ? (window.SensoPlans?.freeLimits || { clientes: 5, servicos: 10 })
-        : (window.SensoPlans?.basicMonthlyLimits || { clientes: 50, servicos: 150 });
+        ? (window.SensoPlans?.freeLimits || { clientes: 5, orcamentos: 10 })
+        : (window.SensoPlans?.basicMonthlyLimits || { clientes: 50, orcamentos: 150 });
     const usage = getUsageSummary();
     const planLabel = isFreePlan(plan) ? "Plano Grátis" : "Plano Básico mensal";
 
     currentPlanUsage.innerHTML = `
         <div>Seu ${planLabel} inclui:</div>
         <div class="usage-row"><span>Clientes ativos</span><strong>${usage.clientesAtivos}/${limits.clientes}</strong></div>
-        <div class="usage-row"><span>Serviços cadastrados</span><strong>${usage.servicos}/${limits.servicos}</strong></div>
+        <div class="usage-row"><span>Orçamentos cadastrados</span><strong>${usage.orcamentos}/${limits.orcamentos}</strong></div>
     `;
     currentPlanUsage.classList.add("visible");
 }
@@ -703,8 +704,12 @@ function formatStatus(plan) {
 function formatContractedPrice(plan) {
     if (plan?.plano === "gratis") return "Valor: R$ 0,00";
 
-    const price = Number(plan?.precoContratado);
-    if (!Number.isFinite(price)) return "Valor: nao informado";
+    const rawPrice = plan?.precoContratado;
+    const officialPrice = plan?.plano === "pro" ? 59.90 : 29.90;
+    const price = rawPrice === null || rawPrice === undefined || rawPrice === ""
+        ? officialPrice
+        : Number(rawPrice);
+    if (!Number.isFinite(price)) return `Valor: ${formatCurrencyBR(officialPrice)}`;
 
     return `Valor: ${formatCurrencyBR(price)}`;
 }
@@ -715,6 +720,8 @@ function formatPlanType(plan) {
     const type = String(plan?.tipoPlano || "").toLowerCase();
     if (type === "fundador" || type === "promocional") return "Tipo: promocional";
     if (type === "normal") return "Tipo: normal";
+    if (type === "mensal" || normalizeTipoPagamento(plan?.tipoPagamento) === "mensal") return "Tipo: mensal";
+    if (normalizeTipoPagamento(plan?.tipoPagamento) === "avista") return "Tipo: à vista";
 
     return "Tipo: nao informado";
 }

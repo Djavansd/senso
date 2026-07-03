@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow,noarchive">
+    <title>Gestão interna | Senso</title>
+    <link rel="stylesheet" href="../css/admin-senso.css?v=20260702-gestao-premium">
+    <script src="../js/auth-boot.js?v=20260630"></script>
+</head>
+<body class="admin-body">
+    <header class="admin-header">
+        <div class="admin-brand"><span class="admin-brand-mark">S</span><div><span class="eyebrow">Senso • Área segura</span><h1>Gestão de usuários</h1></div></div>
+        <div class="admin-header-actions"><a href="../index.html">Voltar ao Senso</a><button id="adminSignOut" type="button">Sair</button></div>
+    </header>
+    <main class="admin-main">
+        <section class="admin-notice" id="adminNotice" role="status">Validando autorização administrativa no servidor…</section>
+        <section class="admin-sound-settings" aria-labelledby="adminSoundTitle">
+            <img src="../assets/assistente-senso/alerta-admin.png" alt="" aria-hidden="true">
+            <div class="admin-sound-copy">
+                <span class="eyebrow">Avisos de novos cadastros</span>
+                <h2 id="adminSoundTitle">Som do alerta administrativo</h2>
+                <p>Escolha se o Senso deve tocar quando uma nova conta ficar aguardando aprovação.</p>
+            </div>
+            <div class="admin-sound-controls">
+                <button id="adminSoundManagementToggle" type="button" aria-pressed="false">Ativar som</button>
+                <label for="adminSoundVolume">Volume <output id="adminSoundVolumeValue">65%</output></label>
+                <input id="adminSoundVolume" type="range" min="10" max="100" step="5" value="65">
+                <button id="adminSoundTest" class="sound-test" type="button">Testar som</button>
+            </div>
+        </section>
+        <audio id="adminManagementAudio" src="../assets/sounds/novo-usuario.mp3" preload="none"></audio>
+        <section class="admin-overview" id="adminOverview" hidden aria-label="Resumo dos usuários">
+            <article class="admin-kpi kpi-total"><span>Total</span><strong id="kpiTotal">0</strong><small>contas cadastradas</small></article>
+            <article class="admin-kpi kpi-waiting"><span>Aguardando</span><strong id="kpiWaiting">0</strong><small>pedindo aprovação</small></article>
+            <article class="admin-kpi kpi-active"><span>Ativos</span><strong id="kpiActive">0</strong><small>com acesso liberado</small></article>
+            <article class="admin-kpi kpi-blocked"><span>Bloqueados</span><strong id="kpiBlocked">0</strong><small>sem acesso ao app</small></article>
+        </section>
+        <section class="admin-tools" aria-label="Filtros">
+            <label class="admin-search"><span>Buscar usuário</span><input id="userSearch" type="search" placeholder="Nome, e-mail ou empresa" disabled></label>
+            <label><span>Filtrar situação</span><select id="statusFilter" disabled><option value="">Todos os status</option><option value="aguardando">Aguardando</option><option value="ativo">Ativo</option><option value="bloqueado">Bloqueado</option></select></label>
+        </section>
+        <section class="users-table-wrap" hidden id="usersArea">
+            <table class="users-table">
+                <thead><tr><th>Usuário</th><th>Negócios cadastrados</th><th>Status</th><th>Plano</th><th>Ações</th></tr></thead>
+                <tbody id="usersBody"></tbody>
+            </table>
+        </section>
+    </main>
+    <dialog class="delete-user-dialog" id="deleteUserDialog" aria-labelledby="deleteUserTitle">
+        <form method="dialog" class="delete-user-card" id="deleteUserForm">
+            <span class="delete-warning-icon" aria-hidden="true">!</span>
+            <h2 id="deleteUserTitle">Excluir usuário definitivamente</h2>
+            <p id="deleteUserDescription"></p>
+            <div class="delete-warning-box">A conta de login e todos os dados do usuário serão apagados. Esta ação não poderá ser desfeita.</div>
+            <label>Digite <strong>EXCLUIR</strong> para confirmar
+                <input id="deleteConfirmation" type="text" autocomplete="off" maxlength="7" required>
+            </label>
+            <label>Sua senha administrativa
+                <input id="deleteAdminPassword" type="password" autocomplete="current-password" maxlength="128" required>
+            </label>
+            <section id="deleteMfaStep" class="delete-mfa-step" hidden>
+                <label>Código MFA recebido por SMS
+                    <input id="deleteMfaCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}">
+                </label>
+            </section>
+            <div id="deleteRecaptchaHost"></div>
+            <div class="delete-dialog-status" id="deleteDialogStatus" role="status"></div>
+            <div class="delete-dialog-actions">
+                <button id="deleteCancel" class="secondary" type="button">Cancelar</button>
+                <button id="deleteConfirm" class="danger" type="button">Excluir definitivamente</button>
+            </div>
+        </form>
+    </dialog>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/auth-guard.js?v=20260702-leituras1"></script>
+    <script src="../js/gestao-interna-4m8x2.js?v=20260702-negocios3"></script>
+</body>
+</html>

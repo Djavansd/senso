@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Senso</title>
 
-    <link rel="stylesheet" href="css/style.css?v=20260629-brasil-mobile" />
+    <link rel="stylesheet" href="css/style.css?v=20260702-alerta-som" />
     <link rel="stylesheet" href="css/assistente-senso.css" />
     <link rel="stylesheet" href="css/assistente-ajuda.css" />
     <link rel="icon" type="image/png" href="assets/icons/icon-192.png?v=20260609">
@@ -346,6 +346,7 @@
             background: linear-gradient(145deg, rgba(254,205,170,.46), rgba(255,255,255,.5));
         }
     </style>
+<script src="js/auth-boot.js?v=20260630"></script>
 </head>
 <body>
 
@@ -360,6 +361,7 @@
     <a class="menu-link" href="pages/financeiro.html">💰 Financeiro</a>
     <a class="menu-link" href="pages/resumo.html">📊 Resumo mensal</a>
     <a class="menu-link" href="pages/configuracoes.html">⚙️ Configurações</a>
+    <a class="menu-link" data-senso-admin-link hidden style="display:none" href="pages/gestao-interna-4m8x2.html">🛡️ Gestão interna</a>
     <a class="menu-link assistente-ajuda-link" href="pages/assistente-ajuda.html">
         <img class="menu-assistente-icone" src="assets/assistente-senso/ajuda-apontando.png" alt="" aria-hidden="true">
         <span>Assistente de ajuda</span>
@@ -386,6 +388,20 @@
         <span id="paymentAlertTitle" class="agenda-alert-title"></span>
         <span id="paymentAlertDesc" class="agenda-alert-desc"></span>
     </button>
+
+    <aside id="adminPendingAlert" class="admin-pending-alert hidden" aria-live="polite">
+        <img src="assets/assistente-senso/alerta-admin.png" alt="Mascote Senso comemorando">
+        <div class="admin-pending-content">
+            <span class="admin-pending-eyebrow">Alerta administrativo</span>
+            <strong id="adminPendingTitle">Novo usuário aguardando</strong>
+            <p id="adminPendingDescription">Abra a gestão para analisar e liberar o acesso.</p>
+            <div class="admin-pending-actions">
+                <a href="pages/gestao-interna-4m8x2.html">Abrir Gestão de Usuários</a>
+                <button id="adminSoundToggle" type="button" aria-pressed="false">Ativar som</button>
+            </div>
+        </div>
+    </aside>
+    <audio id="adminPendingAudio" src="assets/sounds/novo-usuario.mp3" preload="none"></audio>
 
     <div id="privacyNotice" class="agenda-alert privacy-notice hidden">
         <span class="agenda-alert-title">Política de Privacidade disponível</span>
@@ -443,16 +459,108 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
-<script src="js/auth-guard.js?v=20260607-gratis"></script>
-<script src="js/core/plans.js?v=20260607-gratis"></script>
-<script src="js/core/profile.js"></script>
+<script src="js/auth-guard.js?v=20260702-leituras1"></script>
+<script src="js/core/plans.js?v=20260702-leituras1"></script>
+<script src="js/core/profile.js?v=20260702-negocios2"></script>
 <script src="js/domains/mecanica/domain.js"></script>
-<script src="js/app.js"></script>
+<script src="js/app.js?v=20260702-negocio-ativo"></script>
+<script src="js/data-sync-v2.js?v=20260702-leituras1"></script>
 <script src="js/assistente-senso.js"></script>
 <script src="js/assistente-ajuda.js"></script>
 <script src="js/assistente-senso-contexto.js"></script>
 
 <script>
+let adminPendingUnsubscribe = null;
+let adminPendingKnownCount = null;
+const ADMIN_SOUND_KEY = "senso:admin-alert-sound";
+const ADMIN_SOUND_VOLUME_KEY = "senso:admin-alert-volume";
+
+function adminSoundEnabled() {
+    try { return localStorage.getItem(ADMIN_SOUND_KEY) === "on"; }
+    catch (_error) { return false; }
+}
+
+function updateAdminSoundButton() {
+    const button = document.getElementById("adminSoundToggle");
+    if (!button) return;
+    const enabled = adminSoundEnabled();
+    button.textContent = enabled ? "Som ativado" : "Ativar som";
+    button.setAttribute("aria-pressed", String(enabled));
+    button.classList.toggle("sound-enabled", enabled);
+}
+
+async function playAdminPendingSound() {
+    if (!adminSoundEnabled()) return;
+    const audio = document.getElementById("adminPendingAudio");
+    if (!audio) return;
+    try {
+        audio.currentTime = 0;
+        const savedVolume = Number(localStorage.getItem(ADMIN_SOUND_VOLUME_KEY));
+        audio.volume = Number.isFinite(savedVolume) && savedVolume >= 10 && savedVolume <= 100
+            ? savedVolume / 100
+            : 0.65;
+        await audio.play();
+    } catch (_error) {
+        const button = document.getElementById("adminSoundToggle");
+        if (button) button.textContent = "Toque para liberar o som";
+    }
+}
+
+document.getElementById("adminSoundToggle")?.addEventListener("click", async () => {
+    const nextEnabled = !adminSoundEnabled();
+    try { localStorage.setItem(ADMIN_SOUND_KEY, nextEnabled ? "on" : "off"); } catch (_error) {}
+    updateAdminSoundButton();
+    if (nextEnabled) await playAdminPendingSound();
+});
+
+updateAdminSoundButton();
+
+function watchAdminPendingUsers() {
+    const alertElement = document.getElementById("adminPendingAlert");
+    if (!alertElement || window.SensoAuth?.isAdmin !== true || !window.firebase?.firestore) {
+        alertElement?.classList.add("hidden");
+        return;
+    }
+    if (adminPendingUnsubscribe) return;
+
+    adminPendingUnsubscribe = firebase.firestore().collection("users").onSnapshot(snapshot => {
+        const pending = snapshot.docs.filter(doc => {
+            const user = doc.data() || {};
+            return user.autorizado === false && user.status !== "bloqueado";
+        });
+        const count = pending.length;
+        const countKey = `senso:admin-pending-count:${window.SensoAuth?.uid || "admin"}`;
+        let previousCount = adminPendingKnownCount;
+        if (previousCount === null) {
+            try {
+                const stored = localStorage.getItem(countKey);
+                previousCount = stored === null ? count : Number(stored);
+            } catch (_error) {
+                previousCount = count;
+            }
+        }
+        alertElement.classList.toggle("hidden", count === 0);
+        document.querySelectorAll("[data-senso-admin-link]").forEach(link => {
+            if (count) link.dataset.pendingCount = String(count);
+            else delete link.dataset.pendingCount;
+        });
+        if (Number.isFinite(previousCount) && count > previousCount) playAdminPendingSound();
+        adminPendingKnownCount = count;
+        try { localStorage.setItem(countKey, String(count)); } catch (_error) {}
+        if (!count) return;
+
+        document.getElementById("adminPendingTitle").textContent = count === 1
+            ? "1 novo usuário aguardando"
+            : `${count} novos usuários aguardando`;
+        document.getElementById("adminPendingDescription").textContent = count === 1
+            ? "Uma conta pediu acesso ao Senso. Confira os dados antes de aprovar."
+            : "Existem contas aguardando sua análise e aprovação.";
+    }, error => {
+        console.warn("Não foi possível acompanhar usuários pendentes.", error);
+        alertElement.classList.add("hidden");
+    });
+}
+
 function renderHomeDashboard() {
     const data = getData();
     const agora = new Date();
@@ -796,6 +904,7 @@ window.addEventListener("senso-auth-ready", () => {
     carregarPaymentAlert();
     renderPrivacyNotice();
     renderDesktopProLink();
+    watchAdminPendingUsers();
 });
 
 window.addEventListener("senso-plan-ready", () => {
@@ -809,6 +918,7 @@ renderAgendaAlert();
 carregarPaymentAlert();
 renderPrivacyNotice();
 renderDesktopProLink();
+if (window.SensoAuth?.profile) watchAdminPendingUsers();
 </script>
 
 </body> 

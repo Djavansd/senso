@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
@@ -92,6 +92,61 @@
     width: 5px;
     background: #f59e0b;
     border-radius: 14px 0 0 14px;
+}
+
+.servico-cadastrado-card {
+    --servico-card-cor: #1687f8;
+    --servico-card-rgb: 22, 135, 248;
+    position: relative;
+    overflow: hidden;
+    padding: 14px 13px 14px 17px;
+    border: 1px solid rgba(var(--servico-card-rgb), .30);
+    background: linear-gradient(145deg, #ffffff 48%, rgba(var(--servico-card-rgb), .065));
+    box-shadow:
+        0 11px 24px rgba(15, 23, 42, .11),
+        0 3px 9px rgba(var(--servico-card-rgb), .13);
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.servico-cadastrado-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    border-radius: 14px 0 0 14px;
+    background: linear-gradient(180deg, var(--servico-card-cor), rgba(var(--servico-card-rgb), .58));
+}
+
+.servico-cadastrado-card:hover {
+    transform: translateY(-1px);
+    box-shadow:
+        0 14px 28px rgba(15, 23, 42, .14),
+        0 4px 11px rgba(var(--servico-card-rgb), .16);
+}
+
+.servico-cadastrado-card.card-servico-executado {
+    --servico-card-cor: #16a56f;
+    --servico-card-rgb: 22, 165, 111;
+}
+
+.servico-cadastrado-card.card-servico-recusado {
+    --servico-card-cor: #e5484d;
+    --servico-card-rgb: 229, 72, 77;
+}
+
+.servico-cadastrado-card.servico-em-aberto {
+    --servico-card-cor: #f59e0b;
+    --servico-card-rgb: 245, 158, 11;
+}
+
+.servicos-mes {
+    border-color: rgba(22, 135, 248, .20);
+    box-shadow: 0 9px 22px rgba(15, 23, 42, .09);
+}
+
+.servicos-mes[open] > summary {
+    background: linear-gradient(90deg, rgba(22, 135, 248, .075), rgba(255, 255, 255, .96));
+    border-bottom: 1px solid rgba(22, 135, 248, .12);
 }
 
 .servico-alerta-aprovacao {
@@ -287,7 +342,73 @@ textarea {
     resize: vertical;
 }
 
+.servico-etapa-card {
+    --etapa-cor: #1687f8;
+    --etapa-rgb: 22, 135, 248;
+    position: relative;
+    margin: 4px 0 16px;
+    padding: 14px 13px 15px 17px;
+    overflow: hidden;
+    border: 1px solid rgba(var(--etapa-rgb), .30);
+    border-radius: 17px;
+    background: linear-gradient(145deg, #ffffff 45%, rgba(var(--etapa-rgb), .055));
+    box-shadow:
+        0 11px 25px rgba(15, 23, 42, .10),
+        0 3px 8px rgba(var(--etapa-rgb), .11);
+}
+
+.servico-etapa-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    background: linear-gradient(180deg, var(--etapa-cor), rgba(var(--etapa-rgb), .58));
+}
+
+.servico-etapa-card--detalhes {
+    --etapa-cor: #13a985;
+    --etapa-rgb: 19, 169, 133;
+}
+
+.servico-etapa-card h3 {
+    margin: 0 0 11px;
+    color: #172033;
+    font-size: 16px;
+    letter-spacing: -.15px;
+}
+
+.servico-etapa-card > label,
+.servico-etapa-card > div > label {
+    color: #334155;
+    font-weight: 700;
+}
+
+.servico-etapa-card input,
+.servico-etapa-card select,
+.servico-etapa-card textarea {
+    border-color: #cbd5e1;
+    background-color: rgba(255, 255, 255, .94);
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, .035);
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.servico-etapa-card input:focus,
+.servico-etapa-card select:focus,
+.servico-etapa-card textarea:focus {
+    outline: none;
+    border-color: var(--etapa-cor);
+    box-shadow: 0 0 0 3px rgba(var(--etapa-rgb), .14);
+}
+
+.servico-etapa-card .servico-card,
+.servico-etapa-card .problema-pro-box,
+.servico-etapa-card .resumo-card {
+    border-color: rgba(var(--etapa-rgb), .20);
+    box-shadow: 0 5px 13px rgba(15, 23, 42, .065);
+}
+
 </style>
+<script src="../js/auth-boot.js?v=20260630"></script>
 </head>
 
 <body>
@@ -296,7 +417,8 @@ textarea {
 
 <div class="content">
 
-<h3>Serviço • Passo 1</h3>
+<section class="servico-etapa-card" aria-labelledby="tituloServicoPasso1">
+<h3 id="tituloServicoPasso1">Serviço • Passo 1</h3>
 
 <label>Cliente</label>
 <input id="clienteBusca" placeholder="Buscar cliente por nome, sobrenome ou telefone" autocomplete="off" />
@@ -320,13 +442,13 @@ textarea {
     <label>KM</label>
     <input id="servicoKmCarro" type="text" inputmode="numeric" placeholder="Opcional" />
 </div>
+</section>
 
-<hr />
-
-<h3>Serviço • Passo 2</h3>
+<section class="servico-etapa-card servico-etapa-card--detalhes" aria-labelledby="tituloServicoPasso2">
+<h3 id="tituloServicoPasso2">Serviço • Passo 2</h3>
 
 <div id="problemaRelatadoBox" class="problema-pro-box hidden">
-    <label>Problema relatado pelo cliente</label>
+    <label id="problemaRelatadoLabel">Problema relatado pelo cliente</label>
     <textarea id="problemaRelatadoServico"
         placeholder="Ex: descreva o que o cliente informou antes do atendimento..."></textarea>
 </div>
@@ -397,6 +519,7 @@ textarea {
 
 <button type="button" id="btnSalvarServico" style="margin-top:12px; margin-bottom:8px;">Salvar Serviço</button>
 <div id="salvarServicoAlerta" class="salvar-servico-alerta hidden"></div>
+</section>
 
 <hr />
 
@@ -410,11 +533,12 @@ textarea {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
-<script src="../js/auth-guard.js?v=20260607-gratis"></script>
-<script src="../js/core/plans.js?v=20260607-gratis"></script>
-<script src="../js/core/profile.js"></script>
+<script src="../js/auth-guard.js?v=20260702-leituras1"></script>
+<script src="../js/core/plans.js?v=20260702-leituras1"></script>
+<script src="../js/core/profile.js?v=20260702-negocios2"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
-<script src="../js/app.js"></script>
+<script src="../js/app.js?v=20260702-negocio-ativo"></script>
+<script src="../js/data-sync-v2.js?v=20260702-leituras1"></script>
 <script src="../js/assistente-senso.js"></script>
 <script src="../js/assistente-ajuda.js"></script>
 
@@ -446,17 +570,16 @@ const itemQtd = document.getElementById("itemQtd");
 const btnAdicionarItem = formItem.querySelector("button[type='submit']");
 let servicoEmEdicaoId = "";
 let itemEmEdicaoIndex = -1;
-const modoMecanica = (
-    window.SensoProfile &&
-    typeof window.SensoProfile.getActiveProfile === "function" &&
-    window.SensoProfile.getActiveProfile()?.id === "mecanica"
-);
+const modoMecanica = window.SensoProfile?.usesVehicleFields?.() === true;
+const negocioAtivo = window.SensoProfile?.getBusinessType?.();
 
 function aplicarTextoProblemaRelatado() {
     if (!problemaRelatadoServico) return;
-    problemaRelatadoServico.placeholder = modoMecanica
+    const label = document.getElementById("problemaRelatadoLabel");
+    if (label) label.textContent = negocioAtivo?.problemLabel || "Problema relatado pelo cliente";
+    problemaRelatadoServico.placeholder = negocioAtivo?.problemPlaceholder || (modoMecanica
         ? "Ex: ar não gela, carro falhando, barulho ao frear, vazamento, luz acesa no painel..."
-        : "Ex: cliente informou o problema, local do serviço, urgência, medidas, acesso ou detalhes do atendimento...";
+        : "Ex: cliente informou o problema, local do serviço, urgência, medidas, acesso ou detalhes do atendimento...");
 }
 
 function usuarioPodeUsarProblemaRelatado() {
@@ -1244,7 +1367,15 @@ function renderServicos() {
         const orcamentoIdAttr = escapeHtml(orcamentoExistente?.id || "");
 
         return `
-            <div class="resumo-card ${aguardandoAprovacao ? "servico-em-aberto" : ""}">
+            <div class="resumo-card servico-cadastrado-card ${
+                aguardandoAprovacao
+                    ? "servico-em-aberto"
+                    : orcamentoRecusado
+                    ? "card-servico-recusado"
+                    : s.status === "executado"
+                    ? "card-servico-executado"
+                    : "card-servico-pendente"
+            }">
                 <strong>${escapeHtml(s.cliente.nome)}</strong><br>
                 <small>${dataServico}</small><br>
                 Total: <strong>R$ ${formatarMoedaBR(s.totalGeral)}</strong><br>
@@ -1292,7 +1423,7 @@ function renderServicos() {
                     : (s.status === "executado" || orcamentoRecusado)
                     ? `<button class="btn-corrigir"
                         data-servico-id="${servicoIdAttr}">
-                        ⚠️ Corrigir serviço
+                        🗑️ Apagar serviço
                        </button>`
                     : ""
                 }
@@ -1328,6 +1459,12 @@ function renderServicos() {
 
     listaServicos.querySelectorAll(".btn-corrigir").forEach(btn => {
         btn.onclick = () => {
+            const confirmar = confirm(
+                "Apagar este serviço?\n\n" +
+                "O serviço sairá da lista e os registros ligados a ele serão removidos. " +
+                "Esta ação ficará registrada no histórico de correções."
+            );
+            if (!confirmar) return;
             estornarServico(btn.dataset.servicoId);
             renderServicos();
         };

@@ -427,6 +427,38 @@ input, select {
     color: var(--app-primary) !important;
 }
 
+.admin-pending-alert {
+  display: grid;
+  grid-template-columns: 105px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 14px 12px 2px;
+  padding: 10px 14px 12px 7px;
+  overflow: hidden;
+  border: 1px solid rgba(217, 147, 0, .42);
+  border-left: 5px solid #d99300;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fffdf4, #fff8d9);
+  box-shadow: 0 12px 26px rgba(111, 76, 0, .16);
+}
+
+.admin-pending-alert.hidden { display: none; }
+.admin-pending-alert img { width: 105px; height: 105px; object-fit: contain; filter: drop-shadow(0 7px 7px rgba(74, 58, 0, .18)); }
+.admin-pending-content { min-width: 0; }
+.admin-pending-eyebrow { display: block; margin-bottom: 3px; color: #8a5b00; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.admin-pending-content strong { display: block; color: #493200; font-size: 16px; line-height: 1.2; }
+.admin-pending-content p { margin: 5px 0 9px; color: #735817; font-size: 12px; line-height: 1.35; }
+.admin-pending-content a { display: inline-block; padding: 8px 11px; border-radius: 9px; background: #0f766e; color: #fff; font-size: 12px; font-weight: 800; text-decoration: none; box-shadow: 0 6px 13px rgba(15, 118, 110, .22); }
+.admin-pending-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.admin-pending-actions button { width: auto; margin: 0; padding: 8px 11px; border: 1px solid rgba(138, 91, 0, .28); border-radius: 9px; background: rgba(255,255,255,.74); color: #725000; font-size: 12px; font-weight: 800; box-shadow: none; }
+.admin-pending-actions button.sound-enabled { border-color: rgba(15,118,110,.32); background: #e2f5ef; color: #0f665e; }
+[data-senso-admin-link][data-pending-count]::after { content: attr(data-pending-count); display: inline-grid; place-items: center; min-width: 21px; height: 21px; margin-left: auto; padding: 0 6px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 11px; font-weight: 900; }
+
+@media (max-width: 380px) {
+  .admin-pending-alert { grid-template-columns: 82px minmax(0, 1fr); }
+  .admin-pending-alert img { width: 82px; height: 82px; }
+}
+
 /* ===== IDENTIDADE VISUAL BRASIL ===== */
 html {
     min-height: 100%;
@@ -447,28 +479,257 @@ body::before {
     z-index: -2;
     pointer-events: none;
     background:
-        linear-gradient(145deg, rgba(255, 255, 255, .70), rgba(239, 250, 244, .78)),
+        linear-gradient(145deg, rgba(255, 255, 255, .22), rgba(239, 250, 244, .36)),
         url("../assets/brasil-textura.jpg") center / cover no-repeat;
-    filter: saturate(.92);
+    opacity: .14;
+    filter: saturate(.68) contrast(.84);
 }
 
 .app {
-    background: rgba(246, 250, 248, .72) !important;
-    box-shadow: 0 0 34px rgba(10, 80, 55, .08);
+    background: rgba(246, 250, 248, .78) !important;
+    box-shadow: 0 0 34px rgba(10, 80, 55, .05);
 }
 
 @media (max-width: 520px) {
     body::before {
         background:
-            linear-gradient(145deg, rgba(255, 255, 255, .28), rgba(239, 250, 244, .34)),
+            linear-gradient(145deg, rgba(255, 255, 255, .20), rgba(239, 250, 244, .34)),
             url("../assets/brasil-textura.jpg") center top / cover no-repeat;
-        filter: saturate(1.12) contrast(1.03);
+        opacity: .13;
+        filter: saturate(.66) contrast(.82);
     }
 
     .app {
-        background: rgba(246, 250, 248, .18) !important;
+        background: rgba(246, 250, 248, .58) !important;
         box-shadow: none;
     }
+}
+
+/* ===== BACKGROUND EXCLUSIVO DA DASHBOARD ===== */
+body:has(#totalClientes)::before {
+    background: linear-gradient(
+        180deg,
+        #fff1a6 0%,
+        #fff7cf 22%,
+        #d9f3dc 43%,
+        #ccebdc 62%,
+        #d7ecfb 82%,
+        #c7e3f8 100%
+    );
+    opacity: 1;
+    filter: none;
+}
+
+body:has(#totalClientes) .app {
+    background: transparent !important;
+}
+
+/* ===== CARDS PREMIUM EXCLUSIVOS DA DASHBOARD ===== */
+body:has(#totalClientes) .dashboard .card {
+    --card-accent: #3b82f6;
+    --card-shadow: rgba(59, 130, 246, .12);
+    --card-title-color: #172033;
+    --card-value-color: #172033;
+    background: linear-gradient(
+        145deg,
+        rgba(255, 255, 255, .99) 0%,
+        rgba(248, 250, 252, .96) 58%,
+        rgba(255, 255, 255, .99) 100%
+    );
+    border-width: 2px;
+    border-color: var(--card-accent);
+    box-shadow:
+        0 8px 20px rgba(15, 23, 42, .06),
+        0 3px 9px var(--card-shadow),
+        inset 0 1px 0 rgba(255, 255, 255, .9);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+body:has(#totalClientes) .dashboard .card::before {
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, .72) 0%,
+        rgba(255, 255, 255, .16) 42%,
+        rgba(255, 255, 255, 0) 68%
+    );
+}
+
+body:has(#totalClientes) .dashboard .card:hover,
+body:has(#totalClientes) .dashboard .card:focus-visible {
+    border-color: var(--card-accent);
+    box-shadow:
+        0 12px 26px rgba(15, 23, 42, .09),
+        0 4px 12px var(--card-shadow);
+}
+
+body:has(#totalClientes) .dashboard .card-icon {
+    filter: saturate(1.05) drop-shadow(0 3px 5px var(--card-shadow));
+}
+
+body:has(#totalClientes) .dashboard .card-title {
+    color: var(--card-title-color);
+    font-weight: 800;
+}
+
+body:has(#totalClientes) .dashboard .card-value {
+    color: var(--card-value-color);
+    font-weight: 800;
+}
+
+body:has(#totalClientes) .dashboard .card-desc {
+    color: #64748b;
+}
+
+body:has(#totalClientes) .dashboard .card.clientes {
+    --card-accent: #3b82f6;
+    --card-shadow: rgba(59, 130, 246, .12);
+    --card-value-color: #1d4ed8;
+}
+
+body:has(#totalClientes) .dashboard .card.servico {
+    --card-accent: #22a85a;
+    --card-shadow: rgba(34, 168, 90, .12);
+    --card-value-color: #15803d;
+}
+
+body:has(#totalClientes) .dashboard .card.orcamentos {
+    --card-accent: #14b8a6;
+    --card-shadow: rgba(20, 184, 166, .12);
+    --card-value-color: #0f766e;
+}
+
+body:has(#totalClientes) .dashboard .card.agenda {
+    --card-accent: #38a9e8;
+    --card-shadow: rgba(56, 169, 232, .12);
+    --card-value-color: #0369a1;
+}
+
+body:has(#totalClientes) .dashboard .card.financeiro {
+    --card-accent: #d6a315;
+    --card-shadow: rgba(214, 163, 21, .13);
+    --card-value-color: #9a6700;
+}
+
+body:has(#totalClientes) .dashboard .card.resumo {
+    --card-accent: #f47a31;
+    --card-shadow: rgba(244, 122, 49, .12);
+    --card-value-color: #c2410c;
+}
+
+/* ===== CARDS PREMIUM DA LISTA DE ORCAMENTOS ===== */
+body:has(#filtrosStatus) .lista .card {
+    --orcamento-accent: #0f766e;
+    --orcamento-shadow: rgba(15, 118, 110, .12);
+    background: linear-gradient(
+        145deg,
+        rgba(255, 255, 255, .99) 0%,
+        rgba(248, 250, 252, .96) 58%,
+        rgba(255, 255, 255, .99) 100%
+    );
+    border: 2px solid var(--orcamento-accent);
+    box-shadow:
+        0 8px 20px rgba(15, 23, 42, .06),
+        0 3px 9px var(--orcamento-shadow),
+        inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+body:has(#filtrosStatus) .lista .card:hover,
+body:has(#filtrosStatus) .lista .card:focus-visible {
+    box-shadow:
+        0 12px 26px rgba(15, 23, 42, .09),
+        0 4px 12px var(--orcamento-shadow);
+}
+
+body:has(#filtrosStatus) .lista .card.enviado {
+    --orcamento-accent: #3b82f6;
+    --orcamento-shadow: rgba(59, 130, 246, .12);
+}
+
+body:has(#filtrosStatus) .lista .card.aprovado {
+    --orcamento-accent: #22a85a;
+    --orcamento-shadow: rgba(34, 168, 90, .12);
+}
+
+body:has(#filtrosStatus) .lista .card.recusado {
+    --orcamento-accent: #e25555;
+    --orcamento-shadow: rgba(226, 85, 85, .12);
+}
+
+body:has(#filtrosStatus) .lista .card-numero,
+body:has(#filtrosStatus) .lista .card-status {
+    color: var(--orcamento-accent);
+}
+
+body:has(#filtrosStatus) .lista .card-cliente,
+body:has(#filtrosStatus) .lista .card-valor {
+    color: #172033;
+}
+
+body:has(#filtrosStatus) .lista .card-data {
+    color: #64748b;
+}
+
+/* ===== BOTOES PREMIUM DO FINANCEIRO ===== */
+body:has(#btnGanho) .btn-ganho,
+body:has(#btnGanho) .btn-gasto {
+    --finance-button-accent: #15803d;
+    --finance-button-shadow: rgba(21, 128, 61, .13);
+    background: linear-gradient(
+        145deg,
+        rgba(255, 255, 255, .99) 0%,
+        rgba(248, 250, 252, .96) 100%
+    );
+    color: var(--finance-button-accent);
+    border: 2px solid var(--finance-button-accent);
+    box-shadow:
+        0 7px 16px rgba(15, 23, 42, .05),
+        0 3px 8px var(--finance-button-shadow);
+    transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+body:has(#btnGanho) .btn-gasto {
+    --finance-button-accent: #c83e3e;
+    --finance-button-shadow: rgba(200, 62, 62, .13);
+}
+
+body:has(#btnGanho) .btn-ganho:hover,
+body:has(#btnGanho) .btn-ganho:focus-visible,
+body:has(#btnGanho) .btn-gasto:hover,
+body:has(#btnGanho) .btn-gasto:focus-visible {
+    background: #ffffff;
+    box-shadow:
+        0 10px 20px rgba(15, 23, 42, .07),
+        0 4px 10px var(--finance-button-shadow);
+}
+
+body:has(#btnGanho) .btn-ganho:focus-visible,
+body:has(#btnGanho) .btn-gasto:focus-visible {
+    outline: 3px solid var(--finance-button-shadow);
+    outline-offset: 2px;
+}
+
+body:has(#btnGanho) .btn-extrato {
+    background: linear-gradient(
+        145deg,
+        rgba(255, 255, 255, .98) 0%,
+        rgba(240, 253, 250, .94) 100%
+    );
+    color: #0f766e;
+    border: 1px solid rgba(255, 255, 255, .88);
+    box-shadow: 0 7px 16px rgba(6, 78, 59, .14);
+    transition: box-shadow .18s ease, background .18s ease;
+}
+
+body:has(#btnGanho) .btn-extrato:hover,
+body:has(#btnGanho) .btn-extrato:focus-visible {
+    background: #ffffff;
+    box-shadow: 0 10px 20px rgba(6, 78, 59, .18);
+}
+
+body:has(#btnGanho) .btn-extrato:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, .48);
+    outline-offset: 2px;
 }
 
 @media print {

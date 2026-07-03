@@ -1,16 +1,28 @@
 (function () {
     "use strict";
 
+    const contextScriptUrl = document.currentScript?.src || "";
+
+    function getMascoteUrl(fileName) {
+        if (contextScriptUrl) {
+            return new URL(`../assets/assistente-senso/${fileName}`, contextScriptUrl).href;
+        }
+
+        return `/assets/assistente-senso/${fileName}`;
+    }
+
     const MASCOTES = Object.freeze({
-        boasVindas: "/assets/assistente-senso/boas-vindas.png",
-        pagamentoVencido: "/assets/assistente-senso/pagamento-vencido.png",
-        pagamentoTresDias: "/assets/assistente-senso/pagamento-vence-em-3-dias.png",
-        manutencao: "/assets/assistente-senso/lembrete-manutencao.png",
-        testeGratisEncerrado: "/assets/assistente-senso/teste-gratis-encerrado.png",
-        planoAtivado: "/assets/assistente-senso/plano-ativado.png"
+        boasVindas: getMascoteUrl("boas-vindas.png"),
+        pagamentoVencido: getMascoteUrl("pagamento-vencido.png"),
+        pagamentoTresDias: getMascoteUrl("pagamento-vence-em-3-dias.png"),
+        manutencao: getMascoteUrl("lembrete-manutencao.png"),
+        testeGratisEncerrado: getMascoteUrl("teste-gratis-encerrado.png"),
+        planoAtivado: getMascoteUrl("plano-ativado.png")
     });
 
     let exibidoNestaEntrada = false;
+    let modalLimiteGratisAberto = false;
+    let confirmacaoPlanoGratis = null;
     let timer = null;
 
     function getUid() {
@@ -158,23 +170,31 @@
     }
 
     function mostrarTesteGratisEsgotado(plano) {
-        if (plano?.plano !== "gratis" || typeof window.getData !== "function") return false;
+        const planState = window.SensoPlans?.state;
+        const loadingPlano = planState?.loading === true;
+        if (
+            loadingPlano
+            || !planState?.ready
+            || planState?.error
+            || plano?.plano !== "gratis"
+            || typeof window.getData !== "function"
+        ) return false;
 
         const data = window.getData();
         const limites = window.SensoPlans.getUsageLimits?.(plano)
             || window.SensoPlans.freeLimits
-            || { clientes: 5, servicos: 10 };
+            || { clientes: 5, orcamentos: 10 };
         const clientes = (data.clientes || []).filter(cliente => !cliente?.arquivado).length;
-        const servicos = (data.servicos || []).length;
+        const orcamentos = (data.orcamentos || []).length;
         const clientesEsgotados = Number.isFinite(Number(limites.clientes)) && clientes >= Number(limites.clientes);
-        const servicosEsgotados = Number.isFinite(Number(limites.servicos)) && servicos >= Number(limites.servicos);
-        if (!clientesEsgotados && !servicosEsgotados) return false;
+        const orcamentosEsgotados = Number.isFinite(Number(limites.orcamentos)) && orcamentos >= Number(limites.orcamentos);
+        if (!clientesEsgotados && !orcamentosEsgotados) return false;
 
         const limiteAtingido = clientesEsgotados
             ? `${limites.clientes} clientes ativos`
-            : `${limites.servicos} serviços`;
+            : `${limites.orcamentos} orçamentos`;
 
-        return abrirUmaVez({
+        const abriu = abrirUmaVez({
             imagem: MASCOTES.testeGratisEncerrado,
             mensagens: [
                 "Você concluiu seu teste grátis!",
@@ -195,12 +215,26 @@
                     estilo: "sutil",
                     aoClicar: ({ fechar }) => fechar("depois")
                 }
-            ]
+            ],
+            aoFechar: () => {
+                modalLimiteGratisAberto = false;
+            }
         }, getChave("teste-gratis-esgotado"), "mostrado");
+
+        if (abriu) modalLimiteGratisAberto = true;
+        return abriu;
     }
 
     function getNomePlano(planoId) {
         return planoId === "pro" ? "Plano Pro" : "Plano Básico";
+    }
+
+    function getValidadeMillis(value) {
+        if (!value) return 0;
+        if (typeof value?.toMillis === "function") return value.toMillis();
+        if (typeof value?.toDate === "function") return value.toDate().getTime();
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? 0 : date.getTime();
     }
 
     function registrarMudancaPlano(plano) {
@@ -210,17 +244,63 @@
                 ? "basico"
                 : "gratis";
         const chaveUltimoPlano = getChave("ultimo-plano");
+        const chavePlanoAtivado = getChave("plano-ativado-pendente");
+        const chaveUltimaValidade = getChave("ultima-validade");
+        const chavePagamentoConfirmado = getChave("pagamento-confirmado-pendente");
         const planoAnterior = lerValor(chaveUltimoPlano);
+        const validadeAtual = getValidadeMillis(plano?.validade);
+        const validadeAnterior = Number(lerValor(chaveUltimaValidade) || 0);
+
+        if (
+            planoAnterior === planoAtual
+            && lerValor(chavePlanoAtivado) === planoAtual
+        ) {
+            removerValor(chavePlanoAtivado);
+        }
 
         if (
             planoAnterior === "gratis"
             && planoAtual !== "gratis"
             && plano?.status !== "bloqueado"
         ) {
-            marcarVisto(getChave("plano-ativado-pendente"), planoAtual);
+            marcarVisto(chavePlanoAtivado, planoAtual);
+        }
+
+        if (
+            planoAtual !== "gratis"
+            && plano?.status !== "bloqueado"
+            && validadeAnterior > 0
+            && validadeAtual > validadeAnterior + 60000
+        ) {
+            marcarVisto(chavePagamentoConfirmado, String(validadeAtual));
         }
 
         marcarVisto(chaveUltimoPlano, planoAtual);
+        if (validadeAtual > 0) marcarVisto(chaveUltimaValidade, String(validadeAtual));
+    }
+
+    function mostrarPagamentoConfirmado(plano) {
+        const validade = getValidadeMillis(plano?.validade);
+        const chavePendente = getChave("pagamento-confirmado-pendente");
+        if (!validade || lerValor(chavePendente) !== String(validade)) return false;
+
+        exibidoNestaEntrada = true;
+        removerValor(chavePendente);
+        const vencimento = new Date(validade).toLocaleDateString("pt-BR");
+        window.AssistenteSenso.abrir({
+            imagem: MASCOTES.planoAtivado,
+            mensagens: [
+                "Pagamento confirmado!",
+                "Seu plano foi renovado com sucesso.",
+                `Próximo vencimento: ${vencimento}.`
+            ],
+            acoes: [{
+                texto: "Continuar",
+                estilo: "primaria",
+                aoClicar: ({ fechar }) => fechar("pagamento-confirmado")
+            }]
+        });
+        return true;
     }
 
     function mostrarPlanoAtivado(plano) {
@@ -379,15 +459,58 @@
         }, getChave("manutencao"), getDiaLocal());
     }
 
-    function tentarExibir() {
-        if (!window.AssistenteSenso || !window.SensoPlans?.state?.ready) return;
+    function aguardar(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
-        const plano = window.SensoPlans.getCurrentPlan?.() || {};
+    async function reconfirmarPlanoAposGratis(uid) {
+        if (!uid) return null;
+        if (confirmacaoPlanoGratis?.uid === uid) return confirmacaoPlanoGratis.promise;
+
+        const promise = (async () => {
+            await window.SensoPlans.ensureUserPlan?.(uid);
+            await aguardar(900);
+            await window.SensoPlans.ensureUserPlan?.(uid);
+
+            const state = window.SensoPlans.state;
+            if (state.loading || !state.ready || state.error || state.uid !== uid) return null;
+            return window.SensoPlans.getCurrentPlan?.() || null;
+        })();
+
+        confirmacaoPlanoGratis = { uid, promise };
+        try {
+            return await promise;
+        } finally {
+            if (confirmacaoPlanoGratis?.promise === promise) {
+                confirmacaoPlanoGratis = null;
+            }
+        }
+    }
+
+    async function tentarExibir() {
+        if (!window.AssistenteSenso || !window.SensoPlans) return;
+
+        const uid = window.SensoAuth?.uid || window.firebase?.auth?.()?.currentUser?.uid;
+        const planState = window.SensoPlans.state;
+        if (uid && (!planState.ready || planState.uid !== uid)) {
+            await window.SensoPlans.ensureUserPlan?.(uid);
+        }
+
+        const loadingPlano = planState.loading === true;
+        if (loadingPlano || !planState.ready || planState.error || planState.uid !== uid) return;
+
+        let plano = window.SensoPlans.getCurrentPlan?.() || {};
+        if (plano.plano === "gratis") {
+            plano = await reconfirmarPlanoAposGratis(uid);
+            if (!plano) return;
+        }
+
         const status = window.SensoPlans.getPaymentStatus?.(plano) || {};
         registrarMudancaPlano(plano);
         if (exibidoNestaEntrada) return;
 
         if (mostrarPlanoAtivado(plano)) return;
+        if (mostrarPagamentoConfirmado(plano)) return;
 
         if (estaNaPaginaPagamento()) {
             mostrarPagamentoVencido(plano, status);
@@ -409,7 +532,14 @@
     window.addEventListener("DOMContentLoaded", agendarTentativa);
     window.addEventListener("senso-auth-ready", agendarTentativa);
     window.addEventListener("senso-plan-ready", event => {
-        registrarMudancaPlano(event?.detail?.plan || {});
+        const plano = event?.detail?.plan || {};
+        if (plano.plano !== "gratis" && modalLimiteGratisAberto) {
+            modalLimiteGratisAberto = false;
+            exibidoNestaEntrada = false;
+            window.AssistenteSenso?.fechar?.("plano-pago-confirmado");
+        }
+
+        if (confirmacaoPlanoGratis) return;
         agendarTentativa();
     });
     window.addEventListener("senso-live-update", agendarTentativa);

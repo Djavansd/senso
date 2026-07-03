@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="../css/assistente-ajuda.css">
     <link rel="icon" type="image/png" href="../assets/icons/icon-192.png?v=20260609">
     <meta name="theme-color" content="#0f9d58">
+<script src="../js/auth-boot.js?v=20260630"></script>
 </head>
 <body class="ajuda-body">
     <main class="ajuda-page">
@@ -43,7 +44,7 @@
                 <p>Abra as áreas abaixo. O mascote apresentará todos os passos e cuidados importantes.</p>
 
                 <div class="ajuda-progresso-topo">
-                    <span id="ajudaProgressoTexto">0 de 7 áreas aprendidas</span>
+                    <span id="ajudaProgressoTexto">0 de 8 áreas aprendidas</span>
                     <span id="ajudaProgressoPercentual">0%</span>
                 </div>
                 <div class="ajuda-progresso-trilho" role="progressbar" aria-label="Progresso do aprendizado" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -75,8 +76,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="../js/firebase-config.js"></script>
-    <script src="../js/auth-guard.js?v=20260607-gratis"></script>
-    <script src="../js/core/profile.js"></script>
+    <script src="../js/auth-guard.js?v=20260702-leituras1"></script>
+    <script src="../js/core/profile.js?v=20260702-negocios2"></script>
     <script src="../js/assistente-senso.js"></script>
     <script src="../js/assistente-ajuda.js"></script>
     <script>
@@ -106,7 +107,8 @@
                 const concluidas = estado.concluidas.length;
                 const percentual = Math.round((concluidas / total) * 100);
                 const perfilId = window.SensoProfile?.getActiveProfile?.()?.id;
-                const perfilNome = perfilId === "prestador" ? "Prestador de serviço" : "Mecânico";
+                const perfilNome = window.SensoProfile?.getBusinessType?.()?.label
+                    || (perfilId === "prestador" ? "Prestador de serviço" : "Mecânica");
 
                 inputAtivo.checked = estado.ativo;
                 selo.textContent = estado.ativo ? `Ajuda ativada • ${perfilNome}` : "Ajuda desativada";

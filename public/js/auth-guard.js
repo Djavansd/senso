@@ -1,176 +1,200 @@
 (function () {
     "use strict";
 
-    const LOGIN_REGEX = /\/pages\/login\.html$/i;
+    const LOGIN_REGEX = /\/pages\/login(?:\.html)?\/?$/i;
+    const PENDING_REGEX = /\/pages\/acesso-pendente(?:\.html)?\/?$/i;
+    const ADMIN_REGEX = /\/pages\/gestao-interna-4m8x2(?:\.html)?\/?$/i;
+    const SECURITY_REGEX = /\/pages\/seguranca-conta(?:\.html)?\/?$/i;
     const LAST_UID_KEY = "senso:lastAuthUid";
 
-    function isLoginPage() {
-        return LOGIN_REGEX.test(window.location.pathname);
-    }
-
-    function buildNextPath() {
-        return window.location.pathname + window.location.search + window.location.hash;
-    }
-
-    function getLoginPath() {
-        const path = window.location.pathname.replace(/\\/g, "/");
-        if (path.includes("/pages/")) return "login.html";
-        return "pages/login.html";
-    }
+    function isLoginPage() { return LOGIN_REGEX.test(location.pathname); }
+    function isPendingPage() { return PENDING_REGEX.test(location.pathname); }
+    function isAdminPage() { return ADMIN_REGEX.test(location.pathname); }
+    function isSecurityPage() { return SECURITY_REGEX.test(location.pathname); }
+    function relativePage(file) { return location.pathname.includes("/pages/") ? file : `pages/${file}`; }
 
     function redirectToLogin() {
         if (isLoginPage()) return;
-        const next = encodeURIComponent(buildNextPath());
-        window.location.replace(`${getLoginPath()}?next=${next}`);
+        const next = encodeURIComponent(location.pathname + location.search + location.hash);
+        location.replace(`${relativePage("login.html")}?next=${next}`);
+    }
+
+    function redirectToPending(status) {
+        if (isPendingPage()) return;
+        location.replace(`${relativePage("acesso-pendente.html")}?status=${encodeURIComponent(status || "aguardando")}`);
+    }
+
+    function denyAdminAccess() {
+        location.replace(relativePage("../index.html").replace("pages/../", ""));
     }
 
     function hasFirebaseConfig() {
         const cfg = window.SENSO_FIREBASE_CONFIG;
-        return !!(
-            window.firebase &&
-            cfg &&
-            cfg.apiKey &&
-            cfg.projectId &&
-            !cfg.apiKey.startsWith("COLOQUE_")
-        );
+        return !!(window.firebase && cfg?.apiKey && cfg?.projectId && !cfg.apiKey.startsWith("COLOQUE_"));
     }
 
     function inferUserName(user) {
         const displayName = String(user?.displayName || "").trim();
         if (displayName) return displayName;
-
         const email = String(user?.email || "").trim();
-        if (email.includes("@")) {
-            return email.split("@")[0];
-        }
-
-        return "";
+        return email.includes("@") ? email.split("@")[0] : "";
     }
 
-    function syncUserIdentity(user) {
-        if (!user?.uid || !window.firebase?.firestore) return Promise.resolve(null);
+    async function syncUserIdentity(user) {
+        if (!user?.uid || !firebase.firestore) return null;
 
-        const nome = inferUserName(user);
-        const payload = {
+        const ref = firebase.firestore().collection("users").doc(user.uid);
+        const snapshot = await ref.get({ source: "server" });
+        const identity = {
             uid: user.uid,
             email: String(user.email || ""),
-            nome,
-            updatedAt: new Date().toISOString()
+            nome: inferUserName(user)
         };
 
-        const userRef = window.firebase
-            .firestore()
-            .collection("users")
-            .doc(user.uid);
+        if (!snapshot.exists) {
+            const created = {
+                ...identity,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                autorizado: false,
+                admin: false,
+                status: "aguardando",
+                plano: "gratis",
+                tipoPagamento: "mensal",
+                validade: null,
+                dataCadastro: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            await ref.set(created);
+            return { ...created, updatedAt: new Date(), dataCadastro: new Date() };
+        }
 
-        return userRef
-            .get()
-            .then(snapshot => {
-                if (!snapshot.exists) {
-                    return userRef
-                        .set({
-                            ...payload,
-                            autorizado: false,
-                            plano: "gratis",
-                            status: "ativo",
-                            tipoPagamento: "mensal",
-                            validade: null
-                        })
-                        .then(() => ({
-                            ...payload,
-                            autorizado: false,
-                            plano: "gratis",
-                            status: "ativo",
-                            tipoPagamento: "mensal",
-                            validade: null
-                        }));
-                }
-
-                return userRef
-                    .set(payload, { merge: true })
-                    .then(() => ({
-                        ...snapshot.data(),
-                        ...payload
-                    }));
-            })
-            .catch(() => {
-                // Evita quebrar fluxo de auth por erro de sincronizacao.
-                return null;
-            });
+        const current = snapshot.data() || {};
+        const identityChanged = current.uid !== identity.uid
+            || current.email !== identity.email
+            || current.nome !== identity.nome;
+        if (identityChanged) {
+            await ref.set({
+                ...identity,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }
+        return { ...current, ...identity };
     }
 
-    function redirectToPendingAccess() {
-        if (isLoginPage()) return;
-        window.location.replace(`${getLoginPath()}?access=pending`);
+    function accessStatus(data) {
+        if (data?.status === "bloqueado") return "bloqueado";
+        if (data?.autorizado === false) return "aguardando";
+        return "ativo";
     }
 
-    window.SensoAuth = window.SensoAuth || {
-        ready: false,
-        user: null,
-        uid: null
-    };
+    function exposeAdminNavigation(isAdmin) {
+        document.querySelectorAll("[data-senso-admin-link]").forEach(element => {
+            element.hidden = !isAdmin;
+            element.style.display = isAdmin ? "" : "none";
+        });
+    }
+
+    function revealAuthorizedPage() {
+        document.documentElement.classList.remove("senso-auth-loading");
+        document.getElementById("senso-auth-loading-style")?.remove();
+    }
+
+    function watchPendingAccess(uid) {
+        if (!isPendingPage() || !uid) return;
+
+        firebase.firestore().collection("users").doc(uid).onSnapshot(snapshot => {
+            if (!snapshot.exists) return;
+            const currentStatus = accessStatus(snapshot.data());
+
+            window.dispatchEvent(new CustomEvent("senso-access-status", {
+                detail: { status: currentStatus }
+            }));
+
+            if (currentStatus === "ativo") {
+                location.replace("../index.html");
+            }
+        }, error => {
+            console.error("Falha ao acompanhar aprovação da conta.", error);
+        });
+    }
+
+    window.SensoAuth = window.SensoAuth || { ready: false, user: null, uid: null, profile: null, isAdmin: false };
 
     if (!hasFirebaseConfig()) {
-        console.warn("Firebase nao configurado. Preencha public/js/firebase-config.js.");
+        console.warn("Firebase nao configurado.");
         if (!isLoginPage()) redirectToLogin();
         return;
     }
 
-    if (!firebase.apps.length) {
-        firebase.initializeApp(window.SENSO_FIREBASE_CONFIG);
-    }
+    if (!firebase.apps.length) firebase.initializeApp(window.SENSO_FIREBASE_CONFIG);
+    window.sensoConnectFirebaseEmulators?.();
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
 
-    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {
-        // Se falhar, o fluxo continua com a persistencia padrao.
-    });
-
-    firebase.auth().onAuthStateChanged(user => {
+    firebase.auth().onAuthStateChanged(async user => {
         window.SensoAuth.ready = true;
         window.SensoAuth.user = user || null;
-        window.SensoAuth.uid = user ? user.uid : null;
+        window.SensoAuth.uid = user?.uid || null;
+        window.SensoAuth.profile = null;
+        window.SensoAuth.isAdmin = false;
 
         if (!user) {
-            try {
-                localStorage.removeItem(LAST_UID_KEY);
-            } catch (_err) {
-                // Ignora erro de storage.
-            }
+            try { localStorage.removeItem(LAST_UID_KEY); } catch (_err) {}
             redirectToLogin();
             return;
         }
 
+        try { localStorage.setItem(LAST_UID_KEY, user.uid); } catch (_err) {}
+
         try {
-            localStorage.setItem(LAST_UID_KEY, user.uid);
-        } catch (_err) {
-            // Ignora erro de storage.
-        }
+            const profile = await syncUserIdentity(user);
+            const status = accessStatus(profile);
+            const isAdmin = profile?.admin === true;
+            const mfaEnrolled = (user.multiFactor?.enrolledFactors || []).length > 0;
+            const tokenResult = await user.getIdTokenResult();
+            const mfaAuthenticated = !!tokenResult.claims?.firebase?.sign_in_second_factor;
+            window.SensoAuth.profile = profile;
+            window.SensoAuth.isAdmin = isAdmin;
+            exposeAdminNavigation(isAdmin);
+            watchPendingAccess(user.uid);
 
-        syncUserIdentity(user).then(userData => {
-            if (userData?.autorizado === false) {
-                firebase.auth().signOut().finally(redirectToPendingAccess);
+            if (status !== "ativo" && !isPendingPage()) {
+                redirectToPending(status);
                 return;
             }
-
+            if (status === "ativo" && isPendingPage()) {
+                location.replace("../index.html");
+                return;
+            }
+            if ((isAdminPage() || isSecurityPage()) && !isAdmin) {
+                denyAdminAccess();
+                return;
+            }
+            if (isAdminPage() && (!mfaEnrolled || !mfaAuthenticated)) {
+                location.replace("seguranca-conta.html");
+                return;
+            }
             if (isLoginPage()) {
-                const params = new URLSearchParams(window.location.search);
-                const next = params.get("next");
-                const safeNext = next && next.startsWith("/") ? next : "/index.html";
-                window.location.replace(safeNext);
+                const next = new URLSearchParams(location.search).get("next");
+                location.replace(next?.startsWith("/") && !next.startsWith("//") ? next : "../index.html");
                 return;
             }
 
-            window.dispatchEvent(new CustomEvent("senso-auth-ready", { detail: { uid: user.uid } }));
-        });
+            revealAuthorizedPage();
+
+            window.dispatchEvent(new CustomEvent("senso-auth-ready", {
+                detail: {
+                    uid: user.uid,
+                    profile,
+                    isAdmin,
+                    mfaEnrolled,
+                    mfaAuthenticated
+                }
+            }));
+        } catch (error) {
+            console.error("Falha ao validar autorizacao no servidor.", error);
+            if (!isLoginPage()) redirectToLogin();
+        }
     });
 
-    window.sensoRequireAuth = function () {
-        const user = firebase.auth().currentUser;
-        if (user) return user;
-        redirectToLogin();
-        return null;
-    };
-
-    window.sensoSignOut = function () {
-        return firebase.auth().signOut();
-    };
+    window.sensoRequireAuth = () => firebase.auth().currentUser || (redirectToLogin(), null);
+    window.sensoSignOut = () => firebase.auth().signOut();
 })();
