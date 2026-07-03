@@ -7,6 +7,8 @@ window.SENSO_FIREBASE_CONFIG = {
     appId: "1:1010700673179:web:44350a3381a55cbda2a63e"
 };
 
+window.SENSO_APP_CHECK_SITE_KEY = "6LfYWkItAAAAAHfxjyeo-xzwm9CGcjIDypaTAItG";
+
 (function configureLocalFirebase(global) {
     "use strict";
 
@@ -15,6 +17,28 @@ window.SENSO_FIREBASE_CONFIG = {
     global.SENSO_USING_FIREBASE_EMULATORS = isLocal;
 
     const connected = { auth: false, firestore: false, functions: false };
+    let appCheckActivated = false;
+
+    global.sensoActivateAppCheck = function () {
+        if (isLocal || appCheckActivated || !global.firebase?.apps?.length || typeof global.firebase.appCheck !== "function") {
+            return false;
+        }
+
+        const siteKey = String(global.SENSO_APP_CHECK_SITE_KEY || "").trim();
+        if (!siteKey) return false;
+
+        try {
+            global.firebase.appCheck().activate(
+                new global.firebase.appCheck.ReCaptchaEnterpriseProvider(siteKey),
+                true
+            );
+            appCheckActivated = true;
+            return true;
+        } catch (error) {
+            console.error("Não foi possível ativar a proteção App Check.", error);
+            return false;
+        }
+    };
 
     global.sensoConnectFirebaseEmulators = function () {
         if (!isLocal || !global.firebase?.apps?.length) return false;
@@ -49,7 +73,7 @@ window.SENSO_FIREBASE_CONFIG = {
         return connected.auth || connected.firestore || connected.functions;
     };
 
-    if (isLocal) {
+    if (isLocal && global.SENSO_SHOW_EMULATOR_BADGE === true) {
         const showBadge = () => {
             if (document.getElementById("senso-emulator-badge")) return;
             const badge = document.createElement("div");

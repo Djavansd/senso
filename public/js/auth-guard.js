@@ -127,6 +127,7 @@
 
     if (!firebase.apps.length) firebase.initializeApp(window.SENSO_FIREBASE_CONFIG);
     window.sensoConnectFirebaseEmulators?.();
+    window.sensoActivateAppCheck?.();
     firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
 
     firebase.auth().onAuthStateChanged(async user => {
