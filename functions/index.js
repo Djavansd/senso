@@ -307,6 +307,76 @@ exports.createMercadoPagoSubscription = onCall({
     }
 });
 
+exports.reconcileMercadoPagoSubscription = onCall({
+    region: REGION,
+    invoker: "public",
+    enforceAppCheck: true,
+    secrets: [MERCADO_PAGO_ACCESS_TOKEN_TEST]
+}, async request => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "Entre na sua conta para conferir o pagamento.");
+
+    const uid = request.auth.uid;
+    const db = getFirestore();
+    const userRef = db.collection("users").doc(uid);
+    const userSnapshot = await userRef.get();
+    if (!userSnapshot.exists) throw new HttpsError("not-found", "Usuário não encontrado.");
+    const user = userSnapshot.data() || {};
+    const subscriptionId = String(user.mercadoPago?.assinaturaId || "").trim();
+    if (!subscriptionId) throw new HttpsError("failed-precondition", "Nenhuma assinatura para conferir.");
+
+    try {
+        const token = MERCADO_PAGO_ACCESS_TOKEN_TEST.value();
+        const subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(subscriptionId)}`, token);
+        const reference = parseMercadoPagoReference(subscription.external_reference);
+        if (!reference || reference.uid !== uid) throw new Error("Assinatura não pertence ao usuário autenticado.");
+        const expectedPlan = MERCADO_PAGO_PLANS[reference.plan];
+        const amount = Number(subscription.auto_recurring?.transaction_amount);
+        if (!expectedPlan || amount !== expectedPlan.amount || subscription.auto_recurring?.currency_id !== "BRL") {
+            throw new Error("Plano, valor ou moeda divergente.");
+        }
+
+        const invoices = await mercadoPagoRequest(`/authorized_payments/search?preapproval_id=${encodeURIComponent(subscriptionId)}`, token);
+        const approvedInvoice = (Array.isArray(invoices.results) ? invoices.results : [])
+            .filter(item => item?.payment?.status === "approved" && Number(item.transaction_amount) === expectedPlan.amount)
+            .sort((a, b) => new Date(b.last_modified || b.date_created || 0) - new Date(a.last_modified || a.date_created || 0))[0];
+
+        if (!approvedInvoice) {
+            await userRef.set({ mercadoPago: { atualizadoEm: FieldValue.serverTimestamp(), status: subscription.status || "pending" } }, { merge: true });
+            return { approved: false, status: subscription.status || "pending" };
+        }
+
+        const manualOverride = user.controleAssinatura === "manual";
+        const update = {
+            mercadoPago: {
+                ambiente: "test",
+                assinaturaId: subscription.id,
+                planoSolicitado: reference.plan,
+                status: subscription.status || "authorized",
+                ultimaFaturaId: approvedInvoice.id || approvedInvoice.payment?.id || null,
+                ultimaFaturaStatus: "approved",
+                atualizadoEm: FieldValue.serverTimestamp()
+            },
+            ultimaConfirmacaoPagamento: FieldValue.serverTimestamp()
+        };
+        if (!manualOverride) Object.assign(update, {
+            plano: reference.plan,
+            precoContratado: expectedPlan.amount,
+            tipoPagamento: "mensal",
+            tipoPlano: "normal",
+            autorizado: true,
+            status: "ativo",
+            validade: subscriptionValidity(subscription),
+            origemPlano: "mercado_pago",
+            controleAssinatura: "automatico"
+        });
+        await userRef.set(update, { merge: true });
+        return { approved: true, plan: reference.plan, manualOverride };
+    } catch (error) {
+        logger.error("Falha ao reconciliar assinatura Mercado Pago.", { uid, subscriptionId, status: error.status, detail: error.payload?.message || error.message });
+        throw new HttpsError("internal", "Não foi possível conferir o pagamento agora.");
+    }
+});
+
 exports.mercadoPagoWebhook = onRequest({
     region: REGION,
     invoker: "public",

@@ -508,6 +508,7 @@ const FALLBACK_PLAN = Object.freeze({
 });
 let currentPricingPhase = "fundador";
 let mercadoPagoCheckoutInProgress = false;
+let mercadoPagoReconciliationStarted = false;
 
 function setMercadoPagoTestVisibility(profile) {
     const canTest = profile?.admin === true || profile?.mercadoPagoTesteAutorizado === true;
@@ -535,6 +536,26 @@ async function startMercadoPagoTest(plan) {
         mercadoPagoCheckoutInProgress = false;
         button.disabled = false;
         button.textContent = originalText;
+    }
+}
+
+async function reconcileMercadoPagoReturn() {
+    if (mercadoPagoReconciliationStarted || new URLSearchParams(location.search).get("mercadopago") !== "retorno") return;
+    mercadoPagoReconciliationStarted = true;
+    try {
+        const callable = firebase.app().functions("southamerica-east1").httpsCallable("reconcileMercadoPagoSubscription");
+        const result = await callable({});
+        if (result?.data?.approved) {
+            alert("Pagamento confirmado. Seu plano foi atualizado com segurança.");
+            await refreshCurrentPlan();
+        } else {
+            alert("O pagamento ainda está sendo analisado. O Senso atualizará o plano após a aprovação.");
+        }
+    } catch (error) {
+        console.warn("Não foi possível conferir o retorno do Mercado Pago.", error);
+        alert("Ainda não foi possível confirmar o pagamento. Tente atualizar esta tela em alguns minutos.");
+    } finally {
+        history.replaceState({}, "", location.pathname);
     }
 }
 
@@ -1023,6 +1044,7 @@ window.addEventListener("senso-plan-ready", event => {
 window.addEventListener("senso-auth-ready", event => {
     setMercadoPagoTestVisibility(event?.detail?.profile);
     refreshCurrentPlan(event?.detail?.uid);
+    reconcileMercadoPagoReturn();
 });
 
 renderLoadingPlan();
