@@ -387,6 +387,7 @@ body {
                    target="_blank"
                    rel="noopener noreferrer">Escolher Básico</a>
                 <button class="plan-cta" id="basicMercadoPagoTest" type="button" hidden>Testar assinatura Básico</button>
+                <button class="plan-cta" id="basicMercadoPagoProduction" type="button" hidden>Validar pagamento real Básico • R$ 29,90</button>
             </div>
 
             <div class="plan-option pro">
@@ -483,6 +484,7 @@ const basicPlanCta = document.getElementById("basicPlanCta");
 const proPlanCta = document.getElementById("proPlanCta");
 const basicMercadoPagoTest = document.getElementById("basicMercadoPagoTest");
 const proMercadoPagoTest = document.getElementById("proMercadoPagoTest");
+const basicMercadoPagoProduction = document.getElementById("basicMercadoPagoProduction");
 const basicPaymentValue = document.getElementById("basicPaymentValue");
 const proPaymentValue = document.getElementById("proPaymentValue");
 const WHATSAPP_PHONE = "5511992841312";
@@ -514,6 +516,7 @@ function setMercadoPagoTestVisibility(profile) {
     const canTest = profile?.admin === true || profile?.mercadoPagoTesteAutorizado === true;
     basicMercadoPagoTest.hidden = !canTest;
     proMercadoPagoTest.hidden = !canTest;
+    basicMercadoPagoProduction.hidden = profile?.admin !== true;
 }
 
 async function startMercadoPagoTest(plan) {
@@ -536,6 +539,25 @@ async function startMercadoPagoTest(plan) {
         mercadoPagoCheckoutInProgress = false;
         button.disabled = false;
         button.textContent = originalText;
+    }
+}
+
+async function startMercadoPagoProductionValidation() {
+    if (mercadoPagoCheckoutInProgress || !confirm("Este teste fará uma cobrança real recorrente de R$ 29,90. Deseja continuar?")) return;
+    mercadoPagoCheckoutInProgress = true;
+    basicMercadoPagoProduction.disabled = true;
+    try {
+        const callable = firebase.app().functions("southamerica-east1").httpsCallable("createMercadoPagoProductionSubscription");
+        const result = await callable({ plan: "basico" });
+        const checkoutUrl = result?.data?.checkoutUrl;
+        if (!checkoutUrl || !/^https:\/\//i.test(checkoutUrl)) throw new Error("Checkout não retornado.");
+        location.href = checkoutUrl;
+    } catch (error) {
+        console.error("Falha ao iniciar validação de produção.", error);
+        alert(error?.message || "Não foi possível abrir o pagamento real.");
+    } finally {
+        mercadoPagoCheckoutInProgress = false;
+        basicMercadoPagoProduction.disabled = false;
     }
 }
 
@@ -1031,6 +1053,7 @@ btnCopiarPix.addEventListener("click", async () => {
 
 basicMercadoPagoTest.addEventListener("click", () => startMercadoPagoTest("basico"));
 proMercadoPagoTest.addEventListener("click", () => startMercadoPagoTest("pro"));
+basicMercadoPagoProduction.addEventListener("click", startMercadoPagoProductionValidation);
 
 window.addEventListener("senso-plan-ready", event => {
     if (event?.detail?.plan) {

@@ -15,6 +15,8 @@ const COLLECTIONS = ["clientes", "servicos", "agenda", "financeiro", "orcamentos
 const REGION = "southamerica-east1";
 const MERCADO_PAGO_ACCESS_TOKEN_TEST = defineSecret("MERCADO_PAGO_ACCESS_TOKEN_TEST");
 const MERCADO_PAGO_WEBHOOK_SECRET_TEST = defineSecret("MERCADO_PAGO_WEBHOOK_SECRET_TEST");
+const MERCADO_PAGO_ACCESS_TOKEN_PROD = defineSecret("MERCADO_PAGO_ACCESS_TOKEN_PROD");
+const MERCADO_PAGO_WEBHOOK_SECRET_PROD = defineSecret("MERCADO_PAGO_WEBHOOK_SECRET_PROD");
 const MERCADO_PAGO_API = "https://api.mercadopago.com";
 const MERCADO_PAGO_PLANS = Object.freeze({
     basico: { name: "Senso Básico Mensal", amount: 29.90 },
@@ -307,11 +309,66 @@ exports.createMercadoPagoSubscription = onCall({
     }
 });
 
+exports.createMercadoPagoProductionSubscription = onCall({
+    region: REGION,
+    invoker: "public",
+    enforceAppCheck: true,
+    secrets: [MERCADO_PAGO_ACCESS_TOKEN_PROD]
+}, async request => {
+    if (!request.auth || request.auth.token.email_verified !== true) {
+        throw new HttpsError("unauthenticated", "Entre com um e-mail confirmado.");
+    }
+    const planKey = String(request.data?.plan || "").trim().toLowerCase();
+    const plan = MERCADO_PAGO_PLANS[planKey];
+    if (!plan) throw new HttpsError("invalid-argument", "Plano inválido.");
+
+    const uid = request.auth.uid;
+    const db = getFirestore();
+    const userRef = db.collection("users").doc(uid);
+    const snapshot = await userRef.get();
+    const user = snapshot.data() || {};
+    if (!snapshot.exists || user.admin !== true) {
+        throw new HttpsError("permission-denied", "Validação de produção restrita ao administrador.");
+    }
+    const payerEmail = String(request.auth.token.email || user.email || "").trim().toLowerCase();
+
+    try {
+        const subscription = await mercadoPagoRequest("/preapproval", MERCADO_PAGO_ACCESS_TOKEN_PROD.value(), {
+            method: "POST",
+            headers: { "X-Idempotency-Key": crypto.randomUUID() },
+            body: JSON.stringify({
+                reason: plan.name,
+                external_reference: `senso:${uid}:${planKey}`,
+                payer_email: payerEmail,
+                auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: plan.amount, currency_id: "BRL" },
+                back_url: "https://www.senso.app.br/pages/pagamento-app.html?mercadopago=retorno",
+                notification_url: "https://southamerica-east1-senso-6d92a.cloudfunctions.net/mercadoPagoWebhook?source_news=webhooks",
+                status: "pending"
+            })
+        });
+        if (!subscription.id || !subscription.init_point) throw new Error("Checkout de produção não retornado.");
+        await userRef.set({
+            mercadoPago: {
+                ambiente: "production",
+                assinaturaId: subscription.id,
+                planoSolicitado: planKey,
+                status: subscription.status || "pending",
+                checkoutCriadoEm: FieldValue.serverTimestamp(),
+                atualizadoEm: FieldValue.serverTimestamp()
+            }
+        }, { merge: true });
+        return { checkoutUrl: subscription.init_point, subscriptionId: subscription.id, plan: planKey, environment: "production" };
+    } catch (error) {
+        logger.error("Falha ao criar assinatura de produção.", { uid, planKey, status: error.status, detail: error.payload?.message });
+        throw new HttpsError("internal", "Não foi possível iniciar a assinatura de produção.");
+    }
+});
+
 exports.reconcileMercadoPagoSubscription = onCall({
     region: REGION,
     invoker: "public",
     enforceAppCheck: true,
-    secrets: [MERCADO_PAGO_ACCESS_TOKEN_TEST]
+    secrets: [MERCADO_PAGO_ACCESS_TOKEN_TEST, MERCADO_PAGO_ACCESS_TOKEN_PROD]
 }, async request => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Entre na sua conta para conferir o pagamento.");
 
@@ -325,7 +382,8 @@ exports.reconcileMercadoPagoSubscription = onCall({
     if (!subscriptionId) throw new HttpsError("failed-precondition", "Nenhuma assinatura para conferir.");
 
     try {
-        const token = MERCADO_PAGO_ACCESS_TOKEN_TEST.value();
+        const environment = user.mercadoPago?.ambiente === "production" ? "production" : "test";
+        const token = environment === "production" ? MERCADO_PAGO_ACCESS_TOKEN_PROD.value() : MERCADO_PAGO_ACCESS_TOKEN_TEST.value();
         const subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(subscriptionId)}`, token);
         const reference = parseMercadoPagoReference(subscription.external_reference);
         if (!reference || reference.uid !== uid) throw new Error("Assinatura não pertence ao usuário autenticado.");
@@ -348,7 +406,7 @@ exports.reconcileMercadoPagoSubscription = onCall({
         const manualOverride = user.controleAssinatura === "manual";
         const update = {
             mercadoPago: {
-                ambiente: "test",
+                ambiente: environment,
                 assinaturaId: subscription.id,
                 planoSolicitado: reference.plan,
                 status: subscription.status || "authorized",
@@ -380,14 +438,16 @@ exports.reconcileMercadoPagoSubscription = onCall({
 exports.mercadoPagoWebhook = onRequest({
     region: REGION,
     invoker: "public",
-    secrets: [MERCADO_PAGO_ACCESS_TOKEN_TEST, MERCADO_PAGO_WEBHOOK_SECRET_TEST]
+    secrets: [MERCADO_PAGO_ACCESS_TOKEN_TEST, MERCADO_PAGO_WEBHOOK_SECRET_TEST, MERCADO_PAGO_ACCESS_TOKEN_PROD, MERCADO_PAGO_WEBHOOK_SECRET_PROD]
 }, async (request, response) => {
     if (request.method !== "POST") {
         response.status(405).send("Method Not Allowed");
         return;
     }
 
-    if (!validWebhookSignature(request, MERCADO_PAGO_WEBHOOK_SECRET_TEST.value())) {
+    const isProduction = validWebhookSignature(request, MERCADO_PAGO_WEBHOOK_SECRET_PROD.value());
+    const isTest = !isProduction && validWebhookSignature(request, MERCADO_PAGO_WEBHOOK_SECRET_TEST.value());
+    if (!isProduction && !isTest) {
         logger.warn("Webhook Mercado Pago com assinatura inválida.");
         response.status(401).send("Invalid signature");
         return;
@@ -397,6 +457,8 @@ exports.mercadoPagoWebhook = onRequest({
     const resourceId = String(request.query?.["data.id"] || request.query?.data_id || request.body?.data?.id || "").trim();
     const requestId = String(request.get("x-request-id") || "").trim();
     const db = getFirestore();
+    const environment = isProduction ? "production" : "test";
+    const accessToken = isProduction ? MERCADO_PAGO_ACCESS_TOKEN_PROD.value() : MERCADO_PAGO_ACCESS_TOKEN_TEST.value();
     const eventRef = db.collection("mercadoPagoWebhookEvents").doc(safeEventId(requestId || `${topic}-${resourceId}`));
 
     try {
@@ -410,19 +472,19 @@ exports.mercadoPagoWebhook = onRequest({
         let subscription;
         let payment = null;
         if (topic === "subscription_preapproval") {
-            subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(resourceId)}`, MERCADO_PAGO_ACCESS_TOKEN_TEST.value());
+            subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(resourceId)}`, accessToken);
         } else if (topic === "subscription_authorized_payment") {
             try {
-                payment = await mercadoPagoRequest(`/authorized_payments/${encodeURIComponent(resourceId)}`, MERCADO_PAGO_ACCESS_TOKEN_TEST.value());
+                payment = await mercadoPagoRequest(`/authorized_payments/${encodeURIComponent(resourceId)}`, accessToken);
                 const subscriptionId = payment.preapproval_id || payment.subscription_id;
                 if (!subscriptionId) throw new Error("Pagamento sem assinatura vinculada.");
-                subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(subscriptionId)}`, MERCADO_PAGO_ACCESS_TOKEN_TEST.value());
+                subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(subscriptionId)}`, accessToken);
             } catch (paymentError) {
                 // O simulador do Mercado Pago pode enviar o ID da assinatura usando
                 // o tópico de pagamento autorizado. Aceitamos apenas para consultar
                 // a assinatura; sem uma fatura aprovada, o plano não é liberado.
                 if (paymentError.status !== 400 && paymentError.status !== 404) throw paymentError;
-                subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(resourceId)}`, MERCADO_PAGO_ACCESS_TOKEN_TEST.value());
+                subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(resourceId)}`, accessToken);
                 payment = null;
             }
         } else {
@@ -451,7 +513,7 @@ exports.mercadoPagoWebhook = onRequest({
 
         const update = {
             mercadoPago: {
-                ambiente: "test",
+                ambiente: environment,
                 assinaturaId: subscription.id,
                 planoSolicitado: reference.plan,
                 status: subscription.status || "unknown",
