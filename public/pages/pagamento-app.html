@@ -560,7 +560,7 @@ async function startMercadoPagoProductionValidation() {
                 alert("Enviamos um link de confirmação para seu e-mail. Confirme, saia e entre novamente no Senso.");
             } catch (verificationError) {
                 console.error("Falha ao enviar verificação de e-mail.", verificationError);
-                alert("Seu e-mail ainda não foi confirmado. Verifique a caixa de entrada ou tente novamente mais tarde.");
+                alert(`Não foi possível enviar a confirmação (${verificationError?.code || "erro desconhecido"}).`);
             }
         } else {
             alert(error?.message || "Não foi possível abrir o pagamento real.");
