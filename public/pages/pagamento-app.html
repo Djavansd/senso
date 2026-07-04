@@ -554,7 +554,17 @@ async function startMercadoPagoProductionValidation() {
         location.href = checkoutUrl;
     } catch (error) {
         console.error("Falha ao iniciar validação de produção.", error);
-        alert(error?.message || "Não foi possível abrir o pagamento real.");
+        if (error?.code === "functions/failed-precondition" && firebase.auth().currentUser) {
+            try {
+                await firebase.auth().currentUser.sendEmailVerification({ url: "https://www.senso.app.br/pages/pagamento-app.html" });
+                alert("Enviamos um link de confirmação para seu e-mail. Confirme, saia e entre novamente no Senso.");
+            } catch (verificationError) {
+                console.error("Falha ao enviar verificação de e-mail.", verificationError);
+                alert("Seu e-mail ainda não foi confirmado. Verifique a caixa de entrada ou tente novamente mais tarde.");
+            }
+        } else {
+            alert(error?.message || "Não foi possível abrir o pagamento real.");
+        }
     } finally {
         mercadoPagoCheckoutInProgress = false;
         basicMercadoPagoProduction.disabled = false;

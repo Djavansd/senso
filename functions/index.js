@@ -315,8 +315,9 @@ exports.createMercadoPagoProductionSubscription = onCall({
     enforceAppCheck: true,
     secrets: [MERCADO_PAGO_ACCESS_TOKEN_PROD]
 }, async request => {
-    if (!request.auth || request.auth.token.email_verified !== true) {
-        throw new HttpsError("unauthenticated", "Entre com um e-mail confirmado.");
+    if (!request.auth) throw new HttpsError("unauthenticated", "Entre na sua conta para contratar.");
+    if (request.auth.token.email_verified !== true) {
+        throw new HttpsError("failed-precondition", "Confirme seu e-mail antes de contratar.");
     }
     const planKey = String(request.data?.plan || "").trim().toLowerCase();
     const plan = MERCADO_PAGO_PLANS[planKey];
