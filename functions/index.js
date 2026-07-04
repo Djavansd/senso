@@ -342,10 +342,19 @@ exports.mercadoPagoWebhook = onRequest({
         if (topic === "subscription_preapproval") {
             subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(resourceId)}`, MERCADO_PAGO_ACCESS_TOKEN_TEST.value());
         } else if (topic === "subscription_authorized_payment") {
-            payment = await mercadoPagoRequest(`/authorized_payments/${encodeURIComponent(resourceId)}`, MERCADO_PAGO_ACCESS_TOKEN_TEST.value());
-            const subscriptionId = payment.preapproval_id || payment.subscription_id;
-            if (!subscriptionId) throw new Error("Pagamento sem assinatura vinculada.");
-            subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(subscriptionId)}`, MERCADO_PAGO_ACCESS_TOKEN_TEST.value());
+            try {
+                payment = await mercadoPagoRequest(`/authorized_payments/${encodeURIComponent(resourceId)}`, MERCADO_PAGO_ACCESS_TOKEN_TEST.value());
+                const subscriptionId = payment.preapproval_id || payment.subscription_id;
+                if (!subscriptionId) throw new Error("Pagamento sem assinatura vinculada.");
+                subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(subscriptionId)}`, MERCADO_PAGO_ACCESS_TOKEN_TEST.value());
+            } catch (paymentError) {
+                // O simulador do Mercado Pago pode enviar o ID da assinatura usando
+                // o tópico de pagamento autorizado. Aceitamos apenas para consultar
+                // a assinatura; sem uma fatura aprovada, o plano não é liberado.
+                if (paymentError.status !== 400 && paymentError.status !== 404) throw paymentError;
+                subscription = await mercadoPagoRequest(`/preapproval/${encodeURIComponent(resourceId)}`, MERCADO_PAGO_ACCESS_TOKEN_TEST.value());
+                payment = null;
+            }
         } else {
             await eventRef.set({ status: "ignored", processedAt: FieldValue.serverTimestamp() }, { merge: true });
             response.status(200).send("Ignored");
