@@ -313,12 +313,14 @@ body {
     background:#ffffff;
     color:#0f766e;
 }
+/* Layout premium de planos */
+body{color:#111827;background:#f8fbfa}.app{width:min(1180px,100%);margin:0 auto}.header{position:relative;display:flex;align-items:center;justify-content:center;min-height:64px;background:rgba(255,255,255,.94)!important;color:#064e3b;box-shadow:0 1px 0 #0f172a0f;backdrop-filter:blur(18px);font-size:21px;font-weight:900}.header-back{position:absolute;left:16px;width:38px;height:38px;border:0;border-radius:12px;background:#ecfdf5;color:#064e3b;font-size:25px;cursor:pointer}.content{padding:18px 14px 34px}.payment-hero{position:relative;overflow:hidden;padding:26px 18px 30px;text-align:center;color:#111827;background:linear-gradient(145deg,#fff 15%,#f0fdf9);border:1px solid #d1fae5;box-shadow:0 22px 55px #0f766e1a;border-radius:24px}.payment-hero:after{content:"";position:absolute;width:360px;height:150px;right:-100px;top:-60px;border-radius:50%;background:radial-gradient(circle,#34d3992e,transparent 68%)}.payment-icon{position:relative;z-index:1;width:52px;height:58px;margin:0 auto 14px;border-radius:14px 14px 20px 20px;background:linear-gradient(145deg,#047857,#064e3b);box-shadow:0 10px 22px #05966940}.payment-icon:before{content:"S";font-size:28px}.payment-hero h3{position:relative;z-index:1;margin:0;font-size:clamp(25px,5vw,38px);color:#111827}.payment-hero p{position:relative;z-index:1;max-width:680px;margin:12px auto 0;color:#475569;font-size:15px}.current-plan{margin:16px 0 18px;border-radius:20px;border-color:#d1fae5;box-shadow:0 14px 35px #0f172a14}.plan-list{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:14px}.plan-option{display:flex;flex-direction:column;min-width:0;padding:20px 18px;border-radius:22px;border:1px solid #dbe7e4;box-shadow:0 18px 42px #0f172a14;background:#fff}.plan-option:before{background:linear-gradient(150deg,#10b98114,transparent 35%)}.plan-option:nth-child(2){border-color:#bfdbfe}.plan-option.pro{color:#111827;background:linear-gradient(165deg,#fff,#faf5ff);border:1.5px solid #8b5cf6;box-shadow:0 22px 48px #7c3aed29}.plan-option.pro .plan-title,.plan-option.pro .plan-price,.plan-option.pro .plan-desc,.plan-option.pro .plan-feature{color:inherit}.plan-badge{align-self:flex-start;margin-bottom:16px}.plan-option:nth-child(2) .plan-badge{background:#eff6ff;color:#2563eb}.plan-option.pro .plan-badge{background:#f3e8ff;color:#7e22ce;border:0}.plan-title{display:block;font-size:20px;text-align:center}.plan-title:before{content:"🚀";display:grid;place-items:center;width:70px;height:70px;margin:0 auto 14px;border-radius:50%;background:#ecfdf5;font-size:30px}.plan-option:nth-child(2) .plan-title:before{content:"▣";color:#2563eb;background:#eff6ff}.plan-option.pro .plan-title:before{content:"♛";color:#7e22ce;background:#f3e8ff}.plan-price{display:block;margin-top:18px;color:#059669;font-size:31px;text-align:center}.plan-option:nth-child(2) .plan-price{color:#2563eb}.plan-option.pro .plan-price{color:#7e22ce}.plan-desc{min-height:50px;margin:9px 0 0;color:#475569!important;text-align:center;font-size:13px}.plan-features{flex:1;margin-top:18px;padding-top:16px;border-top:1px solid #e5e7eb}.plan-feature{color:#334155!important}.plan-feature:before{content:"✓";font-size:14px}.plan-option:nth-child(2) .plan-feature:before{color:#2563eb}.plan-option.pro .plan-feature:before{color:#7e22ce}.plan-cta{border:0;min-height:44px;margin-top:16px;box-shadow:0 9px 20px #0596692e;cursor:pointer}.plan-option:nth-child(2) .plan-cta{background:#2563eb;color:#fff}.plan-option.pro .plan-cta{background:linear-gradient(100deg,#7e22ce,#9333ea);color:#fff}.trust-strip,.benefits-card{background:#fff;border:1px solid #dbe7e4;border-radius:20px;box-shadow:0 14px 34px #0f172a12}.trust-strip{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px;margin:4px 0 16px}.trust-copy{display:flex;align-items:center;gap:12px;color:#334155;font-size:12px}.trust-lock{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:#ecfdf5;color:#047857;font-size:20px}.trust-copy strong{display:block;color:#0f172a;font-size:14px}.trust-brands{display:flex;gap:7px;flex-wrap:wrap}.trust-brand{padding:7px 10px;border-radius:8px;background:#f8fafc;color:#475569;font-weight:900;font-size:11px}.benefits-card{padding:20px 16px;margin-bottom:16px;text-align:center}.benefits-card h3{margin:0 0 18px}.benefits-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.benefit{color:#64748b;font-size:11px;line-height:1.4}.benefit-icon{display:grid;place-items:center;width:44px;height:44px;margin:0 auto 8px;border-radius:50%;background:#ecfdf5;color:#059669;font-size:20px}.benefit strong{display:block;margin-bottom:4px;color:#0f172a;font-size:12px}.payment-card{border-radius:20px}@media(max-width:760px){.plan-list{grid-template-columns:1fr}.plan-option{padding:20px}.plan-desc{min-height:0}.trust-strip{align-items:flex-start;flex-direction:column}.benefits-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 <script src="../js/auth-boot.js?v=20260630"></script>
 </head>
 <body>
 <div class="app">
-    <div class="header">Pagamento do app</div>
+    <div class="header"><button class="header-back" type="button" aria-label="Voltar" onclick="history.back()">‹</button>Planos e Assinatura</div>
 
     <div class="content">
         <div class="payment-hero">
@@ -418,6 +420,21 @@ body {
             </div>
 
         </div>
+
+        <div class="trust-strip" aria-label="Pagamento seguro">
+            <div class="trust-copy"><span class="trust-lock">▣</span><span><strong>Pagamento 100% seguro</strong>Processado pelo Mercado Pago com dados protegidos.</span></div>
+            <div class="trust-brands"><span class="trust-brand">PIX</span><span class="trust-brand">VISA</span><span class="trust-brand">Mastercard</span></div>
+        </div>
+
+        <section class="benefits-card">
+            <h3>Por que escolher o Senso?</h3>
+            <div class="benefits-grid">
+                <div class="benefit"><span class="benefit-icon">✓</span><strong>Seguro e confiável</strong>Seus dados protegidos.</div>
+                <div class="benefit"><span class="benefit-icon">☁</span><strong>Acesse de qualquer lugar</strong>Celular, tablet e computador.</div>
+                <div class="benefit"><span class="benefit-icon">▥</span><strong>Cresça com o Senso</strong>Planos que acompanham você.</div>
+                <div class="benefit"><span class="benefit-icon">◉</span><strong>Suporte humano</strong>Atendimento quando precisar.</div>
+            </div>
+        </section>
 
         <div class="payment-card" id="pagamento">
             <div class="payment-line">
