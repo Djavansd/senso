@@ -280,6 +280,7 @@ exports.createMercadoPagoSubscription = onCall({
                     currency_id: "BRL"
                 },
                 back_url: "https://www.senso.app.br/public/pages/pagamento-app.html?mercadopago=retorno",
+                notification_url: "https://southamerica-east1-senso-6d92a.cloudfunctions.net/mercadoPagoWebhook?source_news=webhooks",
                 status: "pending"
             })
         });
