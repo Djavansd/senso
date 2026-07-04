@@ -547,6 +547,11 @@ async function startMercadoPagoProductionValidation() {
     mercadoPagoCheckoutInProgress = true;
     basicMercadoPagoProduction.disabled = true;
     try {
+        const currentUser = firebase.auth().currentUser;
+        if (currentUser) {
+            await currentUser.reload();
+            if (currentUser.emailVerified) await currentUser.getIdToken(true);
+        }
         const callable = firebase.app().functions("southamerica-east1").httpsCallable("createMercadoPagoProductionSubscription");
         const result = await callable({ plan: "basico" });
         const checkoutUrl = result?.data?.checkoutUrl;
@@ -558,7 +563,7 @@ async function startMercadoPagoProductionValidation() {
             try {
                 firebase.auth().languageCode = "pt-BR";
                 await firebase.auth().currentUser.sendEmailVerification({ url: "https://www.senso.app.br/pages/pagamento-app.html" });
-                alert("Enviamos um link de confirmação para seu e-mail. Confirme, saia e entre novamente no Senso.");
+                alert("Enviamos um link de confirmação para seu e-mail. Confirme e volte ao Senso para continuar, sem precisar sair da conta.");
             } catch (verificationError) {
                 console.error("Falha ao enviar verificação de e-mail.", verificationError);
                 alert(`Não foi possível enviar a confirmação (${verificationError?.code || "erro desconhecido"}).`);
