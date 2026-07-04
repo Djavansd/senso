@@ -414,6 +414,7 @@ body {
                    target="_blank"
                    rel="noopener noreferrer">Escolher Pro</a>
                 <button class="plan-cta" id="proMercadoPagoTest" type="button" hidden>Testar assinatura Pro</button>
+                <button class="plan-cta" id="proMercadoPagoProduction" type="button" hidden>Assinar Pro • R$ 59,90/mês</button>
             </div>
 
         </div>
@@ -485,6 +486,7 @@ const proPlanCta = document.getElementById("proPlanCta");
 const basicMercadoPagoTest = document.getElementById("basicMercadoPagoTest");
 const proMercadoPagoTest = document.getElementById("proMercadoPagoTest");
 const basicMercadoPagoProduction = document.getElementById("basicMercadoPagoProduction");
+const proMercadoPagoProduction = document.getElementById("proMercadoPagoProduction");
 const basicPaymentValue = document.getElementById("basicPaymentValue");
 const proPaymentValue = document.getElementById("proPaymentValue");
 const WHATSAPP_PHONE = "5511992841312";
@@ -517,6 +519,7 @@ function setMercadoPagoTestVisibility(profile) {
     basicMercadoPagoTest.hidden = !canTest;
     proMercadoPagoTest.hidden = !canTest;
     basicMercadoPagoProduction.hidden = profile?.admin !== true && profile?.mercadoPagoProducaoTesteAutorizado !== true;
+    proMercadoPagoProduction.hidden = profile?.admin !== true && profile?.mercadoPagoProducaoTesteAutorizado !== true;
 }
 
 async function startMercadoPagoTest(plan) {
@@ -542,10 +545,13 @@ async function startMercadoPagoTest(plan) {
     }
 }
 
-async function startMercadoPagoProductionValidation() {
-    if (mercadoPagoCheckoutInProgress || !confirm("Este teste fará uma cobrança real recorrente de R$ 29,90. Deseja continuar?")) return;
+async function startMercadoPagoProductionValidation(plan) {
+    const isPro = plan === "pro";
+    const amount = isPro ? "59,90" : "29,90";
+    const button = isPro ? proMercadoPagoProduction : basicMercadoPagoProduction;
+    if (mercadoPagoCheckoutInProgress || !confirm(`Esta assinatura fará uma cobrança real recorrente de R$ ${amount}. Deseja continuar?`)) return;
     mercadoPagoCheckoutInProgress = true;
-    basicMercadoPagoProduction.disabled = true;
+    button.disabled = true;
     try {
         const currentUser = firebase.auth().currentUser;
         if (currentUser) {
@@ -553,7 +559,7 @@ async function startMercadoPagoProductionValidation() {
             if (currentUser.emailVerified) await currentUser.getIdToken(true);
         }
         const callable = firebase.app().functions("southamerica-east1").httpsCallable("createMercadoPagoProductionSubscription");
-        const result = await callable({ plan: "basico" });
+        const result = await callable({ plan });
         const checkoutUrl = result?.data?.checkoutUrl;
         if (!checkoutUrl || !/^https:\/\//i.test(checkoutUrl)) throw new Error("Checkout não retornado.");
         location.href = checkoutUrl;
@@ -573,7 +579,7 @@ async function startMercadoPagoProductionValidation() {
         }
     } finally {
         mercadoPagoCheckoutInProgress = false;
-        basicMercadoPagoProduction.disabled = false;
+        button.disabled = false;
     }
 }
 
@@ -1069,7 +1075,8 @@ btnCopiarPix.addEventListener("click", async () => {
 
 basicMercadoPagoTest.addEventListener("click", () => startMercadoPagoTest("basico"));
 proMercadoPagoTest.addEventListener("click", () => startMercadoPagoTest("pro"));
-basicMercadoPagoProduction.addEventListener("click", startMercadoPagoProductionValidation);
+basicMercadoPagoProduction.addEventListener("click", () => startMercadoPagoProductionValidation("basico"));
+proMercadoPagoProduction.addEventListener("click", () => startMercadoPagoProductionValidation("pro"));
 
 window.addEventListener("senso-plan-ready", event => {
     if (event?.detail?.plan) {
