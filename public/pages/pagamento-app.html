@@ -382,6 +382,7 @@ body {
                    href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20B%C3%A1sico%20mensal%20do%20Senso%20de%20R%24%2029%2C90%20por%20m%C3%AAs.%20Ap%C3%B3s%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
                    target="_blank"
                    rel="noopener noreferrer">Escolher Básico</a>
+                <button class="plan-cta" id="basicMercadoPagoTest" type="button" hidden>Testar assinatura Básico</button>
             </div>
 
             <div class="plan-option pro">
@@ -407,6 +408,7 @@ body {
                    href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20Pro%20mensal%20do%20Senso%20de%20R%24%2059%2C90%20por%20m%C3%AAs.%20Ap%C3%B3s%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
                    target="_blank"
                    rel="noopener noreferrer">Escolher Pro</a>
+                <button class="plan-cta" id="proMercadoPagoTest" type="button" hidden>Testar assinatura Pro</button>
             </div>
 
         </div>
@@ -455,6 +457,7 @@ body {
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/auth-guard.js?v=20260702-leituras1"></script>
 <script src="../js/core/plans.js?v=20260702-leituras1"></script>
@@ -474,6 +477,8 @@ const basicPlanPrice = document.getElementById("basicPlanPrice");
 const proPlanPrice = document.getElementById("proPlanPrice");
 const basicPlanCta = document.getElementById("basicPlanCta");
 const proPlanCta = document.getElementById("proPlanCta");
+const basicMercadoPagoTest = document.getElementById("basicMercadoPagoTest");
+const proMercadoPagoTest = document.getElementById("proMercadoPagoTest");
 const basicPaymentValue = document.getElementById("basicPaymentValue");
 const proPaymentValue = document.getElementById("proPaymentValue");
 const WHATSAPP_PHONE = "5511992841312";
@@ -498,6 +503,36 @@ const FALLBACK_PLAN = Object.freeze({
     tipoPlano: null
 });
 let currentPricingPhase = "fundador";
+let mercadoPagoCheckoutInProgress = false;
+
+function setMercadoPagoTestVisibility(profile) {
+    const canTest = profile?.admin === true || profile?.mercadoPagoTesteAutorizado === true;
+    basicMercadoPagoTest.hidden = !canTest;
+    proMercadoPagoTest.hidden = !canTest;
+}
+
+async function startMercadoPagoTest(plan) {
+    if (mercadoPagoCheckoutInProgress) return;
+    mercadoPagoCheckoutInProgress = true;
+    const button = plan === "pro" ? proMercadoPagoTest : basicMercadoPagoTest;
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = "Preparando checkout seguro...";
+    try {
+        const callable = firebase.app().functions("southamerica-east1").httpsCallable("createMercadoPagoSubscription");
+        const result = await callable({ plan });
+        const checkoutUrl = result?.data?.checkoutUrl;
+        if (!checkoutUrl || !/^https:\/\//i.test(checkoutUrl)) throw new Error("Checkout não retornado.");
+        location.href = checkoutUrl;
+    } catch (error) {
+        console.error("Falha ao iniciar assinatura de teste.", error);
+        alert(error?.message || "Não foi possível abrir o checkout de teste.");
+    } finally {
+        mercadoPagoCheckoutInProgress = false;
+        button.disabled = false;
+        button.textContent = originalText;
+    }
+}
 
 function normalizeTipoPagamento(value) {
     const texto = String(value || "")
@@ -969,6 +1004,9 @@ btnCopiarPix.addEventListener("click", async () => {
     }
 });
 
+basicMercadoPagoTest.addEventListener("click", () => startMercadoPagoTest("basico"));
+proMercadoPagoTest.addEventListener("click", () => startMercadoPagoTest("pro"));
+
 window.addEventListener("senso-plan-ready", event => {
     if (event?.detail?.plan) {
         renderCurrentPlan(event.detail.plan);
@@ -979,10 +1017,12 @@ window.addEventListener("senso-plan-ready", event => {
 });
 
 window.addEventListener("senso-auth-ready", event => {
+    setMercadoPagoTestVisibility(event?.detail?.profile);
     refreshCurrentPlan(event?.detail?.uid);
 });
 
 renderLoadingPlan();
+setMercadoPagoTestVisibility(window.SensoAuth?.profile);
 refreshPricingPhase();
 refreshCurrentPlan();
 </script>
