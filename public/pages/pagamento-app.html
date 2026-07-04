@@ -556,6 +556,7 @@ async function startMercadoPagoProductionValidation() {
         console.error("Falha ao iniciar validação de produção.", error);
         if (error?.code === "functions/failed-precondition" && firebase.auth().currentUser) {
             try {
+                firebase.auth().languageCode = "pt-BR";
                 await firebase.auth().currentUser.sendEmailVerification({ url: "https://www.senso.app.br/pages/pagamento-app.html" });
                 alert("Enviamos um link de confirmação para seu e-mail. Confirme, saia e entre novamente no Senso.");
             } catch (verificationError) {
