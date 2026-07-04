@@ -391,7 +391,6 @@ body{color:#111827;background:#f8fbfa}.app{width:min(1180px,100%);margin:0 auto}
                    href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20B%C3%A1sico%20mensal%20do%20Senso%20de%20R%24%2029%2C90%20por%20m%C3%AAs.%20Ap%C3%B3s%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
                    target="_blank"
                    rel="noopener noreferrer">Escolher Básico</a>
-                <button class="plan-cta" id="basicMercadoPagoTest" type="button" hidden>Testar assinatura Básico</button>
                 <button class="plan-cta" id="basicMercadoPagoProduction" type="button" hidden>Validar pagamento real Básico • R$ 29,90</button>
             </div>
 
@@ -419,7 +418,6 @@ body{color:#111827;background:#f8fbfa}.app{width:min(1180px,100%);margin:0 auto}
                    href="https://wa.me/5511992841312?text=Ol%C3%A1%2C%20quero%20contratar%20ou%20trocar%20para%20o%20Plano%20Pro%20mensal%20do%20Senso%20de%20R%24%2059%2C90%20por%20m%C3%AAs.%20Ap%C3%B3s%20a%20troca%20do%20plano%2C%20vou%20enviar%20o%20comprovante%20de%20pagamento."
                    target="_blank"
                    rel="noopener noreferrer">Escolher Pro</a>
-                <button class="plan-cta" id="proMercadoPagoTest" type="button" hidden>Testar assinatura Pro</button>
                 <button class="plan-cta" id="proMercadoPagoProduction" type="button" hidden>Assinar Pro • R$ 59,90/mês</button>
             </div>
 
@@ -504,8 +502,6 @@ const basicPlanPrice = document.getElementById("basicPlanPrice");
 const proPlanPrice = document.getElementById("proPlanPrice");
 const basicPlanCta = document.getElementById("basicPlanCta");
 const proPlanCta = document.getElementById("proPlanCta");
-const basicMercadoPagoTest = document.getElementById("basicMercadoPagoTest");
-const proMercadoPagoTest = document.getElementById("proMercadoPagoTest");
 const basicMercadoPagoProduction = document.getElementById("basicMercadoPagoProduction");
 const proMercadoPagoProduction = document.getElementById("proMercadoPagoProduction");
 const basicPaymentValue = document.getElementById("basicPaymentValue");
@@ -535,35 +531,9 @@ let currentPricingPhase = "fundador";
 let mercadoPagoCheckoutInProgress = false;
 let mercadoPagoReconciliationStarted = false;
 
-function setMercadoPagoTestVisibility(profile) {
-    const canTest = profile?.admin === true || profile?.mercadoPagoTesteAutorizado === true;
-    basicMercadoPagoTest.hidden = !canTest;
-    proMercadoPagoTest.hidden = !canTest;
+function setMercadoPagoProductionVisibility(profile) {
     basicMercadoPagoProduction.hidden = profile?.admin !== true && profile?.mercadoPagoProducaoTesteAutorizado !== true;
     proMercadoPagoProduction.hidden = profile?.admin !== true && profile?.mercadoPagoProducaoTesteAutorizado !== true;
-}
-
-async function startMercadoPagoTest(plan) {
-    if (mercadoPagoCheckoutInProgress) return;
-    mercadoPagoCheckoutInProgress = true;
-    const button = plan === "pro" ? proMercadoPagoTest : basicMercadoPagoTest;
-    const originalText = button.textContent;
-    button.disabled = true;
-    button.textContent = "Preparando checkout seguro...";
-    try {
-        const callable = firebase.app().functions("southamerica-east1").httpsCallable("createMercadoPagoSubscription");
-        const result = await callable({ plan });
-        const checkoutUrl = result?.data?.checkoutUrl;
-        if (!checkoutUrl || !/^https:\/\//i.test(checkoutUrl)) throw new Error("Checkout não retornado.");
-        location.href = checkoutUrl;
-    } catch (error) {
-        console.error("Falha ao iniciar assinatura de teste.", error);
-        alert(error?.message || "Não foi possível abrir o checkout de teste.");
-    } finally {
-        mercadoPagoCheckoutInProgress = false;
-        button.disabled = false;
-        button.textContent = originalText;
-    }
 }
 
 async function startMercadoPagoProductionValidation(plan) {
@@ -1094,8 +1064,6 @@ btnCopiarPix.addEventListener("click", async () => {
     }
 });
 
-basicMercadoPagoTest.addEventListener("click", () => startMercadoPagoTest("basico"));
-proMercadoPagoTest.addEventListener("click", () => startMercadoPagoTest("pro"));
 basicMercadoPagoProduction.addEventListener("click", () => startMercadoPagoProductionValidation("basico"));
 proMercadoPagoProduction.addEventListener("click", () => startMercadoPagoProductionValidation("pro"));
 
@@ -1109,13 +1077,13 @@ window.addEventListener("senso-plan-ready", event => {
 });
 
 window.addEventListener("senso-auth-ready", event => {
-    setMercadoPagoTestVisibility(event?.detail?.profile);
+    setMercadoPagoProductionVisibility(event?.detail?.profile);
     refreshCurrentPlan(event?.detail?.uid);
     reconcileMercadoPagoReturn();
 });
 
 renderLoadingPlan();
-setMercadoPagoTestVisibility(window.SensoAuth?.profile);
+setMercadoPagoProductionVisibility(window.SensoAuth?.profile);
 refreshPricingPhase();
 refreshCurrentPlan();
 </script>
