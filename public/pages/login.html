@@ -353,7 +353,18 @@
                 window.location.replace(getSafeNext());
             } catch (err) {
                 criandoConta = false;
-                setStatus("Não foi possível criar a conta com esses dados.");
+                console.error("Falha ao criar conta.", err);
+                const accountCreationMessages = {
+                    "auth/email-already-in-use": "Este e-mail já possui uma conta. Use o botão Entrar.",
+                    "auth/invalid-email": "Digite um endereço de e-mail válido.",
+                    "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
+                    "auth/password-does-not-meet-requirements": "A senha não atende à política configurada no Firebase.",
+                    "auth/operation-not-allowed": "O cadastro por e-mail está temporariamente desativado.",
+                    "auth/too-many-requests": "Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.",
+                    "auth/network-request-failed": "Falha de internet. Verifique a conexão e tente novamente.",
+                    "auth/app-check-token-is-invalid": "A verificação de segurança do aplicativo falhou. Atualize a página e tente novamente."
+                };
+                setStatus(accountCreationMessages[err?.code] || `Não foi possível criar a conta (${err?.code || "erro desconhecido"}).`);
             }
         }
 
