@@ -156,6 +156,7 @@
         let criandoConta = false;
         let atualizandoNomeLogin = false;
         let nomePendenteLogin = "";
+        let appCheckReadyPromise = null;
         const nextParam = new URLSearchParams(window.location.search).get("next");
         const DANGEROUS_INPUT = [
             /<\s*\/?\s*(script|iframe|object|embed|link|meta|style|svg|img|form|input|button)[\s>/]/i,
@@ -219,6 +220,20 @@
 
         function setStatus(msg) {
             statusEl.textContent = msg || "";
+        }
+
+        function ensureAppCheckReady() {
+            if (window.SENSO_USING_FIREBASE_EMULATORS === true) return Promise.resolve();
+            if (appCheckReadyPromise) return appCheckReadyPromise;
+            appCheckReadyPromise = firebase.appCheck().getToken(false)
+                .then(result => {
+                    if (!result?.token) throw new Error("Token App Check não retornado.");
+                })
+                .catch(error => {
+                    appCheckReadyPromise = null;
+                    throw error;
+                });
+            return appCheckReadyPromise;
         }
 
         function resetMfa() {
@@ -299,6 +314,7 @@
             nomePendenteLogin = nomeCompleto.length >= 3 ? nomeCompleto : "";
             atualizandoNomeLogin = !!nomePendenteLogin;
             try {
+                await ensureAppCheckReady();
                 const credential = await firebase.auth().signInWithEmailAndPassword(email, senha);
                 if (nomePendenteLogin) {
                     await credential.user.updateProfile({ displayName: nomePendenteLogin });
@@ -318,7 +334,11 @@
                 }
                 atualizandoNomeLogin = false;
                 nomePendenteLogin = "";
-                setStatus("Email ou senha inválidos.");
+                const appCheckFailure = err?.code === "auth/firebase-app-check-token-is-invalid"
+                    || String(err?.code || "").startsWith("appCheck/");
+                setStatus(appCheckFailure
+                    ? "A verificação de segurança não foi concluída. Atualize a página e tente novamente."
+                    : "Email ou senha inválidos.");
             }
         }
 
@@ -347,6 +367,7 @@
             setStatus("Criando conta...");
             criandoConta = true;
             try {
+                await ensureAppCheckReady();
                 const credential = await firebase.auth().createUserWithEmailAndPassword(email, senha);
                 await credential.user.updateProfile({ displayName: nomeCompleto });
                 setStatus("");
@@ -362,7 +383,8 @@
                     "auth/operation-not-allowed": "O cadastro por e-mail está temporariamente desativado.",
                     "auth/too-many-requests": "Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.",
                     "auth/network-request-failed": "Falha de internet. Verifique a conexão e tente novamente.",
-                    "auth/app-check-token-is-invalid": "A verificação de segurança do aplicativo falhou. Atualize a página e tente novamente."
+                    "auth/app-check-token-is-invalid": "A verificação de segurança do aplicativo falhou. Atualize a página e tente novamente.",
+                    "auth/firebase-app-check-token-is-invalid": "A verificação de segurança do aplicativo falhou. Atualize a página e tente novamente."
                 };
                 setStatus(accountCreationMessages[err?.code] || `Não foi possível criar a conta (${err?.code || "erro desconhecido"}).`);
             }
