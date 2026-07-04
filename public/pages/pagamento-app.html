@@ -516,7 +516,7 @@ function setMercadoPagoTestVisibility(profile) {
     const canTest = profile?.admin === true || profile?.mercadoPagoTesteAutorizado === true;
     basicMercadoPagoTest.hidden = !canTest;
     proMercadoPagoTest.hidden = !canTest;
-    basicMercadoPagoProduction.hidden = profile?.admin !== true;
+    basicMercadoPagoProduction.hidden = profile?.admin !== true && profile?.mercadoPagoProducaoTesteAutorizado !== true;
 }
 
 async function startMercadoPagoTest(plan) {

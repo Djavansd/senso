@@ -327,7 +327,7 @@ exports.createMercadoPagoProductionSubscription = onCall({
     const userRef = db.collection("users").doc(uid);
     const snapshot = await userRef.get();
     const user = snapshot.data() || {};
-    if (!snapshot.exists || user.admin !== true) {
+    if (!snapshot.exists || (user.admin !== true && user.mercadoPagoProducaoTesteAutorizado !== true)) {
         throw new HttpsError("permission-denied", "Validação de produção restrita ao administrador.");
     }
     const payerEmail = String(request.auth.token.email || user.email || "").trim().toLowerCase();
