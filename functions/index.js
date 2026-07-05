@@ -17,10 +17,18 @@ const MERCADO_PAGO_ACCESS_TOKEN_TEST = defineSecret("MERCADO_PAGO_ACCESS_TOKEN_T
 const MERCADO_PAGO_WEBHOOK_SECRET_TEST = defineSecret("MERCADO_PAGO_WEBHOOK_SECRET_TEST");
 const MERCADO_PAGO_ACCESS_TOKEN_PROD = defineSecret("MERCADO_PAGO_ACCESS_TOKEN_PROD");
 const MERCADO_PAGO_WEBHOOK_SECRET_PROD = defineSecret("MERCADO_PAGO_WEBHOOK_SECRET_PROD");
+const ABACATEPAY_API_KEY_DEV = defineSecret("ABACATEPAY_API_KEY_DEV");
+const ABACATEPAY_WEBHOOK_SECRET_DEV = defineSecret("ABACATEPAY_WEBHOOK_SECRET_DEV");
 const MERCADO_PAGO_API = "https://api.mercadopago.com";
+const ABACATEPAY_API = "https://api.abacatepay.com/v2";
+const ABACATEPAY_PUBLIC_HMAC_KEY = "t9dXRhHHo3yDEj5pVDYz0frf7q6bMKyMRmxxCPIPp3RCplBfXRxqlC6ZpiWmOqj4L63qEaeUOtrCI8P0VMUgo6iIga2ri9ogaHFs0WIIywSMg0q7RmBfybe1E5XJcfC4IW3alNqym0tXoAKkzvfEjZxV6bE0oG2zJrNNYmUCKZyV0KZ3JS8Votf9EAWWYdiDkMkpbMdPggfh1EqHlVkMiTady6jOR3hyzGEHrIz2Ret0xHKMbiqkr9HS1JhNHDX9";
 const MERCADO_PAGO_PLANS = Object.freeze({
     basico: { name: "Senso Básico Mensal", amount: 29.90 },
     pro: { name: "Senso Pro Mensal", amount: 59.90 }
+});
+const ABACATEPAY_DEV_PLANS = Object.freeze({
+    basico: { name: "Senso Básico Mensal", amountCents: 2990, productId: "prod_JPtH3zTayW2YebK63aDK0sZM" },
+    pro: { name: "Senso Pro Mensal", amountCents: 5990, productId: "prod_adDUYcpEXGEp0XzDseg6BB1P" }
 });
 
 function safeDocId(value, collection, index) {
@@ -80,6 +88,41 @@ async function mercadoPagoRequest(path, accessToken, options = {}) {
         throw error;
     }
     return payload;
+}
+
+async function abacatePayRequest(path, apiKey, options = {}) {
+    const response = await fetch(`${ABACATEPAY_API}${path}`, {
+        ...options,
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${String(apiKey || "").trim()}`,
+            ...(options.headers || {})
+        }
+    });
+    const text = await response.text();
+    let payload = {};
+    try { payload = text ? JSON.parse(text) : {}; } catch { payload = { error: text }; }
+    if (!response.ok || payload.success === false) {
+        const error = new Error(`AbacatePay respondeu ${response.status}.`);
+        error.status = response.status;
+        error.payload = payload;
+        throw error;
+    }
+    return payload.data;
+}
+
+function parseAbacateReference(value) {
+    const match = /^senso:([^:]+):(basico|pro):[a-zA-Z0-9_-]+$/.exec(String(value || ""));
+    return match ? { uid: match[1], plan: match[2] } : null;
+}
+
+function validAbacateSignature(request) {
+    const signature = String(request.get("x-webhook-signature") || request.get("x-abacate-signature") || "").trim();
+    if (!signature || !request.rawBody) return false;
+    const expected = crypto.createHmac("sha256", ABACATEPAY_PUBLIC_HMAC_KEY).update(request.rawBody).digest("base64");
+    const receivedBuffer = Buffer.from(signature, "utf8");
+    const expectedBuffer = Buffer.from(expected, "utf8");
+    return receivedBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(receivedBuffer, expectedBuffer);
 }
 
 function parseMercadoPagoReference(value) {
@@ -555,5 +598,192 @@ exports.mercadoPagoWebhook = onRequest({
         logger.error("Falha no webhook Mercado Pago.", { topic, resourceId, message: error.message, status: error.status });
         await eventRef.set({ status: "error", error: String(error.message || "unknown").slice(0, 300), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
         response.status(500).send("Processing failed");
+    }
+});
+
+exports.setupAbacatePayDevWebhook = onCall({
+    region: REGION,
+    invoker: "public",
+    enforceAppCheck: true,
+    secrets: [ABACATEPAY_API_KEY_DEV, ABACATEPAY_WEBHOOK_SECRET_DEV]
+}, async request => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "Autenticação obrigatória.");
+    const db = getFirestore();
+    const adminSnapshot = await db.collection("users").doc(request.auth.uid).get();
+    const admin = adminSnapshot.data() || {};
+    if (!adminSnapshot.exists || admin.admin !== true || admin.autorizado !== true || admin.status !== "ativo") {
+        throw new HttpsError("permission-denied", "Somente o administrador pode configurar o webhook.");
+    }
+    try {
+        const webhook = await abacatePayRequest("/webhooks/create", ABACATEPAY_API_KEY_DEV.value(), {
+            method: "POST",
+            body: JSON.stringify({
+                name: "Senso Dev - Assinaturas",
+                endpoint: "https://southamerica-east1-senso-6d92a.cloudfunctions.net/abacatePayWebhook",
+                secret: ABACATEPAY_WEBHOOK_SECRET_DEV.value().trim(),
+                events: ["subscription.completed", "subscription.renewed", "subscription.cancelled"]
+            })
+        });
+        await db.collection("appConfig").doc("abacatePayDev").set({
+            webhookId: webhook.id,
+            configuredAt: FieldValue.serverTimestamp(),
+            configuredBy: request.auth.uid
+        }, { merge: true });
+        return { success: true, webhookId: webhook.id };
+    } catch (error) {
+        logger.error("Falha ao configurar webhook AbacatePay Dev.", { status: error.status, detail: error.payload?.error || error.message });
+        throw new HttpsError("internal", "Não foi possível configurar o webhook AbacatePay.");
+    }
+});
+
+exports.createAbacatePayDevSubscription = onCall({
+    region: REGION,
+    invoker: "public",
+    enforceAppCheck: true,
+    secrets: [ABACATEPAY_API_KEY_DEV]
+}, async request => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "Entre na sua conta para contratar.");
+    if (request.auth.token.email_verified !== true) throw new HttpsError("failed-precondition", "Confirme seu e-mail antes de contratar.");
+    const planKey = String(request.data?.plan || "").trim().toLowerCase();
+    const method = String(request.data?.method || "").trim().toUpperCase();
+    const plan = ABACATEPAY_DEV_PLANS[planKey];
+    if (!plan || !["PIX", "CARD"].includes(method)) throw new HttpsError("invalid-argument", "Plano ou forma de pagamento inválida.");
+
+    const uid = request.auth.uid;
+    const db = getFirestore();
+    const userRef = db.collection("users").doc(uid);
+    const snapshot = await userRef.get();
+    const user = snapshot.data() || {};
+    if (!snapshot.exists || (user.admin !== true && user.abacatePayDevTesteAutorizado !== true)) {
+        throw new HttpsError("permission-denied", "Teste AbacatePay restrito a contas autorizadas.");
+    }
+
+    const reference = `senso:${uid}:${planKey}:${Date.now().toString(36)}`;
+    try {
+        const checkout = await abacatePayRequest("/subscriptions/create", ABACATEPAY_API_KEY_DEV.value(), {
+            method: "POST",
+            body: JSON.stringify({
+                items: [{ id: plan.productId, quantity: 1 }],
+                methods: [method],
+                externalId: reference,
+                returnUrl: "https://www.senso.app.br/pages/pagamento-app.html?abacatepay=retorno",
+                completionUrl: "https://www.senso.app.br/pages/pagamento-app.html?abacatepay=retorno",
+                metadata: { uid, plan: planKey, environment: "dev" }
+            })
+        });
+        if (!checkout?.id || !checkout?.url || checkout.devMode !== true) throw new Error("Checkout Dev inválido.");
+        await userRef.set({
+            abacatePay: {
+                ambiente: "dev",
+                checkoutId: checkout.id,
+                planoSolicitado: planKey,
+                metodo: method,
+                status: checkout.status || "PENDING",
+                externalId: reference,
+                checkoutCriadoEm: FieldValue.serverTimestamp(),
+                atualizadoEm: FieldValue.serverTimestamp()
+            }
+        }, { merge: true });
+        return { checkoutUrl: checkout.url, checkoutId: checkout.id, plan: planKey, method, environment: "dev" };
+    } catch (error) {
+        logger.error("Falha ao criar assinatura AbacatePay Dev.", { uid, planKey, method, status: error.status, detail: error.payload?.error || error.message });
+        throw new HttpsError("internal", "Não foi possível iniciar o checkout AbacatePay.");
+    }
+});
+
+exports.abacatePayWebhook = onRequest({
+    region: REGION,
+    invoker: "public",
+    secrets: [ABACATEPAY_WEBHOOK_SECRET_DEV]
+}, async (request, response) => {
+    if (request.method !== "POST") return response.status(405).send("Method Not Allowed");
+    const expectedSecret = ABACATEPAY_WEBHOOK_SECRET_DEV.value().trim();
+    const receivedSecret = String(request.query?.webhookSecret || "").trim();
+    if (!receivedSecret || receivedSecret.length !== expectedSecret.length || !crypto.timingSafeEqual(Buffer.from(receivedSecret), Buffer.from(expectedSecret)) || !validAbacateSignature(request)) {
+        logger.warn("Webhook AbacatePay com autenticação inválida.");
+        return response.status(401).send("Invalid signature");
+    }
+
+    const payload = request.body || {};
+    const eventId = safeEventId(payload.id);
+    const eventName = String(payload.event || "");
+    const data = payload.data || {};
+    const subscription = data.subscription || {};
+    const payment = data.payment || {};
+    const checkout = data.checkout || {};
+    const db = getFirestore();
+    const eventRef = db.collection("abacatePayWebhookEvents").doc(eventId);
+
+    try {
+        const previous = await eventRef.get();
+        if (previous.data()?.processedAt) return response.status(200).send("Already processed");
+        await eventRef.set({ event: eventName, devMode: payload.devMode === true, receivedAt: FieldValue.serverTimestamp(), status: "processing" }, { merge: true });
+        if (payload.devMode !== true) throw new Error("Evento de produção recebido no endpoint Dev.");
+
+        const supported = ["subscription.completed", "subscription.renewed", "subscription.cancelled"];
+        if (!supported.includes(eventName)) {
+            await eventRef.set({ status: "ignored", processedAt: FieldValue.serverTimestamp() }, { merge: true });
+            return response.status(200).send("Ignored");
+        }
+
+        let reference = parseAbacateReference(checkout.externalId || payment.externalId);
+        let userRef;
+        let userSnapshot;
+        if (reference) {
+            userRef = db.collection("users").doc(reference.uid);
+            userSnapshot = await userRef.get();
+        } else if (subscription.id) {
+            const match = await db.collection("users").where("abacatePay.assinaturaId", "==", subscription.id).limit(1).get();
+            if (!match.empty) {
+                userSnapshot = match.docs[0];
+                userRef = userSnapshot.ref;
+                const storedPlan = String(userSnapshot.data()?.abacatePay?.planoSolicitado || "");
+                reference = ABACATEPAY_DEV_PLANS[storedPlan] ? { uid: userSnapshot.id, plan: storedPlan } : null;
+            }
+        }
+        if (!reference || !userSnapshot?.exists) throw new Error("Usuário ou referência da assinatura não encontrado.");
+        const plan = ABACATEPAY_DEV_PLANS[reference.plan];
+        const itemId = checkout.items?.[0]?.id;
+        if (!plan || Number(subscription.amount) !== plan.amountCents || subscription.currency !== "BRL" || subscription.frequency !== "MONTHLY" || (itemId && itemId !== plan.productId)) {
+            throw new Error("Plano, produto, valor ou moeda divergente.");
+        }
+
+        const user = userSnapshot.data() || {};
+        const manualOverride = user.controleAssinatura === "manual";
+        const paid = ["subscription.completed", "subscription.renewed"].includes(eventName)
+            && subscription.status === "ACTIVE" && payment.status === "PAID"
+            && Number(payment.paidAmount) === plan.amountCents;
+        const update = {
+            abacatePay: {
+                ambiente: "dev",
+                assinaturaId: subscription.id || null,
+                checkoutId: checkout.id || user.abacatePay?.checkoutId || null,
+                planoSolicitado: reference.plan,
+                metodo: subscription.method || data.payerInformation?.method || null,
+                status: subscription.status || "unknown",
+                ultimaCobrancaId: payment.id || null,
+                ultimaCobrancaStatus: payment.status || null,
+                atualizadoEm: FieldValue.serverTimestamp()
+            }
+        };
+        if (paid && !manualOverride) Object.assign(update, {
+            plano: reference.plan,
+            precoContratado: plan.amountCents / 100,
+            tipoPagamento: "mensal",
+            tipoPlano: "normal",
+            autorizado: true,
+            status: "ativo",
+            validade: Timestamp.fromMillis(Date.now() + (31 * 24 * 60 * 60 * 1000)),
+            origemPlano: "abacatepay",
+            controleAssinatura: "automatico",
+            ultimaConfirmacaoPagamento: FieldValue.serverTimestamp()
+        });
+        await userRef.set(update, { merge: true });
+        await eventRef.set({ status: "processed", uid: reference.uid, plan: reference.plan, subscriptionId: subscription.id || null, paymentApproved: paid, manualOverride, processedAt: FieldValue.serverTimestamp() }, { merge: true });
+        return response.status(200).send("OK");
+    } catch (error) {
+        logger.error("Falha no webhook AbacatePay.", { eventId, eventName, message: error.message });
+        await eventRef.set({ status: "error", error: String(error.message || "unknown").slice(0, 300), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        return response.status(500).send("Processing failed");
     }
 });
