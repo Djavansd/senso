@@ -750,8 +750,9 @@ exports.abacatePayWebhook = onRequest({
 
         const user = userSnapshot.data() || {};
         const manualOverride = user.controleAssinatura === "manual";
+        const approvedPaymentStatus = ["PAID", "APPROVED"].includes(String(payment.status || "").toUpperCase());
         const paid = ["subscription.completed", "subscription.renewed"].includes(eventName)
-            && subscription.status === "ACTIVE" && payment.status === "PAID"
+            && subscription.status === "ACTIVE" && approvedPaymentStatus
             && Number(payment.paidAmount) === plan.amountCents;
         const update = {
             abacatePay: {
