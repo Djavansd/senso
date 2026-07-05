@@ -13,6 +13,8 @@ initializeApp();
 
 const COLLECTIONS = ["clientes", "servicos", "agenda", "financeiro", "orcamentos", "correcoes"];
 const REGION = "southamerica-east1";
+const IS_FUNCTIONS_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true";
+const ENFORCE_APP_CHECK = !IS_FUNCTIONS_EMULATOR;
 const MERCADO_PAGO_ACCESS_TOKEN_TEST = defineSecret("MERCADO_PAGO_ACCESS_TOKEN_TEST");
 const MERCADO_PAGO_WEBHOOK_SECRET_TEST = defineSecret("MERCADO_PAGO_WEBHOOK_SECRET_TEST");
 const MERCADO_PAGO_ACCESS_TOKEN_PROD = defineSecret("MERCADO_PAGO_ACCESS_TOKEN_PROD");
@@ -215,7 +217,7 @@ exports.syncAppDataV2 = onDocumentWritten({ document: "users/{uid}/appData/{prof
     logger.info("Estrutura v2 sincronizada pelo backend.", { uid, profileId, version, counts });
 });
 
-exports.deleteSensoUser = onCall({ region: REGION, invoker: "public", enforceAppCheck: true }, async request => {
+exports.deleteSensoUser = onCall({ region: REGION, invoker: "public", enforceAppCheck: ENFORCE_APP_CHECK }, async request => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Autenticação obrigatória.");
 
     const actorUid = request.auth.uid;
@@ -283,11 +285,12 @@ exports.deleteSensoUser = onCall({ region: REGION, invoker: "public", enforceApp
 exports.createMercadoPagoSubscription = onCall({
     region: REGION,
     invoker: "public",
-    enforceAppCheck: true,
+    enforceAppCheck: ENFORCE_APP_CHECK,
     secrets: [MERCADO_PAGO_ACCESS_TOKEN_TEST]
 }, async request => {
-    if (!request.auth) throw new HttpsError("unauthenticated", "Entre na sua conta para contratar um plano.");
-    if (request.auth.token.email_verified !== true) {
+    const simulatorUid = IS_FUNCTIONS_EMULATOR ? String(request.data?.simulatorUid || "").trim() : "";
+    if (!request.auth && !simulatorUid) throw new HttpsError("unauthenticated", "Entre na sua conta para contratar um plano.");
+    if (!IS_FUNCTIONS_EMULATOR && request.auth.token.email_verified !== true) {
         throw new HttpsError("failed-precondition", "Confirme seu e-mail antes de contratar.");
     }
 
@@ -295,7 +298,7 @@ exports.createMercadoPagoSubscription = onCall({
     const plan = MERCADO_PAGO_PLANS[planKey];
     if (!plan) throw new HttpsError("invalid-argument", "Plano inválido.");
 
-    const uid = request.auth.uid;
+    const uid = request.auth?.uid || simulatorUid;
     const db = getFirestore();
     const userRef = db.collection("users").doc(uid);
     const userSnapshot = await userRef.get();
@@ -307,7 +310,7 @@ exports.createMercadoPagoSubscription = onCall({
         throw new HttpsError("permission-denied", "Checkout de teste restrito a contas autorizadas.");
     }
 
-    const payerEmail = String(request.auth.token.email || user.email || "").trim().toLowerCase();
+    const payerEmail = String(request.auth?.token?.email || user.email || "").trim().toLowerCase();
     if (!payerEmail) throw new HttpsError("failed-precondition", "E-mail da conta não encontrado.");
 
     try {
@@ -355,7 +358,7 @@ exports.createMercadoPagoSubscription = onCall({
 exports.createMercadoPagoProductionSubscription = onCall({
     region: REGION,
     invoker: "public",
-    enforceAppCheck: true,
+    enforceAppCheck: ENFORCE_APP_CHECK,
     secrets: [MERCADO_PAGO_ACCESS_TOKEN_PROD]
 }, async request => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Entre na sua conta para contratar.");
@@ -371,8 +374,8 @@ exports.createMercadoPagoProductionSubscription = onCall({
     const userRef = db.collection("users").doc(uid);
     const snapshot = await userRef.get();
     const user = snapshot.data() || {};
-    if (!snapshot.exists || (user.admin !== true && user.mercadoPagoProducaoTesteAutorizado !== true)) {
-        throw new HttpsError("permission-denied", "Validação de produção restrita ao administrador.");
+    if (!snapshot.exists || user.autorizado !== true || user.status === "bloqueado") {
+        throw new HttpsError("permission-denied", "Sua conta ainda não está liberada para contratar.");
     }
     const payerEmail = String(request.auth.token.email || user.email || "").trim().toLowerCase();
 
@@ -411,7 +414,7 @@ exports.createMercadoPagoProductionSubscription = onCall({
 exports.reconcileMercadoPagoSubscription = onCall({
     region: REGION,
     invoker: "public",
-    enforceAppCheck: true,
+    enforceAppCheck: ENFORCE_APP_CHECK,
     secrets: [MERCADO_PAGO_ACCESS_TOKEN_TEST, MERCADO_PAGO_ACCESS_TOKEN_PROD]
 }, async request => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Entre na sua conta para conferir o pagamento.");
@@ -604,7 +607,7 @@ exports.mercadoPagoWebhook = onRequest({
 exports.setupAbacatePayDevWebhook = onCall({
     region: REGION,
     invoker: "public",
-    enforceAppCheck: true,
+    enforceAppCheck: ENFORCE_APP_CHECK,
     secrets: [ABACATEPAY_API_KEY_DEV, ABACATEPAY_WEBHOOK_SECRET_DEV]
 }, async request => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Autenticação obrigatória.");
@@ -639,17 +642,20 @@ exports.setupAbacatePayDevWebhook = onCall({
 exports.createAbacatePayDevSubscription = onCall({
     region: REGION,
     invoker: "public",
-    enforceAppCheck: true,
+    enforceAppCheck: ENFORCE_APP_CHECK,
     secrets: [ABACATEPAY_API_KEY_DEV]
 }, async request => {
-    if (!request.auth) throw new HttpsError("unauthenticated", "Entre na sua conta para contratar.");
-    if (request.auth.token.email_verified !== true) throw new HttpsError("failed-precondition", "Confirme seu e-mail antes de contratar.");
+    const simulatorUid = IS_FUNCTIONS_EMULATOR ? String(request.data?.simulatorUid || "").trim() : "";
+    if (!request.auth && !simulatorUid) throw new HttpsError("unauthenticated", "Entre na sua conta para contratar.");
+    if (!IS_FUNCTIONS_EMULATOR && request.auth.token.email_verified !== true) {
+        throw new HttpsError("failed-precondition", "Confirme seu e-mail antes de contratar.");
+    }
     const planKey = String(request.data?.plan || "").trim().toLowerCase();
     const method = String(request.data?.method || "").trim().toUpperCase();
     const plan = ABACATEPAY_DEV_PLANS[planKey];
     if (!plan || !["PIX", "CARD"].includes(method)) throw new HttpsError("invalid-argument", "Plano ou forma de pagamento inválida.");
 
-    const uid = request.auth.uid;
+    const uid = request.auth?.uid || simulatorUid;
     const db = getFirestore();
     const userRef = db.collection("users").doc(uid);
     const snapshot = await userRef.get();
