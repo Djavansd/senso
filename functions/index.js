@@ -165,6 +165,9 @@ function subscriptionValidity(subscription) {
 }
 
 exports.syncAppDataV2 = onDocumentWritten({ document: "users/{uid}/appData/{profileId}", region: REGION }, async event => {
+    logger.info("Espelhamento v2 desativado; appData permanece como fonte principal.", event.params);
+    return;
+
     const after = event.data?.after;
     if (!after?.exists) {
         logger.info("appData removido; v2 preservada por segurança.", event.params);

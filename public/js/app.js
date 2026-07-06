@@ -411,7 +411,6 @@ function saveData(data) {
     dataCacheRaw = raw;
     dataCacheValue = normalized;
     queueCloudDataSync(normalized);
-    window.SensoV2Sync?.queue?.(normalized);
     notifyLiveUpdate("save-data");
 }
 
