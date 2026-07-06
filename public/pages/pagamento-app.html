@@ -551,6 +551,8 @@ const FALLBACK_PLAN = Object.freeze({
     dataContratacao: null,
     tipoPlano: null
 });
+// Integração preservada para futura reativação após liberação da produção.
+const ABACATE_PAY_ENABLED = false;
 let currentPricingPhase = "fundador";
 let mercadoPagoCheckoutInProgress = false;
 let mercadoPagoReconciliationStarted = false;
@@ -596,9 +598,10 @@ function setMercadoPagoProductionVisibility(profile) {
 }
 
 function setAbacatePayDevVisibility(profile) {
-    abacatePayAllowed = profile?.admin === true || profile?.abacatePayDevTesteAutorizado === true;
+    abacatePayAllowed = ABACATE_PAY_ENABLED
+        && (profile?.admin === true || profile?.abacatePayDevTesteAutorizado === true);
     updateSubscriptionVisibility();
-    setupAbacateWebhook.hidden = profile?.admin !== true;
+    setupAbacateWebhook.hidden = !ABACATE_PAY_ENABLED || profile?.admin !== true;
 }
 
 function togglePaymentChoices(plan) {
