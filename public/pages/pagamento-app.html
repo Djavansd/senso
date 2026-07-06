@@ -561,7 +561,7 @@ let abacatePayAllowed = false;
 
 function updateSubscriptionVisibility() {
     const paymentAllowed = mercadoPagoAllowed || abacatePayAllowed;
-    const manualPixAllowed = mercadoPagoAllowed && window.SENSO_USING_FIREBASE_EMULATORS !== true;
+    const manualPixAllowed = mercadoPagoAllowed;
     basicSubscribe.hidden = !paymentAllowed;
     proSubscribe.hidden = !paymentAllowed;
     basicPaymentPix.hidden = !abacatePayAllowed && !manualPixAllowed;
@@ -579,7 +579,7 @@ function updateSubscriptionVisibility() {
             : "Pagamento de teste pela AbacatePay";
     basicPaymentCard.querySelector(".provider-copy small").textContent = cardSubtitle;
     proPaymentCard.querySelector(".provider-copy small").textContent = cardSubtitle;
-    const pixSubtitle = window.SENSO_USING_FIREBASE_EMULATORS === true
+    const pixSubtitle = window.SENSO_USING_FIREBASE_EMULATORS === true && abacatePayAllowed
         ? "AbacatePay Dev"
         : "Pix manual • envie o comprovante";
     basicPaymentPix.querySelector(".provider-copy small").textContent = pixSubtitle;
