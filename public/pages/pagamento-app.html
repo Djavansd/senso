@@ -322,6 +322,7 @@ body{color:#111827;background:#f8fbfa}.app{width:min(1180px,100%);margin:0 auto}
 .payment-choices{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}.payment-choices[hidden],.card-providers[hidden]{display:none!important}.payment-choices .plan-cta{display:flex;align-items:center;gap:10px;margin-top:0;text-align:left}.provider-mark{display:grid;place-items:center;flex:0 0 40px;height:34px;border-radius:8px;background:#fff;color:#0f172a;font-size:12px;font-weight:900}.provider-copy{display:grid;gap:2px;min-width:0}.provider-copy small{font-size:10px;font-weight:700;opacity:.78}.payment-choice-pix{background:#059669!important;color:#fff!important}.payment-choice-card{min-height:54px!important;padding:8px 10px!important;border:1px solid #dbeafe!important;background:#fff!important;color:#0f172a!important;box-shadow:none!important}.payment-choice-card:active{background:#f8fafc!important}.payment-choice-card .provider-mark{height:36px;background:#2563eb;color:#fff;font-size:17px}.payment-choice-card .provider-copy{font-size:13px}.payment-choice-card .provider-copy small{color:#64748b;opacity:1}.choice-arrow{display:grid;place-items:center;width:25px;height:25px;margin-left:auto;border-radius:50%;background:#eff6ff;color:#2563eb;font-size:20px;font-weight:800;line-height:1}.card-providers{display:grid;grid-template-columns:1fr 1fr;gap:8px}.provider-card{min-height:96px!important;padding:5px!important;justify-content:center;background:#fff!important;border:1px solid #e2e8f0!important;box-shadow:none!important}.provider-card:active{background:#f8fafc!important}.provider-card img{display:block;width:100%;max-width:180px;height:auto;border-radius:7px;object-fit:contain}.plan-option.pro .provider-card{background:#fff!important}@media(max-width:390px){.card-providers{grid-template-columns:1fr}}
 /* Efeito inspirado em https://codepen.io/ManuAlvarado22/pen/MPYqXE */
 .payment-choice-card{position:relative;overflow:hidden;background:#2563eb!important;color:#eff6ff!important;border-color:#60a5fa!important}.payment-choice-card>span{position:relative;z-index:3}.payment-choice-card .provider-mark{background:#fff;color:#2563eb}.payment-choice-card .provider-copy small{color:#dbeafe}.payment-choice-card .choice-arrow{background:#ffffff26;color:#fff}.payment-choice-card::before{content:"";position:absolute;z-index:1;pointer-events:none;top:0;left:0;width:100%;height:300%;opacity:.78;background-image:radial-gradient(circle at 20% 35%,transparent 0,transparent 2px,#dbeafe 3px,#dbeafe 4px,transparent 4px),radial-gradient(circle at 75% 44%,transparent 0,transparent 2px,#dbeafe 3px,#dbeafe 4px,transparent 4px),radial-gradient(circle at 46% 52%,transparent 0,transparent 4px,#dbeafe 5px,#dbeafe 6px,transparent 6px);background-size:100% 33.333%;background-repeat:repeat-y;animation:card-bubbles 3.2s linear infinite;will-change:transform}.effect-left,.effect-right{position:absolute!important;z-index:2!important;top:0;width:100%;height:100%}.effect-left{right:66%}.effect-right{left:66%}.effect-right::after{content:"";position:absolute;width:100%;height:220%;top:-220%;left:-66%;pointer-events:none;background:#0f172a;opacity:.2;transition:transform .4s ease-out;transform:translateY(-10%) rotate(0)}.payment-choice-card:hover .effect-right::after,.payment-choice-card:focus-visible .effect-right::after{transform:translateY(58%) rotate(0)}.payment-choice-card .effect-right:hover::after{transform:translateY(58%) rotate(-7deg)}.payment-choice-card .effect-left:hover~.effect-right::after{transform:translateY(58%) rotate(7deg)}.payment-choice-card:active{background:#1d4ed8!important}@keyframes card-bubbles{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,-33.333%,0)}}@media(prefers-reduced-motion:reduce){.payment-choice-card::before{animation-duration:8s}.effect-right::after{transition:none}}
+.payment-line.pix-highlight{margin:0 -6px;padding:10px 6px;border-radius:8px;background:#dcfce7;transition:background .35s ease}
 </style>
 <script src="../js/auth-boot.js?v=20260630"></script>
 </head>
@@ -558,10 +559,11 @@ let abacatePayAllowed = false;
 
 function updateSubscriptionVisibility() {
     const paymentAllowed = mercadoPagoAllowed || abacatePayAllowed;
+    const manualPixAllowed = mercadoPagoAllowed && window.SENSO_USING_FIREBASE_EMULATORS !== true;
     basicSubscribe.hidden = !paymentAllowed;
     proSubscribe.hidden = !paymentAllowed;
-    basicPaymentPix.hidden = !abacatePayAllowed;
-    proPaymentPix.hidden = !abacatePayAllowed;
+    basicPaymentPix.hidden = !abacatePayAllowed && !manualPixAllowed;
+    proPaymentPix.hidden = !abacatePayAllowed && !manualPixAllowed;
     basicPaymentCard.hidden = !paymentAllowed;
     proPaymentCard.hidden = !paymentAllowed;
     basicMercadoPagoCard.hidden = !mercadoPagoAllowed;
@@ -575,6 +577,11 @@ function updateSubscriptionVisibility() {
             : "Pagamento de teste pela AbacatePay";
     basicPaymentCard.querySelector(".provider-copy small").textContent = cardSubtitle;
     proPaymentCard.querySelector(".provider-copy small").textContent = cardSubtitle;
+    const pixSubtitle = window.SENSO_USING_FIREBASE_EMULATORS === true
+        ? "AbacatePay Dev"
+        : "Pix manual • envie o comprovante";
+    basicPaymentPix.querySelector(".provider-copy small").textContent = pixSubtitle;
+    proPaymentPix.querySelector(".provider-copy small").textContent = pixSubtitle;
     if (!paymentAllowed) {
         basicPaymentChoices.hidden = true;
         proPaymentChoices.hidden = true;
@@ -608,6 +615,16 @@ function toggleCardProviders(plan) {
     const otherProviders = plan === "pro" ? basicCardProviders : proCardProviders;
     otherProviders.hidden = true;
     providers.hidden = !providers.hidden;
+}
+
+function startPixPayment(plan, button) {
+    if (window.SENSO_USING_FIREBASE_EMULATORS === true && abacatePayAllowed) {
+        return startAbacatePayDev(plan, "PIX", button);
+    }
+    document.getElementById("pagamento")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    pixMensal.closest(".payment-line")?.classList.add("pix-highlight");
+    setTimeout(() => pixMensal.closest(".payment-line")?.classList.remove("pix-highlight"), 1800);
+    alert("Use a chave Pix abaixo e depois envie o comprovante pelo WhatsApp.");
 }
 
 async function resetInvalidCheckoutSession() {
@@ -1241,11 +1258,11 @@ btnCopiarPix.addEventListener("click", async () => {
 
 basicSubscribe.addEventListener("click", () => togglePaymentChoices("basico"));
 proSubscribe.addEventListener("click", () => togglePaymentChoices("pro"));
-basicPaymentPix.addEventListener("click", () => startAbacatePayDev("basico", "PIX", basicPaymentPix));
+basicPaymentPix.addEventListener("click", () => startPixPayment("basico", basicPaymentPix));
 basicPaymentCard.addEventListener("click", () => toggleCardProviders("basico"));
 basicMercadoPagoCard.addEventListener("click", () => startMercadoPagoCard("basico", basicMercadoPagoCard));
 basicAbacateCard.addEventListener("click", () => startAbacatePayDev("basico", "CARD", basicAbacateCard));
-proPaymentPix.addEventListener("click", () => startAbacatePayDev("pro", "PIX", proPaymentPix));
+proPaymentPix.addEventListener("click", () => startPixPayment("pro", proPaymentPix));
 proPaymentCard.addEventListener("click", () => toggleCardProviders("pro"));
 proMercadoPagoCard.addEventListener("click", () => startMercadoPagoCard("pro", proMercadoPagoCard));
 proAbacateCard.addEventListener("click", () => startAbacatePayDev("pro", "CARD", proAbacateCard));
