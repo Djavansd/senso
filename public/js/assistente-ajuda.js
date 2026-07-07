@@ -466,6 +466,7 @@
     ]);
 
     let confettiCarregando = null;
+    let ajudaContextualIniciada = false;
 
     function getPerfilAtivoId() {
         return window.SensoProfile?.usesVehicleFields?.() === true ? "mecanica" : "prestador";
@@ -735,11 +736,18 @@
     }
 
     function iniciarAjudaContextual() {
+        // As preferências são separadas por usuário. Antes da autenticação ficar
+        // pronta, getUid() usa uma chave genérica e poderia reabrir uma ajuda já
+        // desativada pelo usuário real.
+        if (window.SensoAuth && window.SensoAuth.ready !== true) return;
+        if (ajudaContextualIniciada) return;
+        ajudaContextualIniciada = true;
+
         const estado = lerEstado();
         const licao = getLicaoAtual();
         if (!licao) return;
 
-        if (estado.ativo || licao.id === "configuracoes") {
+        if (estado.ativo) {
             criarBotaoFlutuante(licao);
         }
         if (!estado.ativo) return;
@@ -789,4 +797,5 @@
 
     window.addEventListener("DOMContentLoaded", iniciarAjudaContextual);
     window.addEventListener("senso-auth-ready", () => setTimeout(iniciarAjudaContextual, 180));
+    if (window.SensoAuth?.ready === true) setTimeout(iniciarAjudaContextual, 0);
 })();
