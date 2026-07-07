@@ -323,6 +323,7 @@ body{color:#111827;background:#f8fbfa}.app{width:min(1180px,100%);margin:0 auto}
 /* Efeito inspirado em https://codepen.io/ManuAlvarado22/pen/MPYqXE */
 .payment-choice-card{position:relative;overflow:hidden;background:#2563eb!important;color:#eff6ff!important;border-color:#60a5fa!important}.payment-choice-card>span{position:relative;z-index:3}.payment-choice-card .provider-mark{flex-basis:52px;background:#fff;color:#2563eb}.payment-choice-card .provider-mark img{width:46px;height:30px;border-radius:5px}.payment-choice-card .provider-copy small{color:#dbeafe}.payment-choice-card .choice-arrow{background:#ffffff26;color:#fff}.payment-choice-card::before{content:"";position:absolute;z-index:1;pointer-events:none;top:0;left:0;width:100%;height:300%;opacity:.78;background-image:radial-gradient(circle at 20% 35%,transparent 0,transparent 2px,#dbeafe 3px,#dbeafe 4px,transparent 4px),radial-gradient(circle at 75% 44%,transparent 0,transparent 2px,#dbeafe 3px,#dbeafe 4px,transparent 4px),radial-gradient(circle at 46% 52%,transparent 0,transparent 4px,#dbeafe 5px,#dbeafe 6px,transparent 6px);background-size:100% 33.333%;background-repeat:repeat-y;animation:card-bubbles 3.2s linear infinite;will-change:transform}.effect-left,.effect-right{position:absolute!important;z-index:2!important;top:0;width:100%;height:100%}.effect-left{right:66%}.effect-right{left:66%}.effect-right::after{content:"";position:absolute;width:100%;height:220%;top:-220%;left:-66%;pointer-events:none;background:#0f172a;opacity:.2;transition:transform .4s ease-out;transform:translateY(-10%) rotate(0)}.payment-choice-card:hover .effect-right::after,.payment-choice-card:focus-visible .effect-right::after{transform:translateY(58%) rotate(0)}.payment-choice-card .effect-right:hover::after{transform:translateY(58%) rotate(-7deg)}.payment-choice-card .effect-left:hover~.effect-right::after{transform:translateY(58%) rotate(7deg)}.payment-choice-card:active{background:#1d4ed8!important}@keyframes card-bubbles{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,-33.333%,0)}}@media(prefers-reduced-motion:reduce){.payment-choice-card::before{animation-duration:8s}.effect-right::after{transition:none}}
 .payment-line.pix-highlight{margin:0 -6px;padding:10px 6px;border-radius:8px;background:#dcfce7;transition:background .35s ease}
+.payment-brand-logo{position:relative;z-index:1;display:block;width:128px;height:auto;margin:0 auto 14px;border-radius:12px;box-shadow:0 10px 22px #05966926}
 </style>
 <script src="../js/auth-boot.js?v=20260630"></script>
 </head>
@@ -332,7 +333,7 @@ body{color:#111827;background:#f8fbfa}.app{width:min(1180px,100%);margin:0 auto}
 
     <div class="content">
         <div class="payment-hero">
-            <div class="payment-icon" aria-hidden="true"></div>
+            <img class="payment-brand-logo" src="../assets/pagamentos/logo-senso-pagamento.png" alt="Senso" />
             <h3>Planos e pagamento</h3>
             <p>Escolha seu plano Senso. O plano Grátis libera poucos cadastros para experimentar; Básico e Pro ficam como opções mensais.</p>
         </div>
