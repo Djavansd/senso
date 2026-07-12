@@ -59,6 +59,13 @@
       display: flex;
       gap: 6px;
       align-items: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .agenda-actions a,
+    .agenda-actions button {
+      white-space: nowrap;
     }
 
     .btn-whats {
@@ -71,16 +78,65 @@
     }
 
     .btn-arquivar {
-      background: #e0e0e0;
+      background: #c62828;
+      color: #fff;
       border-radius: 8px;
       padding: 6px 8px;
-      border: none;
+      border: 1px solid #8e1717;
+      cursor: pointer;
+      font-weight: 900;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, .22);
+      box-shadow: 0 2px 5px rgba(127, 29, 29, .25);
+      font-size: 12px;
+    }
+
+    .btn-arquivar:hover,
+    .btn-arquivar:focus-visible {
+      background: #991b1b;
+      color: #fff;
+      outline: 3px solid rgba(198, 40, 40, .25);
+      outline-offset: 1px;
+    }
+
+    .btn-excluir-historico {
+      margin-top: 8px;
+      padding: 7px 10px;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      background: #fff1f2;
+      color: #b91c1c;
+      font-size: 12px;
+      font-weight: 850;
       cursor: pointer;
     }
 
     .agenda-row strong,
     .agenda-card .agenda-ultimo-nome {
       color: #172033;
+      font-weight: 900;
+    }
+
+    .agenda-card small,
+    .agenda-card > .agenda-row small {
+      color: #263b36;
+      font-weight: 800;
+    }
+
+    .agenda-card .badge {
+      font-weight: 900;
+      letter-spacing: .02em;
+    }
+
+    .agenda-card .agenda-row a,
+    .agenda-card .agenda-row button {
+      font-weight: 850;
+    }
+
+    .agenda-servico-agendado {
+      margin-top: 3px;
+      color: #10251c;
+      font-weight: 900;
+      line-height: 1.3;
     }
 
     .btn-editar,
@@ -290,6 +346,7 @@
     const listaAgenda = document.getElementById("listaAgenda");
     const filtroMes = document.getElementById("filtroMes");
 
+
     function normalizarData(d) {
       const x = new Date(d);
       x.setHours(0, 0, 0, 0);
@@ -332,6 +389,18 @@
       return d.getFullYear() === ano && d.getMonth() === mes;
     }
 
+    function obterDescricaoAgendamento(agendamento, dataRef) {
+      const descricaoInformada = String(agendamento?.descricaoProximoServico || "").trim();
+      if (descricaoInformada) return descricaoInformada;
+
+      // Compatibilidade: retornos antigos não tinham a descrição obrigatória.
+      const servicoOrigem = (dataRef?.servicos || []).find(servico =>
+        servico.id === agendamento?.servicoOrigemId || servico.id === agendamento?.origemServicoId
+      );
+      const item = Array.isArray(servicoOrigem?.itens) ? servicoOrigem.itens[0] : null;
+      return String(item?.descricao || item?.nome || "Retorno agendado").trim();
+    }
+
     function atualizarFiltroMes() {
       const selecionado = filtroMes.value;
       filtroMes.innerHTML = '<option value="">Todos os meses</option>';
@@ -347,6 +416,7 @@
       (data.agenda || []).forEach(a => {
         if (!a.dataRetorno || a.status !== "agendado") return;
         const d = new Date(a.dataRetorno);
+        if (isNaN(d)) return;
         meses.add(`${d.getFullYear()}-${d.getMonth()}`);
       });
 
@@ -364,14 +434,76 @@
       });
     }
 
-    function arquivar(id) {
-      if (!confirm("Arquivar este retorno?")) return;
+    function obterAgendaV2CollectionRef() {
+      const uid = window.SensoAuth?.uid || window.firebase?.auth?.()?.currentUser?.uid || null;
+      const profileId = window.SensoProfile?.getActiveProfile?.()?.id || "mecanica";
+      if (!uid || !window.firebase?.firestore) return null;
+      return window.firebase
+        .firestore()
+        .collection("users")
+        .doc(uid)
+        .collection("profiles")
+        .doc(profileId)
+        .collection("agenda");
+    }
+
+    function safeFirestoreDocId(value, index) {
+      return String(value || `legacy-agenda-${index}`).replaceAll("/", "_").slice(0, 500);
+    }
+
+    async function apagarAgendaV2(docIdsRemovidos) {
+      const agendaRef = obterAgendaV2CollectionRef();
+      if (!agendaRef || !docIdsRemovidos?.size) return;
+
+      const batch = window.firebase.firestore().batch();
+      docIdsRemovidos.forEach(docId => batch.delete(agendaRef.doc(docId)));
+      await batch.commit();
+    }
+
+    async function excluirAgendamento(id) {
       const data = getData();
-      const item = data.agenda.find(a => a.id === id);
-      if (item) {
-        item.status = "arquivado";
-        saveData(data);
-        renderAgenda();
+      const agendamento = (data.agenda || []).find(a => a.id === id);
+      if (!agendamento) return;
+
+      const chaveCliente = item => item.clienteId || item.cliente?.id || item.cliente?.documento || item.cliente?.telefone || item.id;
+      const chaveAtual = chaveCliente(agendamento);
+      const relacionados = (data.agenda || []).filter(item =>
+        item.status === "agendado" && chaveCliente(item) === chaveAtual
+      );
+      const mensagem = relacionados.length > 1
+        ? "Excluir todos os agendamentos deste cliente? Esta ação apaga os retornos definitivamente."
+        : "Excluir este agendamento? Esta ação apaga o retorno definitivamente.";
+      if (!confirm(mensagem)) return;
+
+      const idsRelacionados = new Set(relacionados.map(item => item.id));
+      const docIdsRelacionados = new Set();
+      (data.agenda || []).forEach((item, index) => {
+        if (idsRelacionados.has(item.id)) docIdsRelacionados.add(safeFirestoreDocId(item.id, index));
+      });
+      data.agenda = (data.agenda || []).filter(item => !idsRelacionados.has(item.id));
+      await salvarAgendaDefinitivamente(data, docIdsRelacionados);
+      renderAgenda();
+    }
+
+    async function salvarAgendaDefinitivamente(data, docIdsRemovidos = new Set()) {
+      saveData(data);
+      // A exclusão não pode depender do envio agendado: ao atualizar a página,
+      // o Firebase precisa já ter recebido a nova lista sem o agendamento.
+      const docRef = typeof getFirestoreDocRef === "function" ? getFirestoreDocRef() : null;
+      const gravacoes = [];
+      if (docRef) {
+        gravacoes.push(docRef.set({
+          data: normalizeData(data),
+          updatedAt: Number(data.updatedAt || Date.now())
+        }));
+      }
+      gravacoes.push(apagarAgendaV2(docIdsRemovidos));
+
+      try {
+        await Promise.all(gravacoes);
+      } catch (error) {
+        console.warn("Não foi possível confirmar a exclusão da Agenda.", error);
+        alert("O agendamento saiu da tela, mas não consegui confirmar a exclusão no Firebase. Verifique a conexão e tente novamente se ele voltar.");
       }
     }
 
@@ -490,14 +622,31 @@
 
     function renderAgenda() {
       const data = getData();
-      let agenda = (data.agenda || []).filter(a => a.status === "agendado");
+      // Mantém os retornos antigos visíveis; novos só são criados com descrição.
+      let agenda = (data.agenda || []).filter(a => a.status === "agendado" && a.dataRetorno);
 
-      if (filtroMes.value) {
-        const [ano, mes] = filtroMes.value.split("-").map(Number);
+      const filtroSelecionado = String(filtroMes.value || "").trim();
+      if (/^\d{4}-\d{1,2}$/.test(filtroSelecionado)) {
+        const [ano, mes] = filtroSelecionado.split("-").map(Number);
         agenda = agenda.filter(a => retornoNoMes(a.dataRetorno, ano, mes));
       }
 
       agenda.sort((a, b) => new Date(a.dataRetorno) - new Date(b.dataRetorno));
+
+      // Um cartão por cliente: elimina duplicatas idênticas e agrupa próximos serviços.
+      const gruposAgenda = new Map();
+      agenda.forEach(item => {
+        const clienteKey = item.clienteId || item.cliente?.id || item.cliente?.documento || item.cliente?.telefone || item.id;
+        const grupo = gruposAgenda.get(clienteKey) || [];
+        const assinatura = `${obterDescricaoAgendamento(item, data)}|${String(item.dataRetorno || "").slice(0, 10)}`;
+        if (!grupo.some(existing => `${obterDescricaoAgendamento(existing, data)}|${String(existing.dataRetorno || "").slice(0, 10)}` === assinatura)) grupo.push(item);
+        gruposAgenda.set(clienteKey, grupo);
+      });
+      agenda = Array.from(gruposAgenda.values()).map(grupo => {
+        const principal = grupo[0];
+        principal.proximosServicos = grupo;
+        return principal;
+      });
 
       listaAgenda.innerHTML = "";
 
@@ -521,17 +670,20 @@
           <div>
             <strong>${escapeHtml(c.nome)}</strong>
             <span class="badge ${status}">${status.toUpperCase()}</span><br>
+            <strong>Serviço agendado:</strong>
+            ${(a.proximosServicos || [a]).map(servico => `<div class="agenda-servico-agendado">• ${escapeHtml(obterDescricaoAgendamento(servico, data))}</div>`).join("")}<br>
             <small>🔁 ${formatarData(a.dataRetorno)}</small>
           </div>
+        </div>
 
-          <div class="agenda-actions">
-            <a class="btn-whats"
-               href="https://wa.me/55${telefone}?text=${msg}"
-               target="_blank">📲</a>
-            <button class="btn-editar">Editar</button>
-            <button class="btn-arquivar" onclick="arquivar('${escapeHtml(a.id)}')">📁</button>
-            <button class="btn-ver">Ver</button>
-          </div>
+        <div class="agenda-actions">
+          <a class="btn-whats"
+             href="https://wa.me/55${telefone}?text=${msg}"
+             target="_blank">📲</a>
+          <button class="btn-editar">Editar</button>
+          <a class="btn-editar" href="servico.html?agendamento=${encodeURIComponent(a.id)}">Executar serviço</a>
+          <button class="btn-arquivar" onclick="excluirAgendamento('${escapeHtml(a.id)}')">Excluir</button>
+          <button class="btn-ver">Ver</button>
         </div>
 
         ${ultimoServicoHtml}
@@ -598,9 +750,10 @@
       });
     }
 
-    popularFiltroMesUmaVez();
+    atualizarFiltroMes();
     filtroMes.onchange = renderAgenda;
     window.addEventListener("senso-live-update", () => {
+      atualizarFiltroMes();
       renderAgenda();
     });
     renderAgenda();
