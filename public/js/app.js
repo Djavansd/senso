@@ -535,8 +535,49 @@ function saveData(data) {
     dataCacheRaw = raw;
     dataCacheValue = normalized;
     queueCloudDataSync(normalized);
+    limparColecoesFirebasePeloMobile(normalized);
     window.SensoV2Sync?.queue?.(normalized);
     notifyLiveUpdate("save-data");
+}
+
+async function limparColecoesFirebasePeloMobile(data) {
+    const uid = getAuthUid();
+    if (!uid || !window.firebase?.firestore) return;
+
+    try {
+        const profileRef = window.firebase
+            .firestore()
+            .collection("users")
+            .doc(uid)
+            .collection("profiles")
+            .doc(ACTIVE_PROFILE.id);
+
+        await Promise.all([
+            limparColecaoFirebasePorIds(profileRef, "clientes", data.clientes || []),
+            limparColecaoFirebasePorIds(profileRef, "agenda", data.agenda || [])
+        ]);
+    } catch (error) {
+        console.warn("Não foi possível limpar coleções extras no Firebase.", error);
+    }
+}
+
+async function limparColecaoFirebasePorIds(profileRef, collectionName, items) {
+    const idsMobile = new Set((Array.isArray(items) ? items : [])
+        .map(item => String(item?.id || "").replaceAll("/", "_").slice(0, 500))
+        .filter(Boolean));
+    const snapshot = await profileRef.collection(collectionName).get({ source: "server" });
+    const deletes = [];
+
+    snapshot.docs.forEach(doc => {
+        if (idsMobile.has(doc.id)) return;
+        deletes.push(doc.ref);
+    });
+
+    for (let start = 0; start < deletes.length; start += 400) {
+        const batch = window.firebase.firestore().batch();
+        deletes.slice(start, start + 400).forEach(ref => batch.delete(ref));
+        await batch.commit();
+    }
 }
 
 function queueCloudDataSync(data) {
@@ -591,6 +632,7 @@ function tryHydrateCloudData() {
         dataCacheRaw = raw;
         dataCacheValue = mergedCloudData;
         notifyLiveUpdate("cloud-hydrate");
+        limparColecoesFirebasePeloMobile(mergedCloudData);
 
         if (JSON.stringify(cloudData) !== JSON.stringify(mergedCloudData)) {
             queueCloudDataSync(mergedCloudData);
