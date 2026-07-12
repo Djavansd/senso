@@ -345,6 +345,7 @@
   <script>
     const listaAgenda = document.getElementById("listaAgenda");
     const filtroMes = document.getElementById("filtroMes");
+    let limpandoAgendaInvalida = false;
 
 
     function normalizarData(d) {
@@ -399,6 +400,51 @@
       );
       const item = Array.isArray(servicoOrigem?.itens) ? servicoOrigem.itens[0] : null;
       return String(item?.descricao || item?.nome || "Retorno agendado").trim();
+    }
+
+    function obterServicoIdAgendamento(agendamento) {
+      return String(agendamento?.servicoOrigemId || agendamento?.origemServicoId || "").trim();
+    }
+
+    function agendamentoTemOrigemAprovada(agendamento, dataRef) {
+      const servicoId = obterServicoIdAgendamento(agendamento);
+      if (!servicoId) return false;
+
+      const servico = (dataRef.servicos || []).find(item => item.id === servicoId);
+      if (!servico) return false;
+
+      return (dataRef.orcamentos || []).some(orcamento =>
+        orcamento?.origemServicoId === servicoId &&
+        (orcamento.status === "aprovado" || !!orcamento.aprovadoEm)
+      );
+    }
+
+    async function limparAgendamentosSemOrigemAprovada(data) {
+      if (limpandoAgendaInvalida) return data;
+      const agendaOriginal = Array.isArray(data.agenda) ? data.agenda : [];
+      const docIdsRemovidos = new Set();
+      const agendaValida = [];
+
+      agendaOriginal.forEach((item, index) => {
+        const agendado = item?.status === "agendado";
+        const valido = !agendado || agendamentoTemOrigemAprovada(item, data);
+        if (valido) {
+          agendaValida.push(item);
+          return;
+        }
+        docIdsRemovidos.add(safeFirestoreDocId(item?.id, index));
+      });
+
+      if (agendaValida.length === agendaOriginal.length) return data;
+
+      limpandoAgendaInvalida = true;
+      data.agenda = agendaValida;
+      try {
+        await salvarAgendaDefinitivamente(data, docIdsRemovidos, false);
+      } finally {
+        limpandoAgendaInvalida = false;
+      }
+      return data;
     }
 
     function atualizarFiltroMes() {
@@ -481,11 +527,11 @@
         if (idsRelacionados.has(item.id)) docIdsRelacionados.add(safeFirestoreDocId(item.id, index));
       });
       data.agenda = (data.agenda || []).filter(item => !idsRelacionados.has(item.id));
-      await salvarAgendaDefinitivamente(data, docIdsRelacionados);
+      await salvarAgendaDefinitivamente(data, docIdsRelacionados, true);
       renderAgenda();
     }
 
-    async function salvarAgendaDefinitivamente(data, docIdsRemovidos = new Set()) {
+    async function salvarAgendaDefinitivamente(data, docIdsRemovidos = new Set(), mostrarAlerta = true) {
       saveData(data);
       // A exclusão não pode depender do envio agendado: ao atualizar a página,
       // o Firebase precisa já ter recebido a nova lista sem o agendamento.
@@ -503,7 +549,9 @@
         await Promise.all(gravacoes);
       } catch (error) {
         console.warn("Não foi possível confirmar a exclusão da Agenda.", error);
-        alert("O agendamento saiu da tela, mas não consegui confirmar a exclusão no Firebase. Verifique a conexão e tente novamente se ele voltar.");
+        if (mostrarAlerta) {
+          alert("O agendamento saiu da tela, mas não consegui confirmar a exclusão no Firebase. Verifique a conexão e tente novamente se ele voltar.");
+        }
       }
     }
 
@@ -620,10 +668,15 @@
         </div>`;
     }
 
-    function renderAgenda() {
+    async function renderAgenda() {
       const data = getData();
+      await limparAgendamentosSemOrigemAprovada(data);
       // Mantém os retornos antigos visíveis; novos só são criados com descrição.
-      let agenda = (data.agenda || []).filter(a => a.status === "agendado" && a.dataRetorno);
+      let agenda = (data.agenda || []).filter(a =>
+        a.status === "agendado" &&
+        a.dataRetorno &&
+        agendamentoTemOrigemAprovada(a, data)
+      );
 
       const filtroSelecionado = String(filtroMes.value || "").trim();
       if (/^\d{4}-\d{1,2}$/.test(filtroSelecionado)) {
