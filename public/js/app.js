@@ -129,6 +129,74 @@ function createEmptyData() {
     };
 }
 
+function normalizarChaveAgenda(valor) {
+    return String(valor || "").trim().toLocaleLowerCase("pt-BR");
+}
+
+function obterServicoIdAgenda(agendamento) {
+    return String(agendamento?.servicoOrigemId || agendamento?.origemServicoId || "").trim();
+}
+
+function obterDescricaoAgenda(agendamento, dataRef) {
+    const descricaoInformada = String(agendamento?.descricaoProximoServico || "").trim();
+    if (descricaoInformada) return descricaoInformada;
+
+    const servicoOrigem = (dataRef?.servicos || []).find(servico =>
+        servico.id === agendamento?.servicoOrigemId || servico.id === agendamento?.origemServicoId
+    );
+    const item = Array.isArray(servicoOrigem?.itens) ? servicoOrigem.itens[0] : null;
+    return String(item?.descricao || item?.nome || "Retorno agendado").trim();
+}
+
+function assinaturaAgendaExcluida(agendamento, dataRef) {
+    const cliente = agendamento?.cliente || {};
+    const clienteKey = agendamento?.clienteId || cliente.id || cliente.documento || cliente.telefone || cliente.nome || "";
+    return [
+        normalizarChaveAgenda(clienteKey),
+        normalizarChaveAgenda(obterServicoIdAgenda(agendamento)),
+        normalizarChaveAgenda(obterDescricaoAgenda(agendamento, dataRef)),
+        String(agendamento?.dataRetorno || "").slice(0, 10)
+    ].join("|");
+}
+
+function lerAgendamentosExcluidos() {
+    try {
+        const bruto = localStorage.getItem(`senso:agenda-excluida:${ACTIVE_PROFILE.id}:uid:${getAuthUid() || "anon"}`);
+        const lista = JSON.parse(bruto || "[]");
+        return new Set(Array.isArray(lista) ? lista : []);
+    } catch (_error) {
+        return new Set();
+    }
+}
+
+function agendamentoMarcadoComoExcluido(agendamento, dataRef, excluidos) {
+    return (agendamento?.id && excluidos.has(`id:${agendamento.id}`))
+        || excluidos.has(`sig:${assinaturaAgendaExcluida(agendamento, dataRef)}`);
+}
+
+function agendamentoTemOrcamentoAprovado(agendamento, dataRef) {
+    const servicoId = obterServicoIdAgenda(agendamento);
+    if (!servicoId) return false;
+    if (!(dataRef.servicos || []).some(servico => servico.id === servicoId)) return false;
+    return (dataRef.orcamentos || []).some(orcamento =>
+        orcamento?.origemServicoId === servicoId &&
+        (orcamento.status === "aprovado" || !!orcamento.aprovadoEm)
+    );
+}
+
+function removerResiduosAgenda(data) {
+    const agenda = Array.isArray(data.agenda) ? data.agenda : [];
+    if (!agenda.length) return data;
+
+    const excluidos = lerAgendamentosExcluidos();
+    data.agenda = agenda.filter(agendamento => {
+        if (agendamento?.status !== "agendado") return true;
+        return !agendamentoMarcadoComoExcluido(agendamento, data, excluidos)
+            && agendamentoTemOrcamentoAprovado(agendamento, data);
+    });
+    return data;
+}
+
 function normalizeData(input) {
     const data = (input && typeof input === "object")
         ? input
@@ -142,6 +210,7 @@ function normalizeData(input) {
     data.correcoes ||= [];
     data.updatedAt = Number(data.updatedAt || 0);
     sanitizarObjetoSeguro(data);
+    removerResiduosAgenda(data);
 
     return data;
 }
@@ -821,30 +890,6 @@ function marcarOrcamentoComoAprovado(orcamentoId) {
             valor: servico.totalGeral,
             data: servico.executadoEm
         });
-
-        // AGENDA — só cria se houver retorno
-if (servico.intervaloTipo !== "nenhum") {
-
-    const retorno = new Date();
-
-    if (servico.intervaloTipo === "semanas") {
-        retorno.setDate(retorno.getDate() + 7);
-    } else {
-        retorno.setMonth(
-            retorno.getMonth() + (servico.intervaloValor || 6)
-        );
-    }
-
-    data.agenda.push({
-        id: gerarId(),
-        origemServicoId: servico.id,
-        cliente: servico.cliente,
-        dataExecucao: servico.executadoEm,
-        dataRetorno: retorno.toISOString(),
-        status: "agendado",
-        valorServico: servico.totalGeral // 🔒 já estava funcionando
-    });
-}
 
     }
 
