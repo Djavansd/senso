@@ -236,6 +236,17 @@
                 nextBaseline.set(collection, next);
             });
 
+            await Promise.all(["clientes", "agenda"].map(async collection => {
+                const snapshot = await ref.collection(collection).get({ source: "server" });
+                const next = nextBaseline.get(collection) || new Map();
+                const existing = baseline.get(collection) || new Map();
+                snapshot.docs.forEach(doc => {
+                    if (next.has(doc.id)) return;
+                    operations.push({ type: "delete", ref: doc.ref });
+                    existing.delete(doc.id);
+                });
+            }));
+
             await commitChunks(db, operations);
             const manifestUpdate = {
                 dualWriteStatus: "active",

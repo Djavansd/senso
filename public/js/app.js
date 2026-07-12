@@ -36,6 +36,29 @@ let liveUpdateTimer = null;
 let dataCacheKey = "";
 let dataCacheRaw = "";
 let dataCacheValue = null;
+let dataSyncV2LoadStarted = false;
+
+function ensureDataSyncV2Loaded() {
+    if (dataSyncV2LoadStarted || window.SensoV2Sync) return;
+    dataSyncV2LoadStarted = true;
+    try {
+        const currentScript = document.currentScript || document.querySelector('script[src*="app.js"]');
+        const scriptUrl = currentScript?.src
+            ? new URL("data-sync-v2.js?v=20260712-clientes-firebase", currentScript.src).toString()
+            : "data-sync-v2.js?v=20260712-clientes-firebase";
+        const script = document.createElement("script");
+        script.src = scriptUrl;
+        script.defer = true;
+        script.onload = () => {
+            if (typeof getData === "function") {
+                window.SensoV2Sync?.syncNow?.(getData());
+            }
+        };
+        document.head.appendChild(script);
+    } catch (error) {
+        console.warn("Não foi possível carregar a sincronização v2.", error);
+    }
+}
 
 function getAuthUid() {
     if (window.SensoAuth && window.SensoAuth.uid) {
@@ -512,6 +535,7 @@ function saveData(data) {
     dataCacheRaw = raw;
     dataCacheValue = normalized;
     queueCloudDataSync(normalized);
+    window.SensoV2Sync?.queue?.(normalized);
     notifyLiveUpdate("save-data");
 }
 
@@ -1325,3 +1349,4 @@ function enableAutoRefreshOnDataChange() {
 }
 
 enableAutoRefreshOnDataChange();
+ensureDataSyncV2Loaded();
