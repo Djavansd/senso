@@ -197,12 +197,44 @@ function removerResiduosAgenda(data) {
     return data;
 }
 
+function normalizarChaveCliente(cliente) {
+    return [
+        normalizarChaveAgenda(cliente?.documento),
+        normalizarChaveAgenda(cliente?.telefone),
+        normalizarChaveAgenda(cliente?.nome),
+        normalizarChaveAgenda(cliente?.endereco)
+    ].join("|");
+}
+
+function deduplicarClientesPorDados(clientes) {
+    const vistos = new Set();
+    return (Array.isArray(clientes) ? clientes : []).filter(cliente => {
+        const chave = normalizarChaveCliente(cliente);
+        if (chave === "|||") return true;
+        if (vistos.has(chave)) return false;
+        vistos.add(chave);
+        return true;
+    });
+}
+
+function aplicarFirebaseComoFonte(dataLocal, dataFirebase) {
+    const local = normalizeData(dataLocal || null);
+    const cloud = normalizeData(dataFirebase || null);
+    return normalizeData({
+        ...local,
+        ...cloud,
+        clientes: deduplicarClientesPorDados(cloud.clientes),
+        agenda: Array.isArray(cloud.agenda) ? cloud.agenda : [],
+        updatedAt: Number(cloud.updatedAt || Date.now())
+    });
+}
+
 function normalizeData(input) {
     const data = (input && typeof input === "object")
         ? input
         : createEmptyData();
 
-    data.clientes ||= [];
+    data.clientes = deduplicarClientesPorDados(data.clientes || []);
     data.servicos ||= [];
     data.agenda ||= [];
     data.financeiro ||= [];
@@ -524,24 +556,20 @@ function tryHydrateCloudData() {
         const cloudPayload = snapshot.data() || {};
         const cloudData = normalizeData(cloudPayload.data || null);
         const cloudUpdatedAt = Number(cloudPayload.updatedAt || cloudData.updatedAt || 0);
-        const localUpdatedAt = Number(localData.updatedAt || 0);
 
-        if (cloudUpdatedAt > localUpdatedAt) {
-            const mergedCloudData = {
-                ...cloudData,
-                updatedAt: cloudUpdatedAt
-            };
-            const raw = JSON.stringify(mergedCloudData);
-            localStorage.setItem(storageKey, raw);
-            dataCacheKey = storageKey;
-            dataCacheRaw = raw;
-            dataCacheValue = mergedCloudData;
-            notifyLiveUpdate("cloud-hydrate");
-            return;
-        }
+        const mergedCloudData = aplicarFirebaseComoFonte(localData, {
+            ...cloudData,
+            updatedAt: cloudUpdatedAt || Date.now()
+        });
+        const raw = JSON.stringify(mergedCloudData);
+        localStorage.setItem(storageKey, raw);
+        dataCacheKey = storageKey;
+        dataCacheRaw = raw;
+        dataCacheValue = mergedCloudData;
+        notifyLiveUpdate("cloud-hydrate");
 
-        if (localUpdatedAt > cloudUpdatedAt && !isDataEmpty(localData)) {
-            queueCloudDataSync(localData);
+        if (JSON.stringify(cloudData) !== JSON.stringify(mergedCloudData)) {
+            queueCloudDataSync(mergedCloudData);
         }
     }).catch(err => {
         console.warn("Falha ao carregar dados do Firestore.", err);
