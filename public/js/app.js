@@ -223,7 +223,7 @@ function aplicarFirebaseComoFonte(dataLocal, dataFirebase) {
     return normalizeData({
         ...local,
         ...cloud,
-        clientes: deduplicarClientesPorDados(cloud.clientes),
+        clientes: deduplicarClientesPorDados(local.clientes),
         agenda: Array.isArray(cloud.agenda) ? cloud.agenda : [],
         updatedAt: Number(cloud.updatedAt || Date.now())
     });
@@ -630,8 +630,10 @@ function listarClientesAtivos() {
 
 function arquivarCliente(id) {
     const data = getData();
-    const c = data.clientes.find(x => x.id === id);
-    if (c) c.arquivado = true;
+    data.clientes = (data.clientes || []).filter(cliente => cliente.id !== id);
+    data.agenda = (data.agenda || []).filter(item =>
+        item.clienteId !== id && item.cliente?.id !== id
+    );
     saveData(data);
 }
 
