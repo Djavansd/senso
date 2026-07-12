@@ -160,31 +160,121 @@ table tr {
 }
 .btn {
     flex:1;
-    padding:10px;
-    border-radius:8px;
+    min-height:46px;
+    padding:10px 12px;
+    border-radius:12px;
     border:none;
     font-weight:bold;
     cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    transition:transform .16s ease, box-shadow .16s ease, filter .16s ease;
 }
-.btn-voltar { background:#ccc; }
+.btn[hidden],
+#btnAgendarDepois[hidden] {
+    display:none !important;
+}
+.btn:not(:disabled):hover,
+.btn:not(:disabled):focus-visible {
+    transform:translateY(-1px);
+    filter:brightness(1.03);
+}
+.btn-voltar {
+    background:#f8fafc;
+    color:#334155;
+    border:1px solid #cbd5e1;
+    box-shadow:0 3px 8px rgba(15,23,42,.08);
+}
 .btn-pdf {
-    background: var(--app-primary);
-    color: var(--app-button-text);
+    background:linear-gradient(135deg, #1677e8, #2563eb);
+    color:#fff;
+    box-shadow:0 6px 13px rgba(37,99,235,.23);
+}
+.btn-whatsapp {
+    background:linear-gradient(135deg, #20b95b, #16a34a);
+    color:#fff;
+    box-shadow:0 6px 13px rgba(22,163,74,.22);
+}
+#btnEditar:not(:disabled) {
+    background:#2563eb;
+    color:#fff;
+    box-shadow:0 0 0 0 rgba(37,99,235,.42), 0 5px 12px rgba(37,99,235,.28);
+    animation:botao-disponivel-azul 2.2s ease-in-out infinite;
+}
+#btnAprovar:not(:disabled) {
+    background:#15803d;
+    color:#fff;
+    box-shadow:0 0 0 0 rgba(21,128,61,.42), 0 5px 12px rgba(21,128,61,.28);
+    animation:botao-disponivel-verde 2.2s ease-in-out infinite;
+}
+#btnRecusar:not(:disabled) {
+    background:#dc2626;
+    color:#fff;
+    border-color:#b91c1c;
+}
+#btnAgendarDepois {
+    min-height:40px;
+    padding:9px 16px;
+    border:1px solid #34a879;
+    border-radius:999px;
+    background:linear-gradient(135deg, #ecfdf5, #d1fae5);
+    color:#08754d;
+    font-weight:800;
+    cursor:pointer;
+    box-shadow:0 4px 10px rgba(16,185,129,.14);
+    transition:transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+#btnAgendarDepois:hover,
+#btnAgendarDepois:focus-visible {
+    transform:translateY(-1px);
+    filter:brightness(1.02);
+    box-shadow:0 6px 14px rgba(16,185,129,.20);
 }
 .btn-disabled {
     background:#ddd !important;
     cursor:not-allowed;
 }
+#btnEditar.btn-disabled {
+    background:#dbeafe !important;
+    color:#1d4ed8 !important;
+    border:1px solid #93c5fd;
+    opacity:1;
+    box-shadow:none;
+    animation:none;
+}
+#btnAprovar.btn-disabled {
+    background:#dcfce7 !important;
+    color:#15803d !important;
+    border:1px solid #86efac;
+    opacity:1;
+    box-shadow:none;
+    animation:none;
+}
+#btnRecusar.btn-disabled {
+    background:#fee2e2 !important;
+    color:#b91c1c !important;
+    border:1px solid #fca5a5;
+    opacity:1;
+}
+@keyframes botao-disponivel-azul {
+    50% { box-shadow:0 0 0 5px rgba(37,99,235,.10), 0 6px 14px rgba(37,99,235,.32); }
+}
+@keyframes botao-disponivel-verde {
+    50% { box-shadow:0 0 0 5px rgba(21,128,61,.10), 0 6px 14px rgba(21,128,61,.32); }
+}
+@media (prefers-reduced-motion:reduce) {
+    #btnEditar:not(:disabled),
+    #btnAprovar:not(:disabled) { animation:none; }
+}
 #statusPdf {
-    display:none;
+    display:none !important;
     margin-top:10px;
     padding:10px;
     border-radius:10px;
     background:#f1f3f4;
     font-size:13px;
-    display:flex;
-    align-items:center;
-    gap:8px;
 }
 .loader {
     width:16px;
@@ -219,6 +309,23 @@ table tr {
 
     .cabecalho-lateral {
         width:100%;
+    }
+
+    .botoes {
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:8px;
+    }
+
+    .botoes .btn {
+        min-width:0;
+        padding:10px 6px;
+        font-size:13px;
+        line-height:1.2;
+    }
+
+    .botoes .btn-voltar:last-child {
+        grid-column:1 / -1;
     }
 }
 
@@ -321,12 +428,13 @@ table tr {
 
 <div class="botoes">
     <button class="btn btn-pdf" onclick="gerarPDF()">📄 PDF</button>
-    <button class="btn btn-pdf" onclick="enviarWhatsAppPDF()">📲 WhatsApp</button>
-    <button id="btnEditar" class="btn btn-pdf" onclick="editarOrcamento()">✏️ Editar</button>
-    <button id="btnAprovar" class="btn btn-pdf" onclick="aprovar()">✅ Aprovar</button>
-    <button id="btnRecusar" class="btn btn-voltar" onclick="recusar()">❌ Recusar</button>
+    <button class="btn btn-whatsapp" onclick="enviarWhatsAppPDF()">📲 WhatsApp</button>
+    <button id="btnEditar" class="btn btn-pdf" onclick="editarOrcamento()" hidden>✏️ Editar</button>
+    <button id="btnAprovar" class="btn btn-pdf" onclick="aprovar()" hidden>✅ Aprovar</button>
+    <button id="btnRecusar" class="btn btn-voltar" onclick="recusar()" hidden>❌ Recusar</button>
     <button class="btn btn-voltar" onclick="history.back()">← Voltar</button>
 </div>
+<div style="text-align:center;margin-top:10px"><button id="btnAgendarDepois" type="button" onclick="agendarDepois()" hidden>📅 Agendar próximo serviço</button></div>
 
 <div id="statusPdf">
     <span class="loader"></span> Gerando PDF...
@@ -343,7 +451,7 @@ table tr {
 <script src="../js/core/plans.js?v=20260702-leituras1"></script>
 <script src="../js/core/profile.js?v=20260702-negocios2"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
-<script src="../js/app.js?v=20260706-sync-unica"></script>
+<script src="../js/app.js?v=20260712-firebase-agenda"></script>
 <script src="../js/assistente-senso.js"></script>
 <script src="../js/assistente-ajuda.js?v=20260706-auth-fix"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -477,15 +585,42 @@ const textoObs = (orc.observacoes || "—");
 obsBox.innerHTML = "<strong>OBSERVAÇÕES:</strong><br>";
 obsBox.appendChild(document.createTextNode(textoObs));
 
-// 🔒 trava botões se já decidido
-if (orc.status !== "enviado") {
-    btnAprovar.disabled = true;
-    btnRecusar.disabled = true;
-    btnEditar.disabled = true;
-    btnAprovar.classList.add("btn-disabled");
-    btnRecusar.classList.add("btn-disabled");
-    btnEditar.classList.add("btn-disabled");
+function atualizarAcoesOrcamentoDecidido() {
+    const dadosAtuais = getData();
+    const servicoOrigem = (dadosAtuais.servicos || []).find(servico => servico.id === orc.origemServicoId);
+    const statusOrcamento = String(orc.status || "").trim().toLowerCase();
+    const aprovado = statusOrcamento === "aprovado" || !!orc.aprovadoEm || servicoOrigem?.status === "executado";
+    const decidido = aprovado || statusOrcamento === "recusado" || !!orc.recusadoEm;
+    const semRetornoManutencao = servicoOrigem?.semRetornoManutencao === true;
+    const jaTemAgendamento = (dadosAtuais.agenda || []).some(item =>
+        item.status === "agendado" &&
+        (item.servicoOrigemId === orc.origemServicoId || item.origemServicoId === orc.origemServicoId)
+    );
+
+    if (decidido) {
+        [btnEditar, btnAprovar, btnRecusar].forEach(botao => {
+            botao.disabled = true;
+            botao.classList.add("btn-disabled");
+            botao.hidden = true;
+            botao.style.display = "none";
+        });
+    } else {
+        [btnEditar, btnAprovar, btnRecusar].forEach(botao => {
+            botao.hidden = false;
+            botao.style.display = "inline-flex";
+        });
+    }
+
+    if (aprovado && !jaTemAgendamento && !semRetornoManutencao) {
+        btnAgendarDepois.hidden = false;
+        btnAgendarDepois.style.display = "inline-flex";
+    } else {
+        btnAgendarDepois.hidden = true;
+        btnAgendarDepois.style.display = "none";
+    }
 }
+
+atualizarAcoesOrcamentoDecidido();
 
 if (!orc.origemServicoId) {
     btnEditar.disabled = true;
@@ -521,10 +656,16 @@ function obterTelefoneWhatsCliente(cliente) {
 
 function baixarBlob(blob, fileName) {
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    const blobUrl = URL.createObjectURL(blob);
+    link.href = blobUrl;
     link.download = fileName;
+    link.style.display = "none";
+    document.body.appendChild(link);
     link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    setTimeout(() => {
+        link.remove();
+        URL.revokeObjectURL(blobUrl);
+    }, 3000);
 }
 
 async function gerarBlobPdfOrcamento() {
@@ -931,9 +1072,108 @@ async function enviarWhatsAppPDF() {
         alert("Nao foi possivel abrir o WhatsApp.");
     }
 }
+function obterExemploProximoServico() {
+    const negocioId = window.SensoProfile?.getBusinessType?.()?.id || "mecanica";
+    const exemplos = {
+        mecanica: "Troca de óleo e filtro",
+        lava_rapido: "Higienização interna completa",
+        estetica_automotiva: "Revisão da vitrificação",
+        funilaria: "Avaliar reparo da porta",
+        pintura_automotiva: "Polimento e retoque da pintura",
+        eletrica_automotiva: "Revisar bateria e alternador",
+        borracharia: "Rodízio e calibragem dos pneus",
+        auto_center: "Revisão de freios e suspensão",
+        ar_automotivo: "Higienização do ar-condicionado",
+        som_acessorios: "Revisar instalação do alarme",
+        pedreiro: "Revisar reparo da parede",
+        pintor: "Pintura de acabamento do ambiente",
+        encanador: "Revisar vazamento da cozinha",
+        eletricista: "Revisar quadro elétrico",
+        faxineiro: "Limpeza periódica do imóvel",
+        jardineiro: "Poda e manutenção do jardim",
+        tecnico_ar: "Limpeza e higienização do ar-condicionado",
+        montador_moveis: "Ajuste e revisão do móvel",
+        chaveiro: "Revisar fechadura instalada",
+        vidraceiro: "Revisar instalação do vidro",
+        marceneiro: "Ajuste de portas do móvel",
+        gesseiro: "Revisar acabamento do drywall",
+        piscineiro: "Limpeza e tratamento da piscina"
+    };
+    return exemplos[negocioId] || "Próximo atendimento necessário";
+}
+
+function abrirModalProximoAgendamento(servico, aoContinuar, removerAgendamentoAoCancelar = false) {
+    const exemploProximoServico = obterExemploProximoServico();
+    const mensagemFinalizacao = window.SensoProfile?.usesVehicleFields?.() === true
+        ? "O veículo foi finalizado."
+        : "O serviço foi finalizado.";
+    const modal = document.createElement("div");
+    modal.style.cssText = "position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:18px;background:rgba(15,23,42,.48)";
+    modal.innerHTML = `<div style="position:relative;width:min(420px,100%);padding:18px 22px 22px;border-radius:18px;background:#fff;box-shadow:0 24px 60px rgba(15,23,42,.25);text-align:center"><button type="button" data-fechar aria-label="Fechar" style="position:absolute;right:10px;top:8px;border:0;background:transparent;color:#64748b;font-size:24px;cursor:pointer">×</button><img src="../assets/assistente-senso/agendamento-instrucoes.png" alt="Mascote mostrando instruções" style="display:block;width:145px;height:145px;object-fit:contain;margin:-4px auto 2px"><h3 style="margin:0 0 8px;color:#0f766e">Agendar próximo serviço?</h3><p style="margin:0 0 18px;color:#52635c;line-height:1.45">${mensagemFinalizacao}<br>Deseja criar um lembrete para um próximo serviço deste cliente?</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:9px"><button type="button" data-nao style="padding:12px;border:1px solid #94a3b8;border-radius:10px;background:#f1f5f9;color:#334155;font-weight:800">Não agendar agora</button><button type="button" data-sem-retorno style="padding:12px;border:1px solid #fbbf24;border-radius:10px;background:#fffbeb;color:#92400e;font-weight:800">Não precisa de retorno</button><button type="button" data-sim style="grid-column:1 / -1;padding:12px;border:0;border-radius:10px;background:#0f766e;color:#fff;font-weight:800">Sim, Agendar</button></div></div>`;
+    document.body.appendChild(modal);
+    const fechar = () => modal.remove();
+    const continuarSemAgendamento = () => {
+        if (removerAgendamentoAoCancelar) {
+            const data = getData();
+            const agendaAntes = (data.agenda || []).length;
+            data.agenda = (data.agenda || []).filter(item =>
+                item.servicoOrigemId !== servico.id && item.origemServicoId !== servico.id
+            );
+            if (data.agenda.length !== agendaAntes) saveData(data);
+        }
+        fechar();
+        aoContinuar();
+    };
+    modal.querySelector("[data-fechar]").onclick = continuarSemAgendamento;
+    modal.querySelector("[data-nao]").onclick = continuarSemAgendamento;
+    modal.querySelector("[data-sem-retorno]").onclick = () => {
+        const data = getData();
+        const servicoAtual = (data.servicos || []).find(item => item.id === servico.id);
+        if (servicoAtual) {
+            servicoAtual.semRetornoManutencao = true;
+            servicoAtual.semRetornoManutencaoEm = new Date().toISOString();
+            data.agenda = (data.agenda || []).filter(item =>
+                item.servicoOrigemId !== servico.id && item.origemServicoId !== servico.id
+            );
+            saveData(data);
+        }
+        atualizarAcoesOrcamentoDecidido();
+        fechar();
+        aoContinuar();
+    };
+    modal.querySelector("[data-sim]").onclick = () => {
+        modal.innerHTML = `<div style="width:min(440px,100%);padding:22px;border-radius:18px;background:#fff;box-shadow:0 24px 60px rgba(15,23,42,.25)"><h3 style="margin:0 0 16px;color:#0f766e">Próximo serviço</h3><label style="display:grid;gap:6px;margin-bottom:12px;font-weight:700">Próximo serviço<input data-descricao required placeholder="Ex.: ${exemploProximoServico}" style="padding:11px;border:1px solid #cbd5e1;border-radius:9px"></label><label style="display:grid;gap:6px;margin-bottom:12px;font-weight:700">Quando deverá retornar<select data-prazo style="padding:11px;border:1px solid #cbd5e1;border-radius:9px"><option value="1">1 mês</option><option value="3">3 meses</option><option value="6">6 meses</option><option value="12">12 meses</option><option value="custom">Escolher data personalizada</option></select></label><input data-data type="date" hidden style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:9px;margin-bottom:12px"><label style="display:grid;gap:6px;font-weight:700">Observação (opcional)<textarea data-observacao placeholder="Ex.: detalhes importantes para o próximo atendimento." style="padding:11px;border:1px solid #cbd5e1;border-radius:9px"></textarea></label><div style="display:flex;gap:9px;margin-top:16px"><button data-nao-agendar type="button" style="flex:1;padding:13px;border:1px solid #94a3b8;border-radius:10px;background:#f1f5f9;color:#334155;font-weight:800">Não agendar agora</button><button data-criar type="button" style="flex:1;padding:13px;border:0;border-radius:10px;background:#0f766e;color:#fff;font-weight:800">Criar Agendamento</button></div></div>`;
+        const prazo = modal.querySelector("[data-prazo]"), dataInput = modal.querySelector("[data-data]");
+        prazo.onchange = () => { dataInput.hidden = prazo.value !== "custom"; };
+        modal.querySelector("[data-nao-agendar]").onclick = continuarSemAgendamento;
+        modal.querySelector("[data-criar]").onclick = () => {
+            const criarButton = modal.querySelector("[data-criar]");
+            if (criarButton.disabled) return;
+            criarButton.disabled = true;
+            const descricao = modal.querySelector("[data-descricao]").value.trim();
+            if (!descricao) { criarButton.disabled = false; alert("Informe o próximo serviço."); return; }
+            const data = getData(); const retorno = new Date();
+            if (prazo.value === "custom") { if (!dataInput.value) { criarButton.disabled = false; alert("Escolha a data de retorno."); return; } retorno.setTime(new Date(`${dataInput.value}T12:00:00`).getTime()); }
+            else retorno.setMonth(retorno.getMonth() + Number(prazo.value));
+            data.agenda ||= [];
+            const dataRetorno = retorno.toISOString();
+            const duplicado = data.agenda.find(a => a.status === "agendado" && a.servicoOrigemId === servico.id && a.descricaoProximoServico === descricao && String(a.dataRetorno).slice(0, 10) === dataRetorno.slice(0, 10));
+            if (duplicado) { fechar(); aoContinuar(); return; }
+            data.agenda.push({ id: gerarId(), clienteId: servico.cliente?.id || "", servicoOrigemId: servico.id, cliente: servico.cliente, descricaoProximoServico: descricao, observacao: modal.querySelector("[data-observacao]").value.trim(), dataRetorno, dataExecucao: servico.executadoEm, valorServico: servico.totalGeral, status: "agendado", criadoEm: new Date().toISOString() });
+            saveData(data);
+            atualizarAcoesOrcamentoDecidido();
+            modal.innerHTML = `<div style="width:min(420px,100%);padding:18px 22px 22px;border-radius:18px;background:#fff;box-shadow:0 24px 60px rgba(15,23,42,.25);text-align:center"><img src="../assets/assistente-senso/agendamento-concluido.png" alt="Mascote comemorando agendamento" style="display:block;width:170px;height:170px;object-fit:contain;margin:-4px auto 2px"><h3 style="margin:0 0 8px;color:#0f766e">Agendamento criado!</h3><p style="margin:0;color:#52635c;line-height:1.45">O próximo serviço foi salvo na Agenda.</p><button type="button" data-continuar style="width:100%;margin-top:16px;padding:12px;border:0;border-radius:10px;background:#0f766e;color:#fff;font-weight:800">Continuar</button></div>`;
+            modal.querySelector("[data-continuar]").onclick = () => { fechar(); aoContinuar(); };
+        };
+    };
+}
+
 function aprovar() {
     const aprovado = marcarOrcamentoComoAprovado(orc.id);
     if (!aprovado) return;
+    orc.status = "aprovado";
+    orc.aprovadoEm ||= new Date().toISOString();
+    atualizarAcoesOrcamentoDecidido();
 
     const servicoId = orc.origemServicoId;
     AssistenteSenso.criarPendencia(servicoId);
@@ -945,7 +1185,7 @@ function aprovar() {
         location.href = "orcamentos.html";
     };
 
-    AssistenteSenso.abrir({
+    const continuarAposAgendamento = () => AssistenteSenso.abrir({
         imagem: "/assets/assistente-senso/gasto-do-servico.png",
         mensagens: [
             "Parabéns!",
@@ -992,6 +1232,16 @@ function aprovar() {
             irParaOrcamentos();
         }
     });
+    abrirModalProximoAgendamento(getData().servicos.find(s => s.id === servicoId) || { id: servicoId, cliente: clienteDados }, continuarAposAgendamento, true);
+}
+
+function agendarDepois() {
+    const servico = (getData().servicos || []).find(s => s.id === orc.origemServicoId);
+    if (!servico) {
+        alert("Serviço de origem não encontrado para este orçamento.");
+        return;
+    }
+    abrirModalProximoAgendamento(servico, () => location.reload(), false);
 }
 
 function recusar() {

@@ -503,20 +503,6 @@ textarea {
     <option>Transferência</option>
 </select>
 
-<div style="margin-top:12px;">
-<label style="font-size:13px;">Retorno / Manutenção (opcional)</label>
-<select id="intervaloSelect">
-    <option value="">Padrão (6 meses)</option>
-    <option value="nenhum">Nenhum</option>
-    <option value="semanal">Semanal</option>
-    <option value="mensal">Mensal</option>
-    <option value="3">3 meses</option>
-    <option value="6">6 meses</option>
-    <option value="12">12 meses</option>
-</select>
-
-</div>
-
 <button type="button" id="btnSalvarServico" style="margin-top:12px; margin-bottom:8px;">Salvar Serviço</button>
 <div id="salvarServicoAlerta" class="salvar-servico-alerta hidden"></div>
 </section>
@@ -538,7 +524,7 @@ textarea {
 <script src="../js/core/plans.js?v=20260702-leituras1"></script>
 <script src="../js/core/profile.js?v=20260702-negocios2"></script>
 <script src="../js/domains/mecanica/domain.js"></script>
-<script src="../js/app.js?v=20260706-sync-unica"></script>
+<script src="../js/app.js?v=20260712-firebase-agenda"></script>
 <script src="../js/assistente-senso.js"></script>
 <script src="../js/assistente-ajuda.js?v=20260706-auth-fix"></script>
 
@@ -549,7 +535,6 @@ const clienteResumo = document.getElementById("clienteResumo");
 const listaItens = document.getElementById("listaItens");
 const totalServicoEl = document.getElementById("totalServico");
 const listaServicos = document.getElementById("listaServicos");
-const intervaloSelect = document.getElementById("intervaloSelect");
 const observacoesServico = document.getElementById("observacoesServico");
 const problemaRelatadoBox = document.getElementById("problemaRelatadoBox");
 const problemaRelatadoServico = document.getElementById("problemaRelatadoServico");
@@ -1018,7 +1003,6 @@ function limparFormularioServico() {
     document.getElementById("itensResumo").classList.add("hidden");
     listaItens.innerHTML = "";
     totalServicoEl.textContent = "0,00";
-    intervaloSelect.value = "";
     btnSalvarServico.textContent = "Salvar Serviço";
     btnAdicionarItem.textContent = "Adicionar Item";
     limparSinalizacaoSalvarServico();
@@ -1076,7 +1060,6 @@ function iniciarEdicaoServico(servicoId) {
     observacoesServico.value = servico.observacoes || "";
     problemaRelatadoServico.value = servico.problemaRelatado || "";
     formaPagamento.value = servico.formaPagamento || "";
-    intervaloSelect.value = getValorIntervaloSelect(servico);
     btnSalvarServico.textContent = "Salvar alterações";
     renderItens();
     renderProblemaRelatadoPro();
@@ -1090,27 +1073,6 @@ btnSalvarServico.onclick = () => {
         clienteSelect.focus();
         return;
     }
-
-    let intervaloTipo = "meses";
-let intervaloValor = 6;
-
-// 🔒 exceção explícita
-if (intervaloSelect.value === "nenhum") {
-    intervaloTipo = "nenhum";
-    intervaloValor = 0;
-
-} else if (intervaloSelect.value === "semanal") {
-    intervaloTipo = "semanas";
-    intervaloValor = 1;
-
-} else if (intervaloSelect.value === "mensal") {
-    intervaloTipo = "meses";
-    intervaloValor = 1;
-
-} else if (intervaloSelect.value) {
-    intervaloTipo = "meses";
-    intervaloValor = Number(intervaloSelect.value);
-}
 
     let observacoesSeguras;
     let problemaRelatadoSeguro = "";
@@ -1230,8 +1192,6 @@ if (intervaloSelect.value === "nenhum") {
         }
         servico.observacoes = observacoesSeguras;
         servico.formaPagamento = formaPagamento.value || "";
-        servico.intervaloTipo = intervaloTipo;
-        servico.intervaloValor = intervaloValor;
         servico.atualizadoEm = new Date().toISOString();
         atualizarOrcamentoDoServico(data, servico);
         saveData(data);
@@ -1249,7 +1209,7 @@ if (intervaloSelect.value === "nenhum") {
         Object.assign(clienteCadastro, dadosVeiculoAtualizados, { id: clienteCadastro.id });
     }
 
-    data.servicos.push({
+    const novoServico = {
         id: gerarId(),
         cliente: clienteServico,
         itens: itens.slice(),
@@ -1258,10 +1218,13 @@ if (intervaloSelect.value === "nenhum") {
         observacoes: observacoesSeguras,
         formaPagamento: formaPagamento.value || "",
         status: "pendente",
-        intervaloTipo,
-        intervaloValor,
         criadoEm: new Date().toISOString()
-    });
+    };
+    data.servicos.push(novoServico);
+    const agendamentoOrigemId = new URLSearchParams(location.search).get("agendamento");
+    if (agendamentoOrigemId) {
+        data.agenda = (data.agenda || []).filter(a => a.id !== agendamentoOrigemId);
+    }
     saveData(data);
 
     limparFormularioServico();
@@ -1488,6 +1451,17 @@ renderServicos();
 const servicoEditarParam = new URLSearchParams(location.search).get("editar");
 if (servicoEditarParam) {
     iniciarEdicaoServico(servicoEditarParam);
+}
+
+const agendamentoParam = new URLSearchParams(location.search).get("agendamento");
+if (agendamentoParam) {
+    const agendamento = (getData().agenda || []).find(a => a.id === agendamentoParam);
+    const clienteIdAgendamento = agendamento?.clienteId || agendamento?.cliente?.id || "";
+    if (clienteIdAgendamento) {
+        clienteSelect.value = clienteIdAgendamento;
+        renderResumoClienteSelecionado();
+    }
+    if (agendamento?.descricaoProximoServico) itemDescricao.value = agendamento.descricaoProximoServico;
 }
 </script>
 </body>
