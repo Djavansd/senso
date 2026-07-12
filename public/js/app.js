@@ -556,6 +556,18 @@ async function limparColecoesFirebasePeloMobile(data) {
             limparColecaoFirebasePorIds(profileRef, "clientes", data.clientes || []),
             limparColecaoFirebasePorIds(profileRef, "agenda", data.agenda || [])
         ]);
+        await profileRef.set({
+            counts: {
+                clientes: (data.clientes || []).length,
+                agenda: (data.agenda || []).length,
+                correcoes: (data.correcoes || []).length,
+                financeiro: (data.financeiro || []).length,
+                orcamentos: (data.orcamentos || []).length,
+                servicos: (data.servicos || []).length
+            },
+            legacyUpdatedAt: Number(data.updatedAt || Date.now()),
+            lastMobilePruneAt: window.firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
     } catch (error) {
         console.warn("Não foi possível limpar coleções extras no Firebase.", error);
     }
