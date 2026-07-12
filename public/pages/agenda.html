@@ -338,7 +338,7 @@
   <script src="../js/core/plans.js?v=20260702-leituras1"></script>
   <script src="../js/core/profile.js?v=20260702-negocios2"></script>
   <script src="../js/domains/mecanica/domain.js"></script>
-  <script src="../js/app.js?v=20260712-firebase-agenda"></script>
+  <script src="../js/app.js?v=20260712-firebase-agenda-id"></script>
   <script src="../js/assistente-senso.js"></script>
   <script src="../js/assistente-ajuda.js?v=20260706-auth-fix"></script>
 
@@ -576,6 +576,38 @@
       const batch = window.firebase.firestore().batch();
       docIdsRemovidos.forEach(docId => batch.delete(agendaRef.doc(docId)));
       await batch.commit();
+    }
+
+    function substituirAgendaLocalPeloFirebase(dataFirebase) {
+      const storageKey = typeof getStorageKey === "function" ? getStorageKey() : null;
+      if (!storageKey) return;
+
+      const dataLocal = getData();
+      const dataFinal = typeof aplicarFirebaseComoFonte === "function"
+        ? aplicarFirebaseComoFonte(dataLocal, dataFirebase)
+        : normalizeData({ ...dataLocal, ...dataFirebase, agenda: dataFirebase.agenda || [] });
+      const raw = JSON.stringify(dataFinal);
+      localStorage.setItem(storageKey, raw);
+      window.dispatchEvent(new CustomEvent("senso-live-update", { detail: { source: "firebase-agenda-authority", ts: Date.now() } }));
+    }
+
+    async function sincronizarAgendaComFirebaseServidor() {
+      const docRef = typeof getFirestoreDocRef === "function" ? getFirestoreDocRef() : null;
+      if (!docRef) return false;
+
+      try {
+        const snapshot = await docRef.get({ source: "server" });
+        if (!snapshot.exists) return false;
+
+        const payload = snapshot.data() || {};
+        const dataFirebase = normalizeData(payload.data || null);
+        dataFirebase.updatedAt = Number(payload.updatedAt || dataFirebase.updatedAt || Date.now());
+        substituirAgendaLocalPeloFirebase(dataFirebase);
+        return true;
+      } catch (error) {
+        console.warn("Não foi possível conferir a Agenda no Firebase.", error);
+        return false;
+      }
     }
 
     async function excluirAgendamento(id) {
@@ -879,13 +911,19 @@
       });
     }
 
-    atualizarFiltroMes();
+    async function iniciarAgenda() {
+      listaAgenda.innerHTML = "<p>Sincronizando agenda...</p>";
+      await sincronizarAgendaComFirebaseServidor();
+      atualizarFiltroMes();
+      await renderAgenda();
+    }
+
     filtroMes.onchange = renderAgenda;
     window.addEventListener("senso-live-update", () => {
       atualizarFiltroMes();
       renderAgenda();
     });
-    renderAgenda();
+    iniciarAgenda();
   </script>
 
 </body>
